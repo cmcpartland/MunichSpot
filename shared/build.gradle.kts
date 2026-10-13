@@ -14,6 +14,8 @@ kotlin {
         namespace = "de.munichspot.shared"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+        // Needed so Compose resources (pois.geojson) are packaged into the APK.
+        androidResources.enable = true
     }
 
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
