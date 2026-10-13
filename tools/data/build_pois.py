@@ -2,6 +2,7 @@
 """Fetches Munich recycling islands (AWM), mailboxes (OSM) drinking fountains and public toilets and writes pois.geojson."""
 import json
 import math
+import re
 import sys
 import time
 from collections import Counter
@@ -127,6 +128,20 @@ def toilet_groups(rooms):
     return groups.values()
 
 
+# Names that describe the operator or the room, not the place.
+NOT_TOILET_NAMES = {"DSMDecaux GmbH", "Behindertengerecht", "Behinderten"}
+
+
+def toilet_name(raw):
+    """Turns a room name into a place name: drops the room code (B/D/H/M) and the generic prefix."""
+    name = re.sub(r"\s[BDHM]$", "", clean(raw))
+    if name.startswith("Öffentliche Toilette "):
+        name = name[len("Öffentliche Toilette "):].strip()
+    if name[:1] in "\"„“":
+        name = clean(re.sub(r"[\"„“”]", " ", name))
+    return "" if name in NOT_TOILET_NAMES else name
+
+
 def toilet_features():
     rooms = fetch(TOILET_URL)["features"]
     print(f"toilet rooms read: {len(rooms)}")
@@ -135,7 +150,7 @@ def toilet_features():
         x = sum(r["geometry"]["coordinates"][0] for r in group) / len(group)
         y = sum(r["geometry"]["coordinates"][1] for r in group) / len(group)
         lon, lat = to_wgs84.transform(x, y)
-        names = Counter(n for n in (clean(p.get("name")) for p in props) if n)
+        names = Counter(n for n in (toilet_name(p.get("name")) for p in props) if n)
         name = min(names, key=lambda n: (-names[n], n)) if names else "Öffentliche Toilette"
         first = min(group, key=lambda r: int(r["id"].rsplit(".", 1)[1]))
         categories = [p.get("kategorie") or "" for p in props]

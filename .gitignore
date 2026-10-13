@@ -13,3 +13,6 @@ local.properties
 xcuserdata/
 DerivedData/
 *.xcworkspace/xcuserdata/
+
+# Python
+__pycache__/
