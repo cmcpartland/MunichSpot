@@ -37,13 +37,25 @@ def fetch(url, data=None, attempts=4):
         time.sleep(10 * attempt)
 
 
-def feature(id_, type_, name, lon, lat):
-    return {
+MATERIAL_COLUMNS = {
+    "glas_braun": "GLASS_BROWN",
+    "glas_gruen": "GLASS_GREEN",
+    "glas_weiss": "GLASS_WHITE",
+    "lvp": "PACKAGING",
+    "altkleider": "CLOTHING",
+}
+
+
+def feature(id_, type_, name, lon, lat, materials=None):
+    f = {
         "type": "Feature",
         "id": id_,
         "geometry": {"type": "Point", "coordinates": [round(lon, 5), round(lat, 5)]},
         "properties": {"type": type_, "name": name},
     }
+    if materials is not None:
+        f["properties"]["materials"] = materials
+    return f
 
 
 def recycling_features():
@@ -52,7 +64,8 @@ def recycling_features():
         x, y = f["geometry"]["coordinates"][:2]
         lon, lat = to_wgs84.transform(x, y)
         name = (f["properties"].get("adresse") or "").strip() or "Wertstoffinsel"
-        yield feature("awm-" + f["id"], "RECYCLING", name, lon, lat)
+        materials = [m for col, m in MATERIAL_COLUMNS.items() if (f["properties"].get(col) or 0) > 0]
+        yield feature("awm-" + f["id"], "RECYCLING", name, lon, lat, materials)
 
 
 def mailbox_features():
@@ -84,6 +97,9 @@ def main():
         encoding="utf-8",
     )
     print(f"RECYCLING: {counts['RECYCLING']}, POST_BOX: {counts['POST_BOX']}")
+    for m in MATERIAL_COLUMNS.values():
+        print(f"  {m}: {sum(m in f['properties'].get('materials', ()) for f in features)}")
+    print(f"  none: {sum(f['properties'].get('materials') == [] for f in features)}")
     print(f"wrote {out} ({out.stat().st_size} bytes)")
 
 

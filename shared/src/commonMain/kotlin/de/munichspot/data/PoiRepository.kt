@@ -22,5 +22,8 @@ internal fun parsePois(geoJson: String): List<Poi> =
             name = properties.getValue("name").jsonPrimitive.content,
             lat = coordinates[1].jsonPrimitive.content.toDouble(),
             lon = coordinates[0].jsonPrimitive.content.toDouble(),
+            materials = properties["materials"]?.jsonArray.orEmpty().mapNotNull { m ->
+                Material.entries.firstOrNull { it.name == m.jsonPrimitive.content }
+            },
         )
     }
