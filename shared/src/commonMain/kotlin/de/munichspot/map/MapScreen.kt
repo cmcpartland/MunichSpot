@@ -66,10 +66,16 @@ import org.maplibre.compose.util.MaplibreComposable
 import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
 
-internal fun PoiType.pinColor(): Color = if (this == PoiType.RECYCLING) RecyclingGreen else PostBoxYellow
+internal fun PoiType.pinColor(): Color = when (this) {
+    PoiType.RECYCLING -> RecyclingGreen
+    PoiType.POST_BOX -> PostBoxYellow
+    PoiType.DRINKING_WATER -> DrinkingWaterBlue
+}
 
 private val RecyclingGreen = Color(0xFF2E7D32)
 private val PostBoxYellow = Color(0xFFF9A825)
+private val DrinkingWaterBlue = Color(0xFF81D4FA)
+private val DrinkingWaterText = Color(0xFF01579B)
 private val LocationBlue = Color(0xFF1A73E8)
 
 private const val ATTRIBUTION =
@@ -87,6 +93,9 @@ fun MapScreen(pois: List<Poi>) {
     val mailboxes = remember(pois, filters) {
         pois.filter { it.type == PoiType.POST_BOX && filters.matches(it) }.toGeoJson()
     }
+    val fountains = remember(pois, filters) {
+        pois.filter { it.type == PoiType.DRINKING_WATER && filters.matches(it) }.toGeoJson()
+    }
     LaunchedEffect(filters) {
         if (selected?.let(filters::matches) == false) selected = null
     }
@@ -102,7 +111,11 @@ fun MapScreen(pois: List<Poi>) {
             zoom = 11.0,
         ),
     ) {
-        for ((type, json) in listOf(PoiType.RECYCLING to recycling, PoiType.POST_BOX to mailboxes)) {
+        for ((type, json) in listOf(
+            PoiType.RECYCLING to recycling,
+            PoiType.POST_BOX to mailboxes,
+            PoiType.DRINKING_WATER to fountains,
+        )) {
             PoiLayers(
                 type = type,
                 json = json,
@@ -263,7 +276,8 @@ private fun PoiLayers(
         textField = format(span(feature["point_count_abbreviated"].asString())),
         textFont = const(listOf("Noto Sans Bold")),
         textSize = const(14.sp),
-        textColor = const(Color.White),
+        // White is unreadable on the pale fountain colour.
+        textColor = const(if (type == PoiType.DRINKING_WATER) DrinkingWaterText else Color.White),
         textAllowOverlap = const(true),
     )
     CircleLayer(
@@ -293,5 +307,11 @@ private fun List<Poi>.toGeoJson(): String = buildString {
     append("]}")
 }
 
-private fun String.jsonEscape(): String =
-    replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")
+private fun String.jsonEscape(): String = buildString {
+    for (c in this@jsonEscape) when {
+        c == '\\' -> append("\\\\")
+        c == '"' -> append("\\\"")
+        c < ' ' -> append("\\u").append(c.code.toString(16).padStart(4, '0'))
+        else -> append(c)
+    }
+}

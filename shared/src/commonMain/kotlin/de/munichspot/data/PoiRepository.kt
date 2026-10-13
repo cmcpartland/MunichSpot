@@ -22,6 +22,7 @@ private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutM
 
 // Recycling islands: Landeshauptstadt München, AWM, opendata.muenchen.de (dl-by-de/2.0)
 // Mailboxes: © OpenStreetMap contributors (ODbL)
+// Drinking fountains: Landeshauptstadt München, opendata.muenchen.de (dl-by-de/2.0)
 suspend fun loadBundledPois(): List<Poi> =
     Res.readBytes("files/pois.geojson").decodeToString().let { withContext(Dispatchers.Default) { parsePois(it) } }
 
@@ -39,18 +40,21 @@ suspend fun fetchLatestPois(): List<Poi>? = try {
 }
 
 internal fun parsePois(geoJson: String): List<Poi> =
-    Json.parseToJsonElement(geoJson).jsonObject.getValue("features").jsonArray.map { f ->
+    Json.parseToJsonElement(geoJson).jsonObject.getValue("features").jsonArray.mapNotNull { f ->
         val feature = f.jsonObject
-        val coordinates = feature.getValue("geometry").jsonObject.getValue("coordinates").jsonArray
         val properties = feature.getValue("properties").jsonObject
+        val type = PoiType.entries.firstOrNull { it.name == properties.getValue("type").jsonPrimitive.content }
+            ?: return@mapNotNull null
+        val coordinates = feature.getValue("geometry").jsonObject.getValue("coordinates").jsonArray
         Poi(
             id = feature.getValue("id").jsonPrimitive.content,
-            type = PoiType.valueOf(properties.getValue("type").jsonPrimitive.content),
+            type = type,
             name = properties.getValue("name").jsonPrimitive.content,
             lat = coordinates[1].jsonPrimitive.content.toDouble(),
             lon = coordinates[0].jsonPrimitive.content.toDouble(),
             materials = properties["materials"]?.jsonArray.orEmpty().mapNotNull { m ->
                 Material.entries.firstOrNull { it.name == m.jsonPrimitive.content }
             },
+            note = properties["note"]?.jsonPrimitive?.content,
         )
     }
