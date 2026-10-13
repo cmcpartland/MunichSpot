@@ -15,21 +15,23 @@ internal enum class ToiletFilter { ACCESSIBLE, FREE, CHANGING, HIDE_DEFECT }
 
 internal data class PoiFilters(
     val recyclingMaterials: Set<RecyclingFilter> = RecyclingFilter.entries.toSet(),
-    val showMailboxes: Boolean = true,
-    val showDrinkingWater: Boolean = true,
-    val showToilets: Boolean = true,
     val toiletRequirements: Set<ToiletFilter> = emptySet(),
 ) {
-    val isDefault: Boolean get() = this == PoiFilters()
+    fun isDefault(type: PoiType): Boolean = reset(type) == this
+
+    fun reset(type: PoiType): PoiFilters = when (type) {
+        PoiType.RECYCLING -> copy(recyclingMaterials = PoiFilters().recyclingMaterials)
+        PoiType.TOILET -> copy(toiletRequirements = emptySet())
+        else -> this
+    }
 
     fun matches(poi: Poi): Boolean = when (poi.type) {
         PoiType.RECYCLING -> recyclingMaterials.isNotEmpty() && (
             recyclingMaterials.size == RecyclingFilter.entries.size ||
                 recyclingMaterials.any { f -> poi.materials.any { it in f.materials } }
             )
-        PoiType.POST_BOX -> showMailboxes
-        PoiType.DRINKING_WATER -> showDrinkingWater
-        PoiType.TOILET -> showToilets && toiletRequirements.all {
+        PoiType.POST_BOX, PoiType.DRINKING_WATER -> true
+        PoiType.TOILET -> toiletRequirements.all {
             val toilet = poi.toilet
             when (it) {
                 ToiletFilter.ACCESSIBLE -> toilet?.accessible == true
