@@ -8,7 +8,7 @@ pip install -r tools/data/requirements.txt
 python tools/data/build_pois.py [output-path]
 ```
 
-The script exits non-zero if a type has too few features (500 recycling islands, 500 mailboxes, 50 drinking fountains) or any point lies outside the Munich area.
+The script exits non-zero if a type has too few features (500 recycling islands, 500 mailboxes, 50 drinking fountains, 100 public toilet locations) or any point lies outside the Munich area.
 
 ## Nightly refresh
 
@@ -21,3 +21,4 @@ One-time setup: Settings → Pages → Build and deployment → Source: GitHub A
 - Recycling islands: Landeshauptstadt München, AWM, WFS `gsm_wfs:awm_container` (EPSG:25832, reprojected to WGS84). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
 - Mailboxes: OpenStreetMap `amenity=post_box` in Munich via the Overpass API. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 - Drinking fountains: Landeshauptstadt München, WFS `baug_wfs:trinkwasserbrunnen`, dataset `opendata_trinkwasserbrunnen` (EPSG:25832, reprojected to WGS84). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
+- Public toilets: Landeshauptstadt München, WFS `gsm_wfs:wc_finder_opendata`, dataset `wc_finder` (EPSG:25832, reprojected to WGS84). The dataset has one feature per room; rooms within 15 m are merged into one location. [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).

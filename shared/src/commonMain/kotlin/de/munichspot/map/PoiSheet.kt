@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import de.munichspot.data.Material
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
+import de.munichspot.data.ToiletInfo
+import de.munichspot.data.ToiletStatus
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,10 +36,12 @@ internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
         PoiType.RECYCLING -> "Wertstoffinsel" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
         PoiType.POST_BOX -> "Briefkasten" to "Quelle: © OpenStreetMap contributors"
         PoiType.DRINKING_WATER -> "Trinkbrunnen" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
+        PoiType.TOILET -> "Öffentliche Toilette" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            Modifier.navigationBarsPadding().padding(horizontal = 24.dp, vertical = 8.dp),
+            Modifier.navigationBarsPadding().verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -43,7 +50,7 @@ internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
                 )
                 Text(title, style = MaterialTheme.typography.titleLarge)
             }
-            Text(poi.name, style = MaterialTheme.typography.bodyLarge)
+            if (poi.name != title) Text(poi.name, style = MaterialTheme.typography.bodyLarge)
             if (poi.type == PoiType.RECYCLING) {
                 val lines = poi.materials.accepted()
                 if (lines.isEmpty()) {
@@ -68,6 +75,7 @@ internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
                     )
                 }
             }
+            poi.toilet?.let { ToiletDetails(it) }
             Button(onClick = { uriHandler.openUri(navigationUri(poi)) }) { Text("Navigate") }
             Text(source, style = MaterialTheme.typography.labelSmall)
         }
@@ -83,4 +91,35 @@ private fun List<Material>.accepted(): List<String> = buildList {
     if (glass.isNotEmpty()) add("Glas (${glass.joinToString(" · ") { it.second }})")
     if (Material.PACKAGING in this@accepted) add("Leichtverpackungen")
     if (Material.CLOTHING in this@accepted) add("Altkleider")
+}
+
+@Composable
+private fun ToiletDetails(toilet: ToiletInfo) {
+    val body = MaterialTheme.typography.bodyMedium
+    toilet.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        toilet.hours?.let { Text("Geöffnet: $it", style = body) }
+        toilet.price?.let { Text(if (it == 0.0) "Kostenlos" else formatEuro(it), style = body) }
+        toilet.floor?.let { Text("Etage: $it", style = body) }
+        listOfNotNull(
+            "Barrierefrei".takeIf { toilet.accessible },
+            "Wickeltisch".takeIf { toilet.changing },
+            "Euroschlüssel".takeIf { toilet.euroKey },
+        ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), style = body) }
+        listOf("F" to "Damen", "M" to "Herren", "U" to "Unisex")
+            .filter { it.first in toilet.rooms }
+            .takeIf { it.isNotEmpty() }
+            ?.let { Text(it.joinToString(" · ") { r -> r.second }, style = body) }
+    }
+    val warning = when (toilet.status) {
+        ToiletStatus.DEFECT -> "Laut Stadt defekt oder nicht zugänglich"
+        ToiletStatus.IMPAIRED -> "Laut Stadt teilweise beeinträchtigt"
+        null -> null
+    }
+    warning?.let { Text(it, style = body, color = MaterialTheme.colorScheme.error) }
+}
+
+private fun formatEuro(price: Double): String {
+    val cents = (price * 100).roundToInt()
+    return "${cents / 100},${(cents % 100).toString().padStart(2, '0')} €"
 }

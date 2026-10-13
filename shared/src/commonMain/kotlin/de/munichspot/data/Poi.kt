@@ -1,6 +1,6 @@
 package de.munichspot.data
 
-enum class PoiType { RECYCLING, POST_BOX, DRINKING_WATER }
+enum class PoiType { RECYCLING, POST_BOX, DRINKING_WATER, TOILET }
 
 enum class Material { GLASS_BROWN, GLASS_GREEN, GLASS_WHITE, PACKAGING, CLOTHING }
 
@@ -12,4 +12,19 @@ data class Poi(
     val lon: Double,
     val materials: List<Material> = emptyList(),
     val note: String? = null,
+    val toilet: ToiletInfo? = null,
+)
+
+enum class ToiletStatus { IMPAIRED, DEFECT }
+
+data class ToiletInfo(
+    val address: String?,
+    val hours: String?,
+    val floor: String?,
+    val price: Double?,
+    val accessible: Boolean,
+    val changing: Boolean,
+    val euroKey: Boolean,
+    val rooms: List<String>,
+    val status: ToiletStatus?,
 )
