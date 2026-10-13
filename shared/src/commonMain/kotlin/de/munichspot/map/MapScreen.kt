@@ -12,10 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.serialization.json.jsonPrimitive
-import org.maplibre.compose.interaction.ClickResult
-import org.maplibre.compose.interaction.MapInteractions
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,19 +23,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonPrimitive
 import org.maplibre.compose.camera.CameraPosition
+import org.maplibre.compose.camera.CameraUpdate
+import org.maplibre.compose.expressions.dsl.asNumber
 import org.maplibre.compose.expressions.dsl.asString
 import org.maplibre.compose.expressions.dsl.const
-import org.maplibre.compose.expressions.dsl.condition
-import org.maplibre.compose.expressions.dsl.eq
 import org.maplibre.compose.expressions.dsl.feature
-import org.maplibre.compose.expressions.dsl.switch
+import org.maplibre.compose.expressions.dsl.format
+import org.maplibre.compose.expressions.dsl.not
+import org.maplibre.compose.expressions.dsl.span
+import org.maplibre.compose.expressions.dsl.step
+import org.maplibre.compose.interaction.ClickResult
+import org.maplibre.compose.interaction.MapInteractions
 import org.maplibre.compose.layers.CircleLayer
+import org.maplibre.compose.layers.SymbolLayer
+import org.maplibre.compose.map.MapState
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.map.rememberMapState
 import org.maplibre.compose.sources.GeoJsonData
 import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.style.BaseStyle
+import org.maplibre.compose.util.MaplibreComposable
+import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
 
 internal fun PoiType.pinColor(): Color = if (this == PoiType.RECYCLING) RecyclingGreen else PostBoxYellow
@@ -52,40 +62,26 @@ private const val ATTRIBUTION =
 fun MapScreen(pois: List<Poi>) {
     var selected by remember { mutableStateOf<Poi?>(null) }
     val poisById = remember(pois) { pois.associateBy { it.id } }
-    val geoJson = remember(pois) { pois.toGeoJson() }
-    val mapState = rememberMapState(
+    val recycling = remember(pois) { pois.filter { it.type == PoiType.RECYCLING }.toGeoJson() }
+    val mailboxes = remember(pois) { pois.filter { it.type == PoiType.POST_BOX }.toGeoJson() }
+    val scope = rememberCoroutineScope()
+    lateinit var mapState: MapState
+    mapState = rememberMapState(
         baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/liberty"),
         initialCameraPosition = CameraPosition(
             center = Position(latitude = 48.137, longitude = 11.575),
             zoom = 11.0,
         ),
     ) {
-        val source = rememberGeoJsonSource(GeoJsonData.JsonString(geoJson))
-        CircleLayer(
-            id = "pois",
-            source = source,
-            radius = const(7.dp),
-            color = switch(
-                condition(
-                    test = feature["type"].asString() eq const(PoiType.RECYCLING.name),
-                    output = const(RecyclingGreen),
-                ),
-                fallback = const(PostBoxYellow),
-            ),
-            strokeColor = const(Color.White),
-            strokeWidth = const(2.dp),
-            hitPadding = 12.dp,
-            onClick = { features ->
-                val id = features.firstOrNull()?.id?.jsonPrimitive?.content
-                val poi = poisById[id]
-                if (poi != null) {
-                    selected = poi
-                    ClickResult.Consume
-                } else {
-                    ClickResult.Pass
-                }
-            },
-        )
+        for ((type, json) in listOf(PoiType.RECYCLING to recycling, PoiType.POST_BOX to mailboxes)) {
+            PoiLayers(
+                type = type,
+                json = json,
+                mapState = mapState,
+                scope = scope,
+                onPoi = { id -> poisById[id]?.let { selected = it } != null },
+            )
+        }
     }
 
     val density = LocalDensity.current
@@ -121,6 +117,76 @@ fun MapScreen(pois: List<Poi>) {
             )
         }
     }
+}
+
+@Composable
+@MaplibreComposable
+private fun PoiLayers(
+    type: PoiType,
+    json: String,
+    mapState: MapState,
+    scope: CoroutineScope,
+    onPoi: (String?) -> Boolean,
+) {
+    val name = type.name.lowercase()
+    val color = type.pinColor()
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(json)) {
+        cluster = true
+        clusterRadius = 50
+        clusterMaxZoom = 14
+    }
+    CircleLayer(
+        id = "$name-clusters",
+        source = source,
+        filter = feature.has("point_count"),
+        radius = step(
+            feature["point_count"].asNumber(),
+            const(14.dp),
+            10 to const(18.dp),
+            50 to const(24.dp),
+        ),
+        color = const(color),
+        strokeColor = const(Color.White),
+        strokeWidth = const(2.dp),
+        onClick = { features ->
+            val cluster = features.firstOrNull()
+            val center = (cluster?.geometry as? Point)?.coordinates
+            if (cluster == null || center == null) {
+                ClickResult.Pass
+            } else {
+                scope.launch {
+                    val zoom = mapState.style.sources[source]?.getClusterExpansionZoom(cluster)
+                        ?: (mapState.cameraPosition.zoom + 2)
+                    mapState.animateCamera(CameraUpdate(center = center, zoom = zoom + 0.5))
+                }
+                ClickResult.Consume
+            }
+        },
+    )
+    SymbolLayer(
+        id = "$name-cluster-count",
+        source = source,
+        filter = feature.has("point_count"),
+        textField = format(span(feature["point_count_abbreviated"].asString())),
+        textFont = const(listOf("Noto Sans Bold")),
+        textSize = const(14.sp),
+        textColor = const(Color.White),
+        textAllowOverlap = const(true),
+    )
+    CircleLayer(
+        id = "$name-pois",
+        source = source,
+        filter = !feature.has("point_count"),
+        radius = const(7.dp),
+        color = const(color),
+        strokeColor = const(Color.White),
+        strokeWidth = const(2.dp),
+        hitPadding = 12.dp,
+        onClick = { features ->
+            val id = features.firstOrNull()?.id?.jsonPrimitive?.content
+            if (onPoi(id)) ClickResult.Consume else ClickResult.Pass
+        },
+    )
 }
 
 private fun List<Poi>.toGeoJson(): String = buildString {
