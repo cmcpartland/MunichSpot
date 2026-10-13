@@ -1,6 +1,13 @@
 package de.munichspot.map
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.MaterialTheme
+import org.maplibre.compose.camera.CameraAnimation
+import org.maplibre.spatialk.geojson.BoundingBox
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.time.Duration
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -73,36 +80,59 @@ internal fun PoiType.pinColor(): Color = when (this) {
     PoiType.TOILET -> ToiletPurple
 }
 
+internal fun PoiType.label(): String = when (this) {
+    PoiType.RECYCLING -> "Wertstoffinseln"
+    PoiType.POST_BOX -> "Briefkästen"
+    PoiType.DRINKING_WATER -> "Trinkbrunnen"
+    PoiType.TOILET -> "Toiletten"
+}
+
+internal val DrinkingWaterText = Color(0xFF01579B)
+
 private val RecyclingGreen = Color(0xFF2E7D32)
 private val PostBoxYellow = Color(0xFFF9A825)
 private val DrinkingWaterBlue = Color(0xFF81D4FA)
-private val DrinkingWaterText = Color(0xFF01579B)
 private val ToiletPurple = Color(0xFF8E24AA)
 private val LocationBlue = Color(0xFF1A73E8)
 
-private const val ATTRIBUTION =
+internal const val ATTRIBUTION =
     "© OpenStreetMap contributors · OpenFreeMap · Daten: Landeshauptstadt München (dl-by-de/2.0)"
 
+private val Marienplatz = Position(latitude = 48.1374, longitude = 11.5755)
+private var locationAsked = false
+
+/** Box of +-[radiusKm] around [center], so the map frames a circle of that radius. */
+private fun boundsAround(center: Position, radiusKm: Double = 5.0): BoundingBox {
+    val dLat = radiusKm / 111.32
+    val dLon = radiusKm / (111.32 * cos(center.latitude * PI / 180))
+    return BoundingBox(
+        southwest = Position(latitude = center.latitude - dLat, longitude = center.longitude - dLon),
+        northeast = Position(latitude = center.latitude + dLat, longitude = center.longitude + dLon),
+    )
+}
+
 @Composable
-fun MapScreen(pois: List<Poi>) {
+internal fun MapScreen(
+    pois: List<Poi>,
+    type: PoiType?,
+    onTypeChange: (PoiType?) -> Unit,
+    filters: PoiFilters,
+    onFiltersChange: (PoiFilters) -> Unit,
+) {
     var selected by remember { mutableStateOf<Poi?>(null) }
     val poisById = remember(pois) { pois.associateBy { it.id } }
-    var filters by remember { mutableStateOf(PoiFilters()) }
     var showFilters by remember { mutableStateOf(false) }
-    val recycling = remember(pois, filters) {
-        pois.filter { it.type == PoiType.RECYCLING && filters.matches(it) }.toGeoJson()
+    val geoJson = PoiType.entries.associateWith { t ->
+        val f = if (type == t) filters else PoiFilters()
+        val key = when (t) {
+            PoiType.RECYCLING -> f.recyclingMaterials
+            PoiType.TOILET -> f.toiletRequirements
+            else -> null
+        }
+        remember(pois, key) { pois.filter { it.type == t && f.matches(it) }.toGeoJson() }
     }
-    val mailboxes = remember(pois, filters) {
-        pois.filter { it.type == PoiType.POST_BOX && filters.matches(it) }.toGeoJson()
-    }
-    val fountains = remember(pois, filters) {
-        pois.filter { it.type == PoiType.DRINKING_WATER && filters.matches(it) }.toGeoJson()
-    }
-    val toilets = remember(pois, filters) {
-        pois.filter { it.type == PoiType.TOILET && filters.matches(it) }.toGeoJson()
-    }
-    LaunchedEffect(filters) {
-        if (selected?.let(filters::matches) == false) selected = null
+    LaunchedEffect(type, filters) {
+        if (type != null && selected?.let { it.type != type || !filters.matches(it) } == true) selected = null
     }
     val scope = rememberCoroutineScope()
     val locationState = rememberLocationState()
@@ -111,20 +141,14 @@ fun MapScreen(pois: List<Poi>) {
     lateinit var mapState: MapState
     mapState = rememberMapState(
         baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/liberty"),
-        initialCameraPosition = CameraPosition(
-            center = Position(latitude = 48.137, longitude = 11.575),
-            zoom = 11.0,
-        ),
+        // Roughly the 5 km framing on a phone; refined below once the viewport is known.
+        initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 11.1),
     ) {
-        for ((type, json) in listOf(
-            PoiType.RECYCLING to recycling,
-            PoiType.POST_BOX to mailboxes,
-            PoiType.DRINKING_WATER to fountains,
-            PoiType.TOILET to toilets,
-        )) {
+        for (t in PoiType.entries) {
+            if (type != null && type != t) continue
             PoiLayers(
-                type = type,
-                json = json,
+                type = t,
+                json = geoJson.getValue(t),
                 mapState = mapState,
                 scope = scope,
                 onPoi = { id ->
@@ -148,6 +172,21 @@ fun MapScreen(pois: List<Poi>) {
 
     val density = LocalDensity.current
     var attributionBarHeight by remember { mutableStateOf(0.dp) }
+
+    LaunchedEffect(Unit) {
+        mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
+        val permission = locationState.permission
+        if (!locationAsked && permission is LocationPermission.NotGranted && permission.canRequest != false) {
+            locationAsked = true
+            locationState.requestPermission()
+        }
+        val position = withTimeoutOrNull(5.seconds) {
+            snapshotFlow { locationState.lastLocation?.position }.first { it != null }
+        }
+        if (position != null && position.latitude in 47.9..48.4 && position.longitude in 11.2..11.9) {
+            mapState.animateCameraToBounds(boundsAround(position))
+        }
+    }
 
     LaunchedEffect(centerRequested) {
         if (!centerRequested) return@LaunchedEffect
@@ -182,7 +221,11 @@ fun MapScreen(pois: List<Poi>) {
             },
         )
         selected?.let { PoiSheet(it) { selected = null } }
-        if (showFilters) FilterSheet(filters, onChange = { filters = it }, onDismiss = { showFilters = false })
+        if (showFilters && type != null) FilterSheet(type, filters, onChange = onFiltersChange, onDismiss = { showFilters = false })
+        CategorySearchBar(
+            pois, type, onTypeChange,
+            Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+        )
         SmallFloatingActionButton(
             onClick = {
                 if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
@@ -194,7 +237,7 @@ fun MapScreen(pois: List<Poi>) {
         ) {
             LocateIcon(LocalContentColor.current)
         }
-        SmallFloatingActionButton(
+        if (type != null && type.hasFilters()) SmallFloatingActionButton(
             onClick = {
                 selected = null
                 showFilters = true
@@ -203,7 +246,7 @@ fun MapScreen(pois: List<Poi>) {
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = attributionBarHeight + 56.dp),
         ) {
-            BadgedBox(badge = { if (!filters.isDefault) Badge() }) {
+            BadgedBox(badge = { if (!filters.isDefault(type)) Badge() }) {
                 FilterIcon(LocalContentColor.current)
             }
         }

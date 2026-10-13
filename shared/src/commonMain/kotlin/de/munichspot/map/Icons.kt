@@ -35,3 +35,25 @@ internal fun LocateIcon(color: Color, modifier: Modifier = Modifier) {
         }
     }
 }
+
+@Composable
+internal fun SearchIcon(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(20.dp)) {
+        val w = 2.dp.toPx()
+        val r = size.width * 0.33f
+        val c = Offset(size.width * 0.42f, size.height * 0.42f)
+        drawCircle(color, radius = r, center = c, style = Stroke(w))
+        val d = r * 0.72f
+        drawLine(color, c + Offset(d, d), Offset(size.width * 0.92f, size.height * 0.92f), w, StrokeCap.Round)
+    }
+}
+
+@Composable
+internal fun CloseIcon(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(18.dp)) {
+        val w = 2.dp.toPx()
+        val m = size.width * 0.15f
+        drawLine(color, Offset(m, m), Offset(size.width - m, size.height - m), w, StrokeCap.Round)
+        drawLine(color, Offset(size.width - m, m), Offset(m, size.height - m), w, StrokeCap.Round)
+    }
+}
