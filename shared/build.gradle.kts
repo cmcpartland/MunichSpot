@@ -35,6 +35,7 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.resources)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.io.core)
             implementation(libs.ktor.client.core)
         }
         androidMain.dependencies {

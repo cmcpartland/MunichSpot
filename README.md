@@ -14,7 +14,7 @@ This is an early prototype, not a finished app.
 - Drinking fountains show their name and remark; many are shut off in winter.
 - Public toilets show address, opening hours, price, floor, accessibility, baby changing, Euro key, room types and a warning if the city lists them as defective.
 - Locate button shows the user's position and centres the map on it. Location permission is asked only on first tap.
-- Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py` and publishes the result to GitHub Pages. The app shows the bundled data first, then switches to the nightly file when it is reachable.
+- Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py` and publishes the result to GitHub Pages. On launch the app shows the last downloaded file if it has one, otherwise the bundled data, then switches to the nightly file when it is reachable. This also works offline.
 
 **Platform status:**
 - **iOS:** all of the above has been run and checked in the iOS simulator, not on a physical device.

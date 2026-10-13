@@ -29,18 +29,35 @@ private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutM
 suspend fun loadBundledPois(): List<Poi> =
     Res.readBytes("files/pois.geojson").decodeToString().let { withContext(Dispatchers.Default) { parsePois(it) } }
 
+// Cached copy of the last download if it is valid, otherwise the bundled data.
+suspend fun loadStartupPois(): List<Poi> = withContext(Dispatchers.Default) {
+    val text = readCachedPoisText() ?: return@withContext loadBundledPois()
+    val cached = try {
+        parsePois(text).takeIf(::isPlausible)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+    cached ?: loadBundledPois().also { deleteCachedPois() }
+}
+
 // Returns null on any failure or implausible data, so callers keep what they have.
 suspend fun fetchLatestPois(): List<Poi>? = try {
     val response = client.get(LATEST_POIS_URL)
     if (!response.status.isSuccess()) null
-    else withContext(Dispatchers.Default) { parsePois(response.bodyAsText()) }.takeIf { pois ->
-        pois.size >= MIN_LATEST_POIS && PoiType.entries.all { type -> pois.any { it.type == type } }
+    else {
+        val text = response.bodyAsText()
+        withContext(Dispatchers.Default) { parsePois(text).takeIf(::isPlausible)?.also { saveCachedPois(text) } }
     }
 } catch (e: CancellationException) {
     throw e
 } catch (e: Exception) {
     null
 }
+
+private fun isPlausible(pois: List<Poi>) =
+    pois.size >= MIN_LATEST_POIS && PoiType.entries.all { type -> pois.any { it.type == type } }
 
 internal fun parsePois(geoJson: String): List<Poi> =
     Json.parseToJsonElement(geoJson).jsonObject.getValue("features").jsonArray.mapNotNull { f ->
