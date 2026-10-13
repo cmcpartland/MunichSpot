@@ -7,7 +7,7 @@ This is an early spike, not a finished app.
 ## Status
 
 - **Android:** runs. It shows 10 hardcoded sample points on a MapLibre map. Tapping a pin opens a details sheet with a Navigate action.
-- **iOS:** the shared code compiles for the iOS simulator, but the Xcode host app is not set up yet.
+- **iOS:** runs in the iOS simulator with the same map, pins and tap-to-open details sheet, hosted by a thin SwiftUI app in `iosApp/`. It has not been tried on a physical device yet.
 - **Planned:** a nightly data pipeline (AWM + OpenStreetMap to GeoJSON), clustering, filters, and user location.
 
 ## Tech stack
@@ -22,7 +22,7 @@ Modules:
 
 - `shared/`: the Kotlin Multiplatform library. All UI and logic live here.
 - `androidApp/`: thin Android entry point.
-- `iosApp/`: planned, not yet created.
+- `iosApp/`: thin SwiftUI host app (Xcode project). A build phase runs Gradle to build the `Shared` framework.
 
 ## Building
 
@@ -33,7 +33,7 @@ Requirements:
   export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
   ```
 - Android compileSdk 37 (AGP downloads it automatically).
-- iOS, once the host app exists, will need Xcode 26 (macOS 15.6+).
+- iOS: Xcode 26 or newer (tested with Xcode 27.0). Deployment target is iOS 18.5, which is what the bundled MapLibre Native binaries are built for.
 
 Commands:
 
@@ -42,6 +42,8 @@ Commands:
 ./gradlew :androidApp:installDebug
 ./gradlew :shared:compileKotlinIosSimulatorArm64
 ```
+
+For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on a simulator. The build phase uses `JAVA_HOME`, or Android Studio's JBR if `JAVA_HOME` is not set. To run on a device, set `TEAM_ID` in `iosApp/Configuration/Config.xcconfig`.
 
 ## Data sources and attribution
 

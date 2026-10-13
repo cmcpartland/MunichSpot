@@ -1,6 +1,7 @@
 package de.munichspot.map
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -18,6 +19,8 @@ import org.maplibre.compose.interaction.MapInteractions
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.munichspot.data.Poi
@@ -85,10 +88,15 @@ fun MapScreen(pois: List<Poi> = samplePois) {
         )
     }
 
+    val density = LocalDensity.current
+    var attributionBarHeight by remember { mutableStateOf(0.dp) }
+
     Box(Modifier.fillMaxSize()) {
         MaplibreMap(
             state = mapState,
             modifier = Modifier.fillMaxSize(),
+            // Keeps MapLibre's own attribution button clear of our attribution bar.
+            viewportInsets = PaddingValues(bottom = attributionBarHeight),
             interactions = MapInteractions {
                 callbacks { click { onUnhandled { _ ->
                     selected = null
@@ -102,6 +110,7 @@ fun MapScreen(pois: List<Poi> = samplePois) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .onSizeChanged { attributionBarHeight = with(density) { it.height.toDp() } }
                 .navigationBarsPadding(),
         ) {
             Text(
