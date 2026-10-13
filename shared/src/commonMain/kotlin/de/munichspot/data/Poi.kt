@@ -1,6 +1,6 @@
 package de.munichspot.data
 
-enum class PoiType { RECYCLING, POST_BOX }
+enum class PoiType { RECYCLING, POST_BOX, DRINKING_WATER }
 
 enum class Material { GLASS_BROWN, GLASS_GREEN, GLASS_WHITE, PACKAGING, CLOTHING }
 
@@ -11,4 +11,5 @@ data class Poi(
     val lat: Double,
     val lon: Double,
     val materials: List<Material> = emptyList(),
+    val note: String? = null,
 )

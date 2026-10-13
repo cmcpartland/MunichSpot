@@ -30,6 +30,7 @@ internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
     val (title, source) = when (poi.type) {
         PoiType.RECYCLING -> "Wertstoffinsel" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
         PoiType.POST_BOX -> "Briefkasten" to "Quelle: © OpenStreetMap contributors"
+        PoiType.DRINKING_WATER -> "Trinkbrunnen" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
     }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -55,6 +56,16 @@ internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         lines.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
                     }
+                }
+            }
+            if (poi.type == PoiType.DRINKING_WATER) {
+                poi.note?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                if (poi.note?.contains("24/7") != true) {
+                    Text(
+                        "Viele Trinkbrunnen sind im Winter abgeschaltet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             Button(onClick = { uriHandler.openUri(navigationUri(poi)) }) { Text("Navigate") }

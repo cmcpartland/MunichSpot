@@ -13,6 +13,7 @@ internal enum class RecyclingFilter(val materials: Set<Material>) {
 internal data class PoiFilters(
     val recyclingMaterials: Set<RecyclingFilter> = RecyclingFilter.entries.toSet(),
     val showMailboxes: Boolean = true,
+    val showDrinkingWater: Boolean = true,
 ) {
     val isDefault: Boolean get() = this == PoiFilters()
 
@@ -22,5 +23,6 @@ internal data class PoiFilters(
                 recyclingMaterials.any { f -> poi.materials.any { it in f.materials } }
             )
         PoiType.POST_BOX -> showMailboxes
+        PoiType.DRINKING_WATER -> showDrinkingWater
     }
 }
