@@ -10,6 +10,8 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,8 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.CameraUpdate
@@ -44,7 +50,12 @@ import org.maplibre.compose.expressions.dsl.step
 import org.maplibre.compose.interaction.ClickResult
 import org.maplibre.compose.interaction.MapInteractions
 import org.maplibre.compose.layers.CircleLayer
+import org.maplibre.compose.layers.LocationIndicatorDefaults
+import org.maplibre.compose.layers.LocationIndicatorLayer
 import org.maplibre.compose.layers.SymbolLayer
+import org.maplibre.compose.location.LocationPermission
+import org.maplibre.compose.location.LocationTrackingStatus
+import org.maplibre.compose.location.rememberLocationState
 import org.maplibre.compose.map.MapState
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.map.rememberMapState
@@ -59,6 +70,7 @@ internal fun PoiType.pinColor(): Color = if (this == PoiType.RECYCLING) Recyclin
 
 private val RecyclingGreen = Color(0xFF2E7D32)
 private val PostBoxYellow = Color(0xFFF9A825)
+private val LocationBlue = Color(0xFF1A73E8)
 
 private const val ATTRIBUTION =
     "© OpenStreetMap contributors · OpenFreeMap · Daten: Landeshauptstadt München (dl-by-de/2.0)"
@@ -79,6 +91,9 @@ fun MapScreen(pois: List<Poi>) {
         if (selected?.let(filters::matches) == false) selected = null
     }
     val scope = rememberCoroutineScope()
+    val locationState = rememberLocationState()
+    val snackbar = remember { SnackbarHostState() }
+    var centerRequested by remember { mutableStateOf(false) }
     lateinit var mapState: MapState
     mapState = rememberMapState(
         baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/liberty"),
@@ -101,10 +116,38 @@ fun MapScreen(pois: List<Poi>) {
                 },
             )
         }
+        LocationIndicatorLayer(
+            id = "user-location",
+            locationState = locationState,
+            visible = locationState.permission is LocationPermission.Granted,
+            accuracyRadiusColor = LocationBlue.copy(alpha = 0.15f),
+            accuracyRadiusBorderColor = LocationBlue.copy(alpha = 0.4f),
+            topImage = LocationIndicatorDefaults.topImage(color = LocationBlue),
+            bearingImage = null,
+        )
     }
 
     val density = LocalDensity.current
     var attributionBarHeight by remember { mutableStateOf(0.dp) }
+
+    LaunchedEffect(centerRequested) {
+        if (!centerRequested) return@LaunchedEffect
+        // Waits for a fix; gives up on a known denial, a tracking failure or after a timeout.
+        val position = withTimeoutOrNull(15.seconds) {
+            snapshotFlow {
+                val permission = locationState.permission
+                val failed = (permission is LocationPermission.NotGranted && permission.canRequest != true) ||
+                    locationState.status is LocationTrackingStatus.Unavailable
+                locationState.lastLocation?.position to failed
+            }.first { (position, failed) -> position != null || failed }.first
+        }
+        if (position != null) {
+            mapState.animateCamera(CameraUpdate(center = position, zoom = 15.0))
+        } else {
+            snackbar.showSnackbar("Standort nicht verfügbar")
+        }
+        centerRequested = false
+    }
 
     Box(Modifier.fillMaxSize()) {
         MaplibreMap(
@@ -123,6 +166,17 @@ fun MapScreen(pois: List<Poi>) {
         if (showFilters) FilterSheet(filters, onChange = { filters = it }, onDismiss = { showFilters = false })
         SmallFloatingActionButton(
             onClick = {
+                if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
+                centerRequested = true
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = attributionBarHeight + 108.dp),
+        ) {
+            LocateIcon(LocalContentColor.current)
+        }
+        SmallFloatingActionButton(
+            onClick = {
                 selected = null
                 showFilters = true
             },
@@ -134,6 +188,12 @@ fun MapScreen(pois: List<Poi>) {
                 FilterIcon(LocalContentColor.current)
             }
         }
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = attributionBarHeight + 8.dp),
+        )
         Surface(
             color = Color.White.copy(alpha = 0.8f),
             modifier = Modifier
