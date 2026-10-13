@@ -7,7 +7,7 @@ This is an early spike, not a finished app.
 ## Status
 
 - **Android:** runs. It shows 10 hardcoded sample points on a MapLibre map. Tapping a pin opens a details sheet with a Navigate action.
-- **iOS:** runs in the iOS simulator and shows the same map and pins, hosted by a thin SwiftUI app in `iosApp/`. It has not been tried on a physical device yet.
+- **iOS:** runs in the iOS simulator with the same map, pins and tap-to-open details sheet, hosted by a thin SwiftUI app in `iosApp/`. It has not been tried on a physical device yet.
 - **Planned:** a nightly data pipeline (AWM + OpenStreetMap to GeoJSON), clustering, filters, and user location.
 
 ## Tech stack
