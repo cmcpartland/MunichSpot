@@ -6,9 +6,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,8 +67,17 @@ private const val ATTRIBUTION =
 fun MapScreen(pois: List<Poi>) {
     var selected by remember { mutableStateOf<Poi?>(null) }
     val poisById = remember(pois) { pois.associateBy { it.id } }
-    val recycling = remember(pois) { pois.filter { it.type == PoiType.RECYCLING }.toGeoJson() }
-    val mailboxes = remember(pois) { pois.filter { it.type == PoiType.POST_BOX }.toGeoJson() }
+    var filters by remember { mutableStateOf(PoiFilters()) }
+    var showFilters by remember { mutableStateOf(false) }
+    val recycling = remember(pois, filters) {
+        pois.filter { it.type == PoiType.RECYCLING && filters.matches(it) }.toGeoJson()
+    }
+    val mailboxes = remember(pois, filters) {
+        pois.filter { it.type == PoiType.POST_BOX && filters.matches(it) }.toGeoJson()
+    }
+    LaunchedEffect(filters) {
+        if (selected?.let(filters::matches) == false) selected = null
+    }
     val scope = rememberCoroutineScope()
     lateinit var mapState: MapState
     mapState = rememberMapState(
@@ -79,7 +93,12 @@ fun MapScreen(pois: List<Poi>) {
                 json = json,
                 mapState = mapState,
                 scope = scope,
-                onPoi = { id -> poisById[id]?.let { selected = it } != null },
+                onPoi = { id ->
+                    poisById[id]?.let {
+                        selected = it
+                        showFilters = false
+                    } != null
+                },
             )
         }
     }
@@ -101,6 +120,20 @@ fun MapScreen(pois: List<Poi>) {
             },
         )
         selected?.let { PoiSheet(it) { selected = null } }
+        if (showFilters) FilterSheet(filters, onChange = { filters = it }, onDismiss = { showFilters = false })
+        SmallFloatingActionButton(
+            onClick = {
+                selected = null
+                showFilters = true
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = attributionBarHeight + 56.dp),
+        ) {
+            BadgedBox(badge = { if (!filters.isDefault) Badge() }) {
+                FilterIcon(LocalContentColor.current)
+            }
+        }
         Surface(
             color = Color.White.copy(alpha = 0.8f),
             modifier = Modifier
