@@ -14,8 +14,8 @@ This is an early prototype, not a finished app.
 - Locate button shows the user's position and centres the map on it. Location permission is asked only on first tap.
 
 **Platform status:**
-- **iOS:** all of the above has been run and checked in the iOS simulator (not on a physical device).
-- **Android:** the original spike (map, pins, details sheet) ran on Android. Everything added since (real data, clustering, filters and location) has only been compiled for Android, not run yet.
+- **iOS:** all of the above has been run and checked in the iOS simulator, not on a physical device.
+- **Android:** all of the above has been run and checked on the Android emulator (Pixel Fold, API 36), not on a physical device.
 
 **Planned:**
 - Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py`, and the app fetches the latest file with the bundled one as fallback.
