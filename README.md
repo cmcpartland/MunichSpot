@@ -6,9 +6,9 @@ This is an early spike, not a finished app.
 
 ## Status
 
-- **Android:** runs. It shows 10 hardcoded sample points on a MapLibre map. Tapping a pin opens a details sheet with a Navigate action.
+- **Android:** runs. It shows about 1,600 real points (865 recycling islands, 747 mailboxes) from a bundled `pois.geojson` on a MapLibre map. Tapping a pin opens a details sheet with a Navigate action.
 - **iOS:** runs in the iOS simulator with the same map, pins and tap-to-open details sheet, hosted by a thin SwiftUI app in `iosApp/`. It has not been tried on a physical device yet.
-- **Planned:** a nightly data pipeline (AWM + OpenStreetMap to GeoJSON), clustering, filters, and user location.
+- **Planned:** a nightly run of the data pipeline, clustering, filters, and user location.
 
 ## Tech stack
 
@@ -43,13 +43,17 @@ Commands:
 ./gradlew :shared:compileKotlinIosSimulatorArm64
 ```
 
+To refresh the bundled data, run `tools/data/build_pois.py` (see `tools/data/README.md`).
+
 For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on a simulator. The build phase uses `JAVA_HOME`, or Android Studio's JBR if `JAVA_HOME` is not set. To run on a device, set `TEAM_ID` in `iosApp/Configuration/Config.xcconfig`.
 
 ## Data sources and attribution
 
-- **Recycling islands:** Landeshauptstadt München, Abfallwirtschaftsbetrieb München (AWM), via opendata.muenchen.de, dataset `awm_container_opendata`. Licensed under [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). The source data is in EPSG:25832 and is converted to WGS84.
+- **Recycling islands:** Landeshauptstadt München, Abfallwirtschaftsbetrieb München (AWM), via opendata.muenchen.de, dataset `awm_container_opendata`. Licensed under [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). The source data is in EPSG:25832 and is converted to WGS84. Accepted container types (glass by colour, packaging, clothing) are included per site.
 - **Mailboxes:** © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 - **Map tiles and style:** [OpenFreeMap](https://openfreemap.org). Data © OpenMapTiles and © OpenStreetMap contributors.
+
+`tools/data/build_pois.py` fetches both sources and generates `shared/src/commonMain/composeResources/files/pois.geojson`.
 
 The Apache-2.0 license below covers the code only. The data remains under its own licenses.
 

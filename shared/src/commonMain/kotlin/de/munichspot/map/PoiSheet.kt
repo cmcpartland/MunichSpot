@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import de.munichspot.data.Material
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
 
@@ -42,8 +43,33 @@ internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
                 Text(title, style = MaterialTheme.typography.titleLarge)
             }
             Text(poi.name, style = MaterialTheme.typography.bodyLarge)
+            if (poi.type == PoiType.RECYCLING) {
+                val lines = poi.materials.accepted()
+                if (lines.isEmpty()) {
+                    Text(
+                        "Keine Containerdaten verfügbar",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        lines.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    }
+                }
+            }
             Button(onClick = { uriHandler.openUri(navigationUri(poi)) }) { Text("Navigate") }
             Text(source, style = MaterialTheme.typography.labelSmall)
         }
     }
+}
+
+private fun List<Material>.accepted(): List<String> = buildList {
+    val glass = listOf(
+        Material.GLASS_BROWN to "braun",
+        Material.GLASS_GREEN to "grün",
+        Material.GLASS_WHITE to "weiß",
+    ).filter { it.first in this@accepted }
+    if (glass.isNotEmpty()) add("Glas (${glass.joinToString(" · ") { it.second }})")
+    if (Material.PACKAGING in this@accepted) add("Leichtverpackungen")
+    if (Material.CLOTHING in this@accepted) add("Altkleider")
 }
