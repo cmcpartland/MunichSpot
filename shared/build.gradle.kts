@@ -35,9 +35,14 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.resources)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.ktor.client.core)
         }
         androidMain.dependencies {
+            implementation(libs.ktor.client.okhttp)
             runtimeOnly(libs.maplibre.compose.runtime.opengl.android)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
     }
 }
