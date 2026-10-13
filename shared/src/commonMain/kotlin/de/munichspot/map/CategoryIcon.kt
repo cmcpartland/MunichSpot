@@ -18,9 +18,13 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.munichspot.data.PoiType
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 internal fun CategoryIcon(type: PoiType, size: Dp = 40.dp, modifier: Modifier = Modifier) {
@@ -37,19 +41,34 @@ private fun DrawScope.drawGlyph(type: PoiType, c: Color) {
     val stroke = Stroke(w, cap = StrokeCap.Round, join = StrokeJoin.Round)
     when (type) {
         PoiType.RECYCLING -> {
-            // Bin: lid, handle, tapered body with ribs.
-            drawLine(c, p(0.15f, 0.25f), p(0.85f, 0.25f), w, StrokeCap.Round)
-            drawLine(c, p(0.38f, 0.25f), p(0.38f, 0.14f), w, StrokeCap.Round)
-            drawLine(c, p(0.62f, 0.25f), p(0.62f, 0.14f), w, StrokeCap.Round)
-            drawLine(c, p(0.38f, 0.14f), p(0.62f, 0.14f), w, StrokeCap.Round)
-            drawPath(
-                Path().apply {
-                    moveTo(0.22f * s, 0.25f * s); lineTo(0.28f * s, 0.88f * s)
-                    lineTo(0.72f * s, 0.88f * s); lineTo(0.78f * s, 0.25f * s)
-                },
-                c, style = stroke,
-            )
-            for (x in listOf(0.38f, 0.5f, 0.62f)) drawLine(c, p(x, 0.4f), p(x, 0.74f), w, StrokeCap.Round)
+            // Recycling symbol: three chasing arrows (arc + solid head) around a circle, rotated 120 degrees apart.
+            val r = 0.34f * s
+            val a0 = -85f
+            val sweep = 60f
+            val end = (a0 + sweep) * PI / 180.0
+            val bx = 0.5f * s + r * cos(end).toFloat()
+            val by = 0.5f * s + r * sin(end).toFloat()
+            val tx = -sin(end).toFloat()
+            val ty = cos(end).toFloat()
+            val hw = 0.16f * s
+            val len = 0.22f * s
+            repeat(3) { i ->
+                rotate(i * 120f, pivot = center) {
+                    drawArc(
+                        c, a0, sweep, false, p(0.5f, 0.5f) - Offset(r, r), Size(2 * r, 2 * r),
+                        style = Stroke(w * 1.8f, cap = StrokeCap.Butt),
+                    )
+                    drawPath(
+                        Path().apply {
+                            moveTo(bx + hw * cos(end).toFloat(), by + hw * sin(end).toFloat())
+                            lineTo(bx + len * tx, by + len * ty)
+                            lineTo(bx - hw * cos(end).toFloat(), by - hw * sin(end).toFloat())
+                            close()
+                        },
+                        c,
+                    )
+                }
+            }
         }
         PoiType.POST_BOX -> {
             drawRoundRect(c, p(0.1f, 0.2f), Size(0.8f * s, 0.6f * s), CornerRadius(0.08f * s), style = stroke)
