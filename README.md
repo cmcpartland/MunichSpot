@@ -10,7 +10,7 @@ This is an early prototype, not a finished app.
 - About 1,900 real points (865 AWM recycling islands, 747 OSM mailboxes, 115 drinking fountains, 165 public toilet locations) from a bundled `pois.geojson`.
 - Pins clustered per type: green = recycling, yellow = mailboxes, light blue = drinking fountains, purple = public toilets. Tapping a cluster zooms in.
 - Tapping a pin opens a details sheet with a Navigate action. Recycling islands list accepted materials: glass by colour, Leichtverpackungen, Altkleider.
-- Filter button (bottom right) opens a filter sheet: recycling islands by material, mailboxes, drinking fountains and public toilets.
+- Filter button (bottom right) opens a filter sheet: recycling islands by material, mailboxes, drinking fountains and public toilets (limit to accessible, free, with baby changing, or hide defective ones).
 - Drinking fountains show their name and remark; many are shut off in winter.
 - Public toilets show address, opening hours, price, floor, accessibility, baby changing, Euro key, room types and a warning if the city lists them as defective.
 - Locate button shows the user's position and centres the map on it. Location permission is asked only on first tap.
