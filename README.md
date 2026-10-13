@@ -2,13 +2,23 @@
 
 MunichSpot is a Kotlin Multiplatform (Compose Multiplatform) app for iOS and Android that shows Munich infrastructure from open data on a map: recycling islands (Wertstoffinseln) and mailboxes (Briefkästen).
 
-This is an early spike, not a finished app.
+This is an early prototype, not a finished app.
 
 ## Status
 
-- **Android:** runs. It shows about 1,600 real points (865 recycling islands, 747 mailboxes) from a bundled `pois.geojson` on a MapLibre map. Tapping a pin opens a details sheet with a Navigate action.
-- **iOS:** runs in the iOS simulator with the same map, pins and tap-to-open details sheet, hosted by a thin SwiftUI app in `iosApp/`. It has not been tried on a physical device yet.
-- **Planned:** a nightly run of the data pipeline, clustering, filters, and user location.
+**Features:**
+- About 1,600 real points (865 AWM recycling islands, 747 OSM mailboxes) from a bundled `pois.geojson`.
+- Pins clustered per type: green = recycling, yellow = mailboxes. Tapping a cluster zooms in.
+- Tapping a pin opens a details sheet with a Navigate action. Recycling islands list accepted materials: glass by colour, Leichtverpackungen, Altkleider.
+- Filter button (bottom right) opens a filter sheet: recycling islands by material, and mailboxes.
+- Locate button shows the user's position and centres the map on it. Location permission is asked only on first tap.
+
+**Platform status:**
+- **iOS:** all of the above has been run and checked in the iOS simulator (not on a physical device).
+- **Android:** the original spike (map, pins, details sheet) ran on Android. Everything added since (real data, clustering, filters and location) has only been compiled for Android, not run yet.
+
+**Planned:**
+- Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py`, and the app fetches the latest file with the bundled one as fallback.
 
 ## Tech stack
 
@@ -56,6 +66,10 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on 
 `tools/data/build_pois.py` fetches both sources and generates `shared/src/commonMain/composeResources/files/pois.geojson`.
 
 The Apache-2.0 license below covers the code only. The data remains under its own licenses.
+
+## Privacy
+
+Your location is used only on the device, to draw the location dot and centre the map. The app does not send it anywhere. Map tiles for the visible area are loaded from OpenFreeMap, as for any map view.
 
 ## License
 

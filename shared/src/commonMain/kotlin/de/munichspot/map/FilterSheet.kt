@@ -35,7 +35,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
@@ -135,28 +134,3 @@ private fun Chevron(color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-internal fun FilterIcon(color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(18.dp)) {
-        val w = 2.dp.toPx()
-        for ((i, frac) in listOf(1f, 0.66f, 0.33f).withIndex()) {
-            val y = size.height * (0.15f + 0.35f * i)
-            val half = size.width * frac / 2
-            drawLine(color, Offset(size.width / 2 - half, y), Offset(size.width / 2 + half, y), w, StrokeCap.Round)
-        }
-    }
-}
-
-@Composable
-internal fun LocateIcon(color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(18.dp)) {
-        val w = 2.dp.toPx()
-        val c = center
-        val r = size.width * 0.3f
-        drawCircle(color, radius = 2.5.dp.toPx(), center = c)
-        drawCircle(color, radius = r, center = c, style = Stroke(w))
-        for ((dx, dy) in listOf(0f to -1f, 0f to 1f, -1f to 0f, 1f to 0f)) {
-            drawLine(color, c + Offset(dx, dy) * (r + 1.dp.toPx()), c + Offset(dx, dy) * (size.width / 2), w, StrokeCap.Round)
-        }
-    }
-}
