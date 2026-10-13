@@ -12,13 +12,11 @@ This is an early prototype, not a finished app.
 - Tapping a pin opens a details sheet with a Navigate action. Recycling islands list accepted materials: glass by colour, Leichtverpackungen, Altkleider.
 - Filter button (bottom right) opens a filter sheet: recycling islands by material, and mailboxes.
 - Locate button shows the user's position and centres the map on it. Location permission is asked only on first tap.
+- Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py` and publishes the result to GitHub Pages. The app shows the bundled data first, then switches to the nightly file when it is reachable.
 
 **Platform status:**
 - **iOS:** all of the above has been run and checked in the iOS simulator, not on a physical device.
 - **Android:** all of the above has been run and checked on the Android emulator (Pixel Fold, API 36), not on a physical device.
-
-**Planned:**
-- Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py`, and the app fetches the latest file with the bundled one as fallback.
 
 ## Tech stack
 
@@ -69,7 +67,7 @@ The Apache-2.0 license below covers the code only. The data remains under its ow
 
 ## Privacy
 
-Your location is used only on the device, to draw the location dot and centre the map. The app does not send it anywhere. Map tiles for the visible area are loaded from OpenFreeMap, as for any map view.
+Your location is used only on the device, to draw the location dot and centre the map. The app does not send it anywhere. Map tiles for the visible area are loaded from OpenFreeMap, as for any map view. The app also downloads the data file from GitHub Pages and sends nothing else.
 
 ## License
 

@@ -5,11 +5,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import de.munichspot.data.Poi
-import de.munichspot.data.loadPois
+import de.munichspot.data.fetchLatestPois
+import de.munichspot.data.loadBundledPois
 import de.munichspot.map.MapScreen
 
 @Composable
 fun App() {
-    val pois by produceState(emptyList<Poi>()) { value = loadPois() }
+    val pois by produceState(emptyList<Poi>()) {
+        value = loadBundledPois()
+        fetchLatestPois()?.let { value = it }
+    }
     MaterialTheme { MapScreen(pois) }
 }

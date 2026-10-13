@@ -1,0 +1,62 @@
+# Rebuilds pois.geojson nightly and publishes it to GitHub Pages.
+# If build_pois.py fails its sanity checks, the build job fails, deploy never runs,
+# and the previous deployment stays live.
+name: Nightly data
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - tools/data/**
+      - .github/workflows/nightly-data.yml
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tools/data/requirements.txt
+      - run: pip install -r tools/data/requirements.txt
+      - run: python tools/data/build_pois.py site/pois.geojson
+      - name: Write index page
+        run: |
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>MunichSpot data</title>
+          <h1>MunichSpot data</h1>
+          <p>Nightly <a href="pois.geojson">pois.geojson</a>: recycling islands and mailboxes in Munich, used by the MunichSpot app.</p>
+          <ul>
+            <li>Recycling islands: Landeshauptstadt München, AWM, <a href="https://www.govdata.de/dl-de/by-2-0">dl-by-de/2.0</a></li>
+            <li>Mailboxes: © OpenStreetMap contributors, <a href="https://www.openstreetmap.org/copyright">ODbL 1.0</a></li>
+          </ul>
+          HTML
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
