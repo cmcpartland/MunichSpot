@@ -70,12 +70,14 @@ internal fun PoiType.pinColor(): Color = when (this) {
     PoiType.RECYCLING -> RecyclingGreen
     PoiType.POST_BOX -> PostBoxYellow
     PoiType.DRINKING_WATER -> DrinkingWaterBlue
+    PoiType.TOILET -> ToiletPurple
 }
 
 private val RecyclingGreen = Color(0xFF2E7D32)
 private val PostBoxYellow = Color(0xFFF9A825)
 private val DrinkingWaterBlue = Color(0xFF81D4FA)
 private val DrinkingWaterText = Color(0xFF01579B)
+private val ToiletPurple = Color(0xFF8E24AA)
 private val LocationBlue = Color(0xFF1A73E8)
 
 private const val ATTRIBUTION =
@@ -96,6 +98,9 @@ fun MapScreen(pois: List<Poi>) {
     val fountains = remember(pois, filters) {
         pois.filter { it.type == PoiType.DRINKING_WATER && filters.matches(it) }.toGeoJson()
     }
+    val toilets = remember(pois, filters) {
+        pois.filter { it.type == PoiType.TOILET && filters.matches(it) }.toGeoJson()
+    }
     LaunchedEffect(filters) {
         if (selected?.let(filters::matches) == false) selected = null
     }
@@ -115,6 +120,7 @@ fun MapScreen(pois: List<Poi>) {
             PoiType.RECYCLING to recycling,
             PoiType.POST_BOX to mailboxes,
             PoiType.DRINKING_WATER to fountains,
+            PoiType.TOILET to toilets,
         )) {
             PoiLayers(
                 type = type,

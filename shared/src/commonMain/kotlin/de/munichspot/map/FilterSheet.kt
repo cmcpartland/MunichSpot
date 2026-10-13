@@ -109,6 +109,14 @@ internal fun FilterSheet(filters: PoiFilters, onChange: (PoiFilters) -> Unit, on
                 dot = PoiType.DRINKING_WATER.pinColor(),
                 checkbox = { Checkbox(filters.showDrinkingWater, onCheckedChange = null) },
             )
+            FilterRow(
+                modifier = Modifier.toggleable(filters.showToilets, role = Role.Checkbox) {
+                    onChange(filters.copy(showToilets = it))
+                },
+                label = "Toiletten",
+                dot = PoiType.TOILET.pinColor(),
+                checkbox = { Checkbox(filters.showToilets, onCheckedChange = null) },
+            )
         }
     }
 }

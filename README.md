@@ -1,17 +1,18 @@
 # MunichSpot
 
-MunichSpot is a Kotlin Multiplatform (Compose Multiplatform) app for iOS and Android that shows Munich infrastructure from open data on a map: recycling islands (Wertstoffinseln), mailboxes (Briefkästen) and drinking fountains (Trinkbrunnen).
+MunichSpot is a Kotlin Multiplatform (Compose Multiplatform) app for iOS and Android that shows Munich infrastructure from open data on a map: recycling islands (Wertstoffinseln), mailboxes (Briefkästen), drinking fountains (Trinkbrunnen) and public toilets (öffentliche Toiletten).
 
 This is an early prototype, not a finished app.
 
 ## Status
 
 **Features:**
-- About 1,700 real points (865 AWM recycling islands, 747 OSM mailboxes, 115 drinking fountains) from a bundled `pois.geojson`.
-- Pins clustered per type: green = recycling, yellow = mailboxes, light blue = drinking fountains. Tapping a cluster zooms in.
+- About 1,900 real points (865 AWM recycling islands, 747 OSM mailboxes, 115 drinking fountains, 165 public toilet locations) from a bundled `pois.geojson`.
+- Pins clustered per type: green = recycling, yellow = mailboxes, light blue = drinking fountains, purple = public toilets. Tapping a cluster zooms in.
 - Tapping a pin opens a details sheet with a Navigate action. Recycling islands list accepted materials: glass by colour, Leichtverpackungen, Altkleider.
-- Filter button (bottom right) opens a filter sheet: recycling islands by material, mailboxes and drinking fountains.
+- Filter button (bottom right) opens a filter sheet: recycling islands by material, mailboxes, drinking fountains and public toilets.
 - Drinking fountains show their name and remark; many are shut off in winter.
+- Public toilets show address, opening hours, price, floor, accessibility, baby changing, Euro key, room types and a warning if the city lists them as defective.
 - Locate button shows the user's position and centres the map on it. Location permission is asked only on first tap.
 - Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py` and publishes the result to GitHub Pages. The app shows the bundled data first, then switches to the nightly file when it is reachable.
 
@@ -61,6 +62,7 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on 
 - **Recycling islands:** Landeshauptstadt München, Abfallwirtschaftsbetrieb München (AWM), via opendata.muenchen.de, dataset `awm_container_opendata`. Licensed under [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). The source data is in EPSG:25832 and is converted to WGS84. Accepted container types (glass by colour, packaging, clothing) are included per site.
 - **Mailboxes:** © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 - **Drinking fountains:** Landeshauptstadt München, via opendata.muenchen.de, dataset `opendata_trinkwasserbrunnen`. Licensed under [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). The source data is in EPSG:25832 and is converted to WGS84. Winter shut-off is not fully in the data.
+- **Public toilets:** Landeshauptstadt München, via opendata.muenchen.de, dataset `wc_finder`. Licensed under [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). The source data is in EPSG:25832 and is converted to WGS84. The dataset lists one entry per room; rooms within 15 m of each other are merged into one location. Only city-owned toilets are included.
 - **Map tiles and style:** [OpenFreeMap](https://openfreemap.org). Data © OpenMapTiles and © OpenStreetMap contributors.
 
 `tools/data/build_pois.py` fetches all sources and generates `shared/src/commonMain/composeResources/files/pois.geojson`.

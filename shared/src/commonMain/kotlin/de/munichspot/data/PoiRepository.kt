@@ -10,6 +10,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -22,7 +25,7 @@ private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutM
 
 // Recycling islands: Landeshauptstadt München, AWM, opendata.muenchen.de (dl-by-de/2.0)
 // Mailboxes: © OpenStreetMap contributors (ODbL)
-// Drinking fountains: Landeshauptstadt München, opendata.muenchen.de (dl-by-de/2.0)
+// Drinking fountains, public toilets: Landeshauptstadt München, opendata.muenchen.de (dl-by-de/2.0)
 suspend fun loadBundledPois(): List<Poi> =
     Res.readBytes("files/pois.geojson").decodeToString().let { withContext(Dispatchers.Default) { parsePois(it) } }
 
@@ -56,5 +59,22 @@ internal fun parsePois(geoJson: String): List<Poi> =
                 Material.entries.firstOrNull { it.name == m.jsonPrimitive.content }
             },
             note = properties["note"]?.jsonPrimitive?.content,
+            toilet = if (type == PoiType.TOILET) {
+                fun text(key: String) = properties[key]?.jsonPrimitive?.contentOrNull
+                fun flag(key: String) = properties[key]?.jsonPrimitive?.booleanOrNull == true
+                ToiletInfo(
+                    address = text("address"),
+                    hours = text("hours"),
+                    floor = text("floor"),
+                    price = properties["price"]?.jsonPrimitive?.doubleOrNull,
+                    accessible = flag("accessible"),
+                    changing = flag("changing"),
+                    euroKey = flag("euroKey"),
+                    rooms = properties["rooms"]?.jsonArray.orEmpty().map { it.jsonPrimitive.content },
+                    status = ToiletStatus.entries.firstOrNull { it.name == text("status") },
+                )
+            } else {
+                null
+            },
         )
     }
