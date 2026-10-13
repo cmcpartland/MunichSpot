@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.triStateToggleable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +25,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TriStateCheckbox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
@@ -44,6 +48,7 @@ import de.munichspot.data.PoiType
 @Composable
 internal fun FilterSheet(filters: PoiFilters, onChange: (PoiFilters) -> Unit, onDismiss: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    var toiletsExpanded by remember { mutableStateOf(false) }
     val all = RecyclingFilter.entries.toSet()
     val selected = filters.recyclingMaterials
     val parentState = when {
@@ -51,8 +56,9 @@ internal fun FilterSheet(filters: PoiFilters, onChange: (PoiFilters) -> Unit, on
         selected.size == all.size -> ToggleableState.On
         else -> ToggleableState.Indeterminate
     }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.navigationBarsPadding().padding(horizontal = 24.dp, vertical = 8.dp)) {
+    // Opens fully so expanded sections are not cut off.
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 24.dp, vertical = 8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Filter", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 TextButton(onClick = { onChange(PoiFilters()) }, enabled = !filters.isDefault) {
@@ -66,14 +72,7 @@ internal fun FilterSheet(filters: PoiFilters, onChange: (PoiFilters) -> Unit, on
                 label = "Wertstoffinseln",
                 dot = PoiType.RECYCLING.pinColor(),
                 checkbox = { TriStateCheckbox(parentState, onClick = null) },
-                trailing = {
-                    Box(
-                        Modifier.size(48.dp).clip(CircleShape).clickable { expanded = !expanded },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Chevron(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.rotate(if (expanded) 180f else 0f))
-                    }
-                },
+                trailing = { ExpandToggle(expanded) { expanded = !expanded } },
             )
             AnimatedVisibility(expanded) {
                 Column(Modifier.padding(start = 32.dp)) {
@@ -116,7 +115,32 @@ internal fun FilterSheet(filters: PoiFilters, onChange: (PoiFilters) -> Unit, on
                 label = "Toiletten",
                 dot = PoiType.TOILET.pinColor(),
                 checkbox = { Checkbox(filters.showToilets, onCheckedChange = null) },
+                trailing = { ExpandToggle(toiletsExpanded) { toiletsExpanded = !toiletsExpanded } },
             )
+            AnimatedVisibility(toiletsExpanded) {
+                Column(Modifier.padding(start = 32.dp)) {
+                    for ((entry, label) in listOf(
+                        ToiletFilter.ACCESSIBLE to "Nur barrierefrei",
+                        ToiletFilter.FREE to "Nur kostenlos",
+                        ToiletFilter.CHANGING to "Mit Wickeltisch",
+                        ToiletFilter.HIDE_DEFECT to "Defekte ausblenden",
+                    )) {
+                        val checked = entry in filters.toiletRequirements
+                        val enabled = filters.showToilets
+                        FilterRow(
+                            modifier = Modifier.alpha(if (enabled) 1f else 0.38f).toggleable(checked, enabled, Role.Checkbox) {
+                                onChange(
+                                    filters.copy(
+                                        toiletRequirements = if (checked) filters.toiletRequirements - entry else filters.toiletRequirements + entry,
+                                    ),
+                                )
+                            },
+                            label = label,
+                            checkbox = { Checkbox(checked, onCheckedChange = null, enabled = enabled) },
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -138,6 +162,13 @@ private fun FilterRow(
         dot?.let { Box(Modifier.size(10.dp).clip(CircleShape).background(it)) }
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         trailing?.invoke()
+    }
+}
+
+@Composable
+private fun ExpandToggle(expanded: Boolean, onClick: () -> Unit) {
+    Box(Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Chevron(MaterialTheme.colorScheme.onSurfaceVariant, Modifier.rotate(if (expanded) 180f else 0f))
     }
 }
 
