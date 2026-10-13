@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
 }
 
+compose.resources {
+    packageOfResClass = "de.munichspot.shared.resources"
+}
+
 kotlin {
     android {
         namespace = "de.munichspot.shared"
@@ -26,6 +30,8 @@ kotlin {
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
+            implementation(libs.compose.resources)
+            implementation(libs.kotlinx.serialization.json)
         }
         androidMain.dependencies {
             runtimeOnly(libs.maplibre.compose.runtime.opengl.android)

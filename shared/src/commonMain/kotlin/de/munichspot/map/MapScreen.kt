@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
-import de.munichspot.data.samplePois
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.expressions.dsl.asString
 import org.maplibre.compose.expressions.dsl.const
@@ -50,8 +49,9 @@ private const val ATTRIBUTION =
     "© OpenStreetMap contributors · OpenFreeMap · Daten: Landeshauptstadt München (dl-by-de/2.0)"
 
 @Composable
-fun MapScreen(pois: List<Poi> = samplePois) {
+fun MapScreen(pois: List<Poi>) {
     var selected by remember { mutableStateOf<Poi?>(null) }
+    val poisById = remember(pois) { pois.associateBy { it.id } }
     val geoJson = remember(pois) { pois.toGeoJson() }
     val mapState = rememberMapState(
         baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/liberty"),
@@ -77,7 +77,7 @@ fun MapScreen(pois: List<Poi> = samplePois) {
             hitPadding = 12.dp,
             onClick = { features ->
                 val id = features.firstOrNull()?.id?.jsonPrimitive?.content
-                val poi = pois.firstOrNull { it.id == id }
+                val poi = poisById[id]
                 if (poi != null) {
                     selected = poi
                     ClickResult.Consume
