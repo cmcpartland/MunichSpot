@@ -28,7 +28,7 @@ This is an early prototype, not a finished app.
 - Compose Multiplatform 1.12.1 (Material 3 1.12.0-alpha03)
 - Android Gradle Plugin 9.3.1
 - maplibre-compose 0.20.0
-- Map tiles and style: OpenFreeMap "liberty" style
+- Map tiles and style: OpenFreeMap "positron" style
 
 Modules:
 
