@@ -51,6 +51,8 @@ import org.maplibre.compose.camera.CameraUpdate
 import org.maplibre.compose.expressions.dsl.asString
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.expressions.dsl.feature
+import org.maplibre.compose.expressions.dsl.and
+import org.maplibre.compose.expressions.dsl.eq
 import org.maplibre.compose.expressions.dsl.format
 import org.maplibre.compose.expressions.dsl.image
 import org.maplibre.compose.expressions.dsl.not
@@ -137,7 +139,6 @@ internal fun MapScreen(
         }
         remember(pois, key) { pois.filter { it.type == t && f.matches(it) }.toGeoJson() }
     }
-    val selectedGeoJson = remember(selected) { listOfNotNull(selected).toGeoJson() }
     LaunchedEffect(type, filters) {
         if (type != null && selected?.let { it.type != type || !filters.matches(it) } == true) selected = null
     }
@@ -158,7 +159,6 @@ internal fun MapScreen(
                 clusterMaxZoom = 14
             }
         }
-        val selectedSource = rememberGeoJsonSource(GeoJsonData.JsonString(selectedGeoJson))
         val visible = PoiType.entries.filter { type == null || type == it }
         // Icons of every type first, then all badges, then all counts, so no icon covers another type's badge.
         for (t in visible) {
@@ -177,7 +177,7 @@ internal fun MapScreen(
         }
         for (t in visible) PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
         for (t in visible) PoiCountLayers(t, sources.getValue(t), mapState, scope)
-        selected?.let { SelectedPoiLayers(it.type, selectedSource) }
+        for (t in PoiType.entries) SelectedPoiLayers(t, sources.getValue(t), selected?.id)
         LocationIndicatorLayer(
             id = "user-location",
             locationState = locationState,
@@ -350,18 +350,21 @@ private fun PoiIconLayers(
 
 @Composable
 @MaplibreComposable
-private fun SelectedPoiLayers(type: PoiType, source: GeoJsonSource) {
+private fun SelectedPoiLayers(type: PoiType, source: GeoJsonSource, selectedId: String?) {
     val painter = remember(type) { CategoryIconPainter(type) }
+    val isSelected = !IsCluster and (feature.id().asString() eq const(selectedId.orEmpty()))
     CircleLayer(
-        id = "selected-glow",
+        id = "${type.name.lowercase()}-selected-glow",
         source = source,
+        filter = isSelected,
         radius = const(36.dp),
         color = const(type.pinColor().copy(alpha = 0.6f)),
         blur = const(0.6f),
     )
     SymbolLayer(
-        id = "selected-icon",
+        id = "${type.name.lowercase()}-selected-icon",
         source = source,
+        filter = isSelected,
         iconImage = image(painter, size = DpSize(SelectedPoiIconSize, SelectedPoiIconSize)),
         iconAllowOverlap = const(true),
         iconIgnorePlacement = const(true),
