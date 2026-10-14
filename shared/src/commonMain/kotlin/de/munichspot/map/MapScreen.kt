@@ -209,8 +209,15 @@ internal fun MapScreen(
     var sheetBounds by remember { mutableStateOf<Rect?>(null) }
     val topInset = WindowInsets.statusBars.getTop(density) + with(density) { 72.dp.toPx() }
 
+    var panBack by remember { mutableStateOf<Position?>(null) }
     LaunchedEffect(selected?.id) {
-        val poi = selected ?: return@LaunchedEffect
+        val back = panBack
+        panBack = null
+        val poi = selected
+        if (poi == null) {
+            if (back != null) mapState.animateCamera(CameraUpdate(center = back), CameraAnimation.Ease { duration = 300.milliseconds })
+            return@LaunchedEffect
+        }
         sheetBounds = null
         val position = Position(longitude = poi.lon, latitude = poi.lat)
         suspend fun reveal(sheet: Rect) {
@@ -223,6 +230,7 @@ internal fun MapScreen(
             if (!covered && pinY >= topInset) return
             val shift = with(density) { ((topInset + sheet.top) / 2 - pinY).toDp() }
             val target = mapState.positionFromScreenLocation(DpOffset(center.x, center.y - shift)) ?: return
+            if (panBack == null) panBack = mapState.cameraPosition.center
             mapState.animateCamera(CameraUpdate(center = target), CameraAnimation.Ease { duration = 300.milliseconds })
         }
         val first = snapshotFlow { sheetBounds }.filterNotNull().first()
