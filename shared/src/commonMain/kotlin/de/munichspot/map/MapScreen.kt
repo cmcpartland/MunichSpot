@@ -7,7 +7,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.inset
 import org.maplibre.compose.overlay.MapOverlay
-import org.maplibre.compose.overlay.include
+import org.maplibre.compose.overlay.DisappearingCompassButton
+import org.maplibre.compose.overlay.DisappearingScaleBar
+import org.maplibre.compose.overlay.ExpandingAttributionButton
+import org.maplibre.compose.overlay.LocalViewportInsets
+import org.maplibre.compose.overlay.MaplibreLogo
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
@@ -294,7 +303,7 @@ internal fun MapScreen(
             // Keeps MapLibre's own attribution button clear of our attribution bar.
             viewportInsets = PaddingValues(bottom = attributionBarHeight),
             overlay = {
-                include(MapOverlay.Default)
+                MapControls(mapState)
                 selected?.let {
                     val o = it.type.pinOffset()
                     Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it) }
@@ -358,6 +367,30 @@ internal fun MapScreen(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             )
         }
+    }
+}
+
+// MapOverlay.Default, but with the scale bar at the bottom left, above the MapLibre logo.
+@Composable
+private fun MapControls(mapState: MapState) {
+    val insets = LocalViewportInsets.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(insets)
+            .consumeWindowInsets(insets)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(MapOverlay.Spacing),
+    ) {
+        Column(Modifier.align(Alignment.BottomStart), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            DisappearingScaleBar(
+                metersPerDp = { mapState.viewport?.metersPerDpAtCenter ?: 0.0 },
+                zoom = { mapState.cameraPosition.zoom },
+            )
+            MaplibreLogo()
+        }
+        DisappearingCompassButton(Modifier.align(Alignment.TopEnd))
+        ExpandingAttributionButton(Modifier.align(Alignment.BottomEnd))
     }
 }
 
