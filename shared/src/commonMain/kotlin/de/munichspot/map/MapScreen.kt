@@ -1,6 +1,7 @@
 package de.munichspot.map
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -188,9 +189,10 @@ internal fun MapScreen(
     val locationState = rememberLocationState()
     val snackbar = remember { SnackbarHostState() }
     var centerRequested by remember { mutableStateOf(false) }
+    val dark = isSystemInDarkTheme()
     lateinit var mapState: MapState
     mapState = rememberMapState(
-        baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/positron"),
+        baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/" + if (dark) "fiord" else "positron"),
         // Roughly the 700 m framing on a phone; refined below once the viewport is known.
         initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.9),
     ) {
@@ -361,7 +363,7 @@ internal fun MapScreen(
                 .padding(bottom = attributionBarHeight + 8.dp),
         )
         Surface(
-            color = Color.White.copy(alpha = 0.8f),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
@@ -371,7 +373,7 @@ internal fun MapScreen(
             Text(
                 text = ATTRIBUTION,
                 fontSize = 10.sp,
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             )
         }

@@ -15,6 +15,7 @@ This is an early prototype, not a finished app.
 - Filter button (bottom right, only while the recycling or toilet category is selected) opens a filter sheet: recycling islands by material (glass, packaging), public toilets by requirement (accessible, free, with baby changing).
 - Drinking fountains show their name and remark; many are shut off in winter.
 - Public toilets show address, opening hours, price, floor, accessibility, baby changing, Euro key, room types and a warning if the city lists them as defective.
+- Dark mode follows the system setting; the map switches to OpenFreeMap's "fiord" style.
 - Locate button shows the user's position and centres the map on it. Location permission is asked when a map is first opened.
 - Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py` and publishes the result to GitHub Pages. On launch the app shows the last downloaded file if it has one, otherwise the bundled data, then switches to the nightly file when it is reachable. This also works offline.
 
