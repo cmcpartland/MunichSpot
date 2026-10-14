@@ -21,6 +21,11 @@ import org.maplibre.compose.camera.CameraAnimation
 import org.maplibre.spatialk.geojson.BoundingBox
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.hypot
+import kotlinx.serialization.json.JsonObject
+import org.maplibre.compose.interaction.ClickEvent
+import org.maplibre.spatialk.geojson.Feature
+import org.maplibre.spatialk.geojson.Geometry
 import kotlin.time.Duration
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -188,6 +193,7 @@ internal fun MapScreen(
                 source = sources.getValue(t),
                 mapState = mapState,
                 scope = scope,
+                islandVisible = type == null,
                 onPoi = { id ->
                     poisById[id]?.let {
                         selected = it
@@ -385,6 +391,7 @@ private fun PoiIconLayers(
     source: GeoJsonSource,
     mapState: MapState,
     scope: CoroutineScope,
+    islandVisible: Boolean,
     onPoi: (String?) -> Boolean,
 ) {
     val name = type.name.lowercase()
@@ -412,10 +419,21 @@ private fun PoiIconLayers(
         iconIgnorePlacement = const(true),
         hitPadding = 8.dp,
         onClick = { features ->
-            val id = features.firstOrNull()?.id?.jsonPrimitive?.content
-            if (onPoi(id)) ClickResult.Consume else ClickResult.Pass
+            val feature = features.firstOrNull()
+            val id = feature?.id?.jsonPrimitive?.content
+            if (type == PoiType.CLOTHES && islandVisible && closerToIsland(feature, mapState)) {
+                ClickResult.Pass
+            } else if (onPoi(id)) ClickResult.Consume else ClickResult.Pass
         },
     )
+}
+
+/** True when the tap is nearer the island's own centre than the shifted clothes pin. */
+private fun ClickEvent.closerToIsland(feature: Feature<Geometry, JsonObject?>?, mapState: MapState): Boolean {
+    val point = (feature?.geometry as? Point)?.coordinates ?: return false
+    val island = mapState.screenLocationFromPosition(point) ?: return false
+    fun distance(o: DpOffset) = hypot(o.x.value - screenOffset.x.value, o.y.value - screenOffset.y.value)
+    return distance(island) < distance(island + ClothesOffset)
 }
 
 @Composable
