@@ -186,7 +186,7 @@ internal fun MapScreen(
             }
         }
         val visible = PoiType.entries.filter { type == null || type == it }
-        // Icons of every type first, then all badges, then all counts, so no icon covers another type's badge.
+        // Each type's badges and counts sit right above its own icons, so they stack with the pin they belong to.
         for (t in visible) {
             PoiIconLayers(
                 type = t,
@@ -201,9 +201,9 @@ internal fun MapScreen(
                     } != null
                 },
             )
+            PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
+            PoiCountLayers(t, sources.getValue(t), mapState, scope)
         }
-        for (t in visible) PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
-        for (t in visible) PoiCountLayers(t, sources.getValue(t), mapState, scope)
         LocationIndicatorLayer(
             id = "user-location",
             locationState = locationState,
