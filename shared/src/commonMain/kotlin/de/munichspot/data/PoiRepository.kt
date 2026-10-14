@@ -21,6 +21,8 @@ const val LATEST_POIS_URL = "https://cmcpartland.github.io/MunichSpot/pois.geojs
 
 private const val MIN_LATEST_POIS = 1000
 
+private val LEGACY_POST_BOX_NAME = Regex("^Briefkasten \\((.+)\\)$")
+
 private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutMillis = 10_000 } } }
 
 // Recycling islands: Landeshauptstadt München, AWM, opendata.muenchen.de (dl-by-de/2.0)
@@ -66,10 +68,12 @@ internal fun parsePois(geoJson: String): List<Poi> =
         val type = PoiType.entries.firstOrNull { it.name == properties.getValue("type").jsonPrimitive.content }
             ?: return@mapNotNull null
         val coordinates = feature.getValue("geometry").jsonObject.getValue("coordinates").jsonArray
+        val rawName = properties.getValue("name").jsonPrimitive.content
+        val legacyTimes = if (type == PoiType.POST_BOX) LEGACY_POST_BOX_NAME.matchEntire(rawName)?.groupValues?.get(1) else null
         Poi(
             id = feature.getValue("id").jsonPrimitive.content,
             type = type,
-            name = properties.getValue("name").jsonPrimitive.content,
+            name = if (legacyTimes != null) "Briefkasten" else rawName,
             lat = coordinates[1].jsonPrimitive.content.toDouble(),
             lon = coordinates[0].jsonPrimitive.content.toDouble(),
             materials = properties["materials"]?.jsonArray.orEmpty().mapNotNull { m ->
@@ -89,6 +93,15 @@ internal fun parsePois(geoJson: String): List<Poi> =
                     euroKey = flag("euroKey"),
                     rooms = properties["rooms"]?.jsonArray.orEmpty().map { it.jsonPrimitive.content },
                     status = ToiletStatus.entries.firstOrNull { it.name == text("status") },
+                )
+            } else {
+                null
+            },
+            postBox = if (type == PoiType.POST_BOX) {
+                PostBoxInfo(
+                    address = properties["address"]?.jsonPrimitive?.contentOrNull,
+                    collectionTimes = properties["collectionTimes"]?.jsonPrimitive?.contentOrNull ?: legacyTimes,
+                    indoor = properties["indoor"]?.jsonPrimitive?.booleanOrNull == true,
                 )
             } else {
                 null

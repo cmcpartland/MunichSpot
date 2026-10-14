@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import de.munichspot.data.Material
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
+import de.munichspot.data.PostBoxInfo
 import de.munichspot.data.ToiletInfo
 import de.munichspot.data.ToiletStatus
 import kotlin.math.roundToInt
@@ -76,6 +77,7 @@ internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
                 }
             }
             poi.toilet?.let { ToiletDetails(it) }
+            poi.postBox?.let { PostBoxDetails(it) }
             Button(onClick = { uriHandler.openUri(navigationUri(poi)) }) { Text("Navigate") }
             Text(source, style = MaterialTheme.typography.labelSmall)
         }
@@ -118,6 +120,38 @@ private fun ToiletDetails(toilet: ToiletInfo) {
     }
     warning?.let { Text(it, style = body, color = MaterialTheme.colorScheme.error) }
 }
+
+@Composable
+private fun PostBoxDetails(info: PostBoxInfo) {
+    val body = MaterialTheme.typography.bodyMedium
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    info.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+    if (info.collectionTimes != null) {
+        Text("Leerungszeiten", style = MaterialTheme.typography.titleSmall)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            formatCollectionTimes(info.collectionTimes).forEach { Text(it, style = body) }
+        }
+    } else {
+        Text("Keine Leerungszeiten bekannt", style = body, color = muted)
+    }
+    if (info.indoor) Text("Im Gebäude – nur während dessen Öffnungszeiten zugänglich", style = body, color = muted)
+}
+
+private val DAYS = mapOf(
+    "Mo" to "Mo", "Tu" to "Di", "We" to "Mi", "Th" to "Do", "Fr" to "Fr", "Sa" to "Sa", "Su" to "So", "PH" to "Feiertag", "off" to "keine Leerung",
+)
+private val RULE_SPLIT = Regex("(\\d),\\s+(?=(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)\\b)")
+private val DAY_TOKEN = Regex("\\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\\b")
+private val DAY_RANGE = Regex("([A-Za-z])-([A-Za-z])")
+private val TIME_LIST = Regex("(\\d),(\\d)")
+private val DAY_LIST = Regex("([A-Za-z]),\\s*([A-Za-z])")
+private val SPACES = Regex("\\s+")
+
+internal fun formatCollectionTimes(raw: String): List<String> =
+    raw.replace(RULE_SPLIT, "$1;").split(';').map { it.trim().replace(SPACES, " ") }.filter { it.isNotEmpty() }.map { rule ->
+        rule.replace(DAY_TOKEN) { DAYS.getValue(it.value) }.replace(DAY_RANGE, "$1–$2")
+            .replace(TIME_LIST, "$1, $2").replace(DAY_LIST, "$1, $2")
+    }
 
 private fun formatEuro(price: Double): String {
     val cents = (price * 100).roundToInt()

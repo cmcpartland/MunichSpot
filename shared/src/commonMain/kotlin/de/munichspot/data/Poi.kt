@@ -13,7 +13,10 @@ data class Poi(
     val materials: List<Material> = emptyList(),
     val note: String? = null,
     val toilet: ToiletInfo? = null,
+    val postBox: PostBoxInfo? = null,
 )
+
+data class PostBoxInfo(val address: String?, val collectionTimes: String?, val indoor: Boolean)
 
 enum class ToiletStatus { IMPAIRED, DEFECT }
 
