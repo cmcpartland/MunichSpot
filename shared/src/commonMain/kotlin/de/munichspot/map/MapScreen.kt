@@ -8,6 +8,13 @@ import androidx.compose.ui.graphics.drawscope.inset
 import org.maplibre.compose.overlay.MapOverlay
 import org.maplibre.compose.overlay.include
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionOnScreen
+import androidx.compose.ui.unit.toSize
+import kotlin.time.Duration.Companion.milliseconds
 import androidx.compose.material3.MaterialTheme
 import org.maplibre.compose.camera.CameraAnimation
 import org.maplibre.spatialk.geojson.BoundingBox
@@ -48,6 +55,9 @@ import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -124,6 +134,7 @@ private fun boundsAround(center: Position, radiusKm: Double = 0.7): BoundingBox 
     )
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 internal fun MapScreen(
     pois: List<Poi>,
@@ -194,6 +205,41 @@ internal fun MapScreen(
     }
 
     val density = LocalDensity.current
+    var mapBounds by remember { mutableStateOf(Rect.Zero) }
+    var sheetBounds by remember { mutableStateOf<Rect?>(null) }
+    val topInset = WindowInsets.statusBars.getTop(density) + with(density) { 72.dp.toPx() }
+
+    var panBack by remember { mutableStateOf<Position?>(null) }
+    LaunchedEffect(selected?.id) {
+        val back = panBack
+        panBack = null
+        val poi = selected
+        if (poi == null) {
+            if (back != null) mapState.animateCamera(CameraUpdate(center = back), CameraAnimation.Ease { duration = 300.milliseconds })
+            return@LaunchedEffect
+        }
+        sheetBounds = null
+        val position = Position(longitude = poi.lon, latitude = poi.lat)
+        suspend fun reveal(sheet: Rect) {
+            val pin = mapState.screenLocationFromPosition(position) ?: return
+            val center = mapState.screenLocationFromPosition(mapState.cameraPosition.center) ?: return
+            val pinY = mapBounds.top + with(density) { pin.y.toPx() }
+            val pinX = mapBounds.left + with(density) { pin.x.toPx() }
+            val reach = with(density) { (SelectedPoiIconSize.toPx() / 2 + 16.dp.toPx()) }
+            val covered = pinX + reach > sheet.left && pinX - reach < sheet.right && pinY + reach > sheet.top
+            if (!covered && pinY >= topInset) return
+            val shift = with(density) { ((topInset + sheet.top) / 2 - pinY).toDp() }
+            val target = mapState.positionFromScreenLocation(DpOffset(center.x, center.y - shift)) ?: return
+            if (panBack == null) panBack = mapState.cameraPosition.center
+            mapState.animateCamera(CameraUpdate(center = target), CameraAnimation.Ease { duration = 300.milliseconds })
+        }
+        val first = snapshotFlow { sheetBounds }.filterNotNull().first()
+        // The sheet keeps its size while sliding up, so its final top is the map's bottom minus its height,
+        // or half the screen when a tall sheet opens partially expanded.
+        val top = maxOf(mapBounds.bottom - first.height, mapBounds.center.y)
+        reveal(Rect(first.left, top, first.right, mapBounds.bottom))
+        reveal(snapshotFlow { sheetBounds }.filterNotNull().debounce(150).first())
+    }
     var attributionBarHeight by remember { mutableStateOf(0.dp) }
 
     LaunchedEffect(Unit) {
@@ -233,7 +279,7 @@ internal fun MapScreen(
     Box(Modifier.fillMaxSize()) {
         MaplibreMap(
             state = mapState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().onGloballyPositioned { mapBounds = Rect(it.positionOnScreen(), it.size.toSize()) },
             // Keeps MapLibre's own attribution button clear of our attribution bar.
             viewportInsets = PaddingValues(bottom = attributionBarHeight),
             overlay = {
@@ -247,7 +293,7 @@ internal fun MapScreen(
                 } } }
             },
         )
-        selected?.let { PoiSheet(it) { selected = null } }
+        selected?.let { PoiSheet(it, onBounds = { b -> sheetBounds = b }) { selected = null } }
         if (showFilters && type != null) FilterSheet(type, filters, onChange = onFiltersChange, onDismiss = { showFilters = false })
         CategorySearchBar(
             pois, type, onTypeChange,

@@ -10,15 +10,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import de.munichspot.data.Material
@@ -29,9 +38,13 @@ import de.munichspot.data.ToiletInfo
 import de.munichspot.data.ToiletStatus
 import kotlin.math.roundToInt
 
+private val DragHandleHeight = 48.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
+internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit) {
+    val density = LocalDensity.current
+    var handleTop by remember { mutableStateOf(0f) }
     val uriHandler = LocalUriHandler.current
     val (title, source) = when (poi.type) {
         PoiType.RECYCLING -> "Wertstoffinsel" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
@@ -39,9 +52,19 @@ internal fun PoiSheet(poi: Poi, onDismiss: () -> Unit) {
         PoiType.DRINKING_WATER -> "Trinkbrunnen" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
         PoiType.TOILET -> "Öffentliche Toilette" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
     }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(
+                Modifier.onGloballyPositioned { handleTop = it.positionOnScreen().y },
+            )
+        },
+    ) {
         Column(
-            Modifier.navigationBarsPadding().verticalScroll(rememberScrollState())
+            Modifier.onGloballyPositioned {
+                val p = it.positionOnScreen()
+                with(density) { onBounds(Rect(p.x, if (handleTop > 0f) handleTop else p.y - DragHandleHeight.toPx(), p.x + it.size.width, p.y + it.size.height)) }
+            }.navigationBarsPadding().verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
