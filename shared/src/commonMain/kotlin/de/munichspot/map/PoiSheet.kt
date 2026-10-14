@@ -131,7 +131,6 @@ private fun PostBoxDetails(info: PostBoxInfo) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             formatCollectionTimes(info.collectionTimes).forEach { Text(it, style = body) }
         }
-        Text("Uhrzeiten der Leerung, keine Öffnungszeiten.", style = body, color = muted)
     } else {
         Text("Keine Leerungszeiten bekannt", style = body, color = muted)
     }
