@@ -27,6 +27,7 @@ private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutM
 
 // Recycling islands: Landeshauptstadt München, AWM, opendata.muenchen.de (dl-by-de/2.0)
 // Mailboxes: © OpenStreetMap contributors (ODbL)
+// Clothes containers: derived from the recycling islands
 // Drinking fountains, public toilets: Landeshauptstadt München, opendata.muenchen.de (dl-by-de/2.0)
 suspend fun loadBundledPois(): List<Poi> =
     Res.readBytes("files/pois.geojson").decodeToString().let { withContext(Dispatchers.Default) { parsePois(it) } }
@@ -61,7 +62,20 @@ suspend fun fetchLatestPois(): List<Poi>? = try {
 private fun isPlausible(pois: List<Poi>) =
     pois.size >= MIN_LATEST_POIS && PoiType.entries.all { type -> pois.any { it.type == type } }
 
-internal fun parsePois(geoJson: String): List<Poi> =
+// Clothes containers are derived from the recycling islands that accept clothing.
+internal fun parsePois(geoJson: String): List<Poi> = parseFeatures(geoJson).flatMap { poi ->
+    if (poi.type != PoiType.RECYCLING || Material.CLOTHING !in poi.materials) {
+        listOf(poi)
+    } else {
+        val rest = poi.materials - Material.CLOTHING
+        listOfNotNull(
+            poi.copy(materials = rest).takeIf { rest.isNotEmpty() },
+            poi.copy(id = "${poi.id}-clothes", type = PoiType.CLOTHES, materials = emptyList()),
+        )
+    }
+}
+
+private fun parseFeatures(geoJson: String): List<Poi> =
     Json.parseToJsonElement(geoJson).jsonObject.getValue("features").jsonArray.mapNotNull { f ->
         val feature = f.jsonObject
         val properties = feature.getValue("properties").jsonObject

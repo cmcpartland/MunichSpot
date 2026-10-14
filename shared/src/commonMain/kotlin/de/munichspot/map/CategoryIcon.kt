@@ -82,6 +82,22 @@ private fun DrawScope.drawGlyph(type: PoiType, c: Color) {
                 }
             }
         }
+        PoiType.CLOTHES -> drawPath(
+            Path().apply {
+                moveTo(0.34f * s, 0.12f * s)
+                quadraticTo(0.5f * s, 0.26f * s, 0.66f * s, 0.12f * s)
+                lineTo(0.94f * s, 0.26f * s)
+                lineTo(0.82f * s, 0.46f * s)
+                lineTo(0.72f * s, 0.4f * s)
+                lineTo(0.72f * s, 0.88f * s)
+                lineTo(0.28f * s, 0.88f * s)
+                lineTo(0.28f * s, 0.4f * s)
+                lineTo(0.18f * s, 0.46f * s)
+                lineTo(0.06f * s, 0.26f * s)
+                close()
+            },
+            c,
+        )
         PoiType.POST_BOX -> {
             drawRoundRect(c, p(0.1f, 0.2f), Size(0.8f * s, 0.6f * s), CornerRadius(0.08f * s), style = stroke)
             drawPath(

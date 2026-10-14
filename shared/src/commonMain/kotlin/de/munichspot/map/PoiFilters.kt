@@ -8,7 +8,6 @@ import de.munichspot.data.ToiletStatus
 internal enum class RecyclingFilter(val materials: Set<Material>) {
     GLASS(setOf(Material.GLASS_BROWN, Material.GLASS_GREEN, Material.GLASS_WHITE)),
     PACKAGING(setOf(Material.PACKAGING)),
-    CLOTHING(setOf(Material.CLOTHING)),
 }
 
 internal enum class ToiletFilter { ACCESSIBLE, FREE, CHANGING, HIDE_DEFECT }
@@ -30,7 +29,7 @@ internal data class PoiFilters(
             recyclingMaterials.size == RecyclingFilter.entries.size ||
                 recyclingMaterials.any { f -> poi.materials.any { it in f.materials } }
             )
-        PoiType.POST_BOX, PoiType.DRINKING_WATER -> true
+        PoiType.CLOTHES, PoiType.POST_BOX, PoiType.DRINKING_WATER -> true
         PoiType.TOILET -> toiletRequirements.all {
             val toilet = poi.toilet
             when (it) {

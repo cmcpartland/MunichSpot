@@ -41,7 +41,6 @@ internal fun FilterSheet(type: PoiType, filters: PoiFilters, onChange: (PoiFilte
                     for ((entry, label) in listOf(
                         RecyclingFilter.GLASS to "Glas",
                         RecyclingFilter.PACKAGING to "Leichtverpackungen",
-                        RecyclingFilter.CLOTHING to "Altkleider",
                     )) {
                         CheckRow(label, entry in selected) {
                             onChange(filters.copy(recyclingMaterials = if (it) selected + entry else selected - entry))
