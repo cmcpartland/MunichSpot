@@ -16,6 +16,10 @@ The `Nightly data` workflow (`.github/workflows/nightly-data.yml`) runs daily at
 
 One-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions.
 
+## City boundary
+
+`build_boundary.py` writes `munich_boundary.geojson` (a world polygon with Munich's city boundary as a hole), which the app draws as a light veil outside the city. Run it manually with `python tools/data/build_boundary.py`; city boundaries basically never change, so it isn't part of the nightly workflow. Source: OSM relation 62428 via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
+
 ## Sources
 
 - Recycling islands: Landeshauptstadt München, AWM, WFS `gsm_wfs:awm_container` (EPSG:25832, reprojected to WGS84). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).

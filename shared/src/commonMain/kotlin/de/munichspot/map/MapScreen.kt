@@ -104,6 +104,10 @@ import org.maplibre.compose.interaction.ClickResult
 import org.maplibre.compose.layers.FeaturesClickHandler
 import org.maplibre.compose.interaction.MapInteractions
 import org.maplibre.compose.layers.CircleLayer
+import org.maplibre.compose.layers.FillLayer
+import org.maplibre.compose.layers.LineLayer
+import androidx.compose.runtime.produceState
+import de.munichspot.shared.resources.Res
 import org.maplibre.compose.layers.LocationIndicatorDefaults
 import org.maplibre.compose.layers.LocationIndicatorLayer
 import org.maplibre.compose.layers.SymbolLayer
@@ -198,12 +202,16 @@ internal fun MapScreen(
     val snackbar = remember { SnackbarHostState() }
     var centerRequested by remember { mutableStateOf(false) }
     val dark = isSystemInDarkTheme()
+    val boundary by produceState<String?>(null) {
+        value = runCatching { Res.readBytes("files/munich_boundary.geojson").decodeToString() }.getOrNull()
+    }
     lateinit var mapState: MapState
     mapState = rememberMapState(
         baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/" + if (dark) "fiord" else "positron"),
         // Roughly the 700 m framing on a phone; refined below once the viewport is known.
         initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.9),
     ) {
+        boundary?.let { CityVeilLayers(it, dark) }
         val sources = PoiType.entries.associateWith { t ->
             rememberGeoJsonSource(GeoJsonData.JsonString(geoJson.getValue(t))) {
                 cluster = true
@@ -456,6 +464,26 @@ private fun zoomToCluster(source: GeoJsonSource, mapState: MapState, scope: Coro
             ClickResult.Consume
         }
     }
+
+/** Light veil over everything outside the city boundary, plus a faint boundary line. */
+@Composable
+@MaplibreComposable
+private fun CityVeilLayers(boundary: String, dark: Boolean) {
+    val source = rememberGeoJsonSource(GeoJsonData.JsonString(boundary))
+    FillLayer(
+        id = "city-veil",
+        source = source,
+        color = const(if (dark) Color.Black else Color.White),
+        opacity = const(if (dark) 0.35f else 0.4f),
+    )
+    LineLayer(
+        id = "city-boundary",
+        source = source,
+        color = const(if (dark) Color(0xFFB0B8CC) else Color(0xFF7A8290)),
+        opacity = const(0.35f),
+        width = const(1.dp),
+    )
+}
 
 @Composable
 @MaplibreComposable
