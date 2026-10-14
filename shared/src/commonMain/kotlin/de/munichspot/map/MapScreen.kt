@@ -107,7 +107,7 @@ private val Marienplatz = Position(latitude = 48.1374, longitude = 11.5755)
 private var locationAsked = false
 
 /** Box of +-[radiusKm] around [center], so the map frames a circle of that radius. */
-private fun boundsAround(center: Position, radiusKm: Double = 1.0): BoundingBox {
+private fun boundsAround(center: Position, radiusKm: Double = 0.7): BoundingBox {
     val dLat = radiusKm / 111.32
     val dLon = radiusKm / (111.32 * cos(center.latitude * PI / 180))
     return BoundingBox(
@@ -146,8 +146,8 @@ internal fun MapScreen(
     lateinit var mapState: MapState
     mapState = rememberMapState(
         baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/liberty"),
-        // Roughly the 1 km framing on a phone; refined below once the viewport is known.
-        initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.4),
+        // Roughly the 700 m framing on a phone; refined below once the viewport is known.
+        initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.9),
     ) {
         val sources = PoiType.entries.associateWith { t ->
             rememberGeoJsonSource(GeoJsonData.JsonString(geoJson.getValue(t))) {
