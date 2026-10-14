@@ -3,6 +3,7 @@ package de.munichspot.map
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -58,7 +59,7 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
         },
     ) {
         Column(
-            Modifier.onGloballyPositioned {
+            Modifier.fillMaxWidth().onGloballyPositioned {
                 val p = it.positionOnScreen()
                 with(density) { onBounds(Rect(p.x, if (handleTop > 0f) handleTop else p.y - DragHandleHeight.toPx(), p.x + it.size.width, p.y + it.size.height)) }
             }.navigationBarsPadding().verticalScroll(rememberScrollState())
