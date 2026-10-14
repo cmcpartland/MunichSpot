@@ -12,6 +12,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - one clustered GeoJSON source per type
   - the layer order: all icon layers, then all badge circles, then all counts, then the location puck, so badges stay on top
   - the opening view (`boundsAround`, 700 m radius, Marienplatz fallback, moving to the user if the fix is in Munich)
+  - the selected-pin highlight (`SelectedPin`), drawn in the map overlay, not as a layer
   - the locate and filter buttons, and the attribution bar
 - `map/CategorySearchBar.kt`: the M3 `SearchBar` plus `ExpandedFullScreenSearchBar`, the category list, and back handling.
 - `map/Categories.kt`: search keywords and `hasFilters()`.
@@ -29,6 +30,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - The OpenFreeMap "liberty" style only has Noto Sans fonts. Use `"Noto Sans Bold"` for map text.
 - `toGeoJson` must escape control characters. A bad name once made a whole layer vanish silently.
 - `BackHandler` from `ui-backhandler` is deprecated in CMP 1.12; the replacement is the navigationevent API.
+- Map style changes (source data, layer filters) take about 0.4 s to appear on the emulator. For instant feedback on a tap, such as the selected-pin highlight, draw in `MaplibreMap`'s `overlay` with `Modifier.placedAt(position)` instead of adding a layer.
 - Overpass (mailboxes) often returns 504. The nightly workflow retries, and a failed run keeps the last deploy live.
 
 ## Local test loop (this Mac)
