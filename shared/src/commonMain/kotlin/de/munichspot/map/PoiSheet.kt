@@ -92,10 +92,10 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
                 )
             }
             if (poi.type == PoiType.DRINKING_WATER) {
-                poi.note?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                poi.note?.let { Text("Bemerkung: $it", style = MaterialTheme.typography.bodyMedium) }
                 if (poi.note?.contains("24/7") != true) {
                     Text(
-                        "Viele Trinkbrunnen sind im Winter abgeschaltet.",
+                        "Viele Trinkbrunnen sind im Winter abgeschaltet oder abgedeckt.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
