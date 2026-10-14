@@ -164,7 +164,7 @@ internal fun MapScreen(
     var centerRequested by remember { mutableStateOf(false) }
     lateinit var mapState: MapState
     mapState = rememberMapState(
-        baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/liberty"),
+        baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/positron"),
         // Roughly the 700 m framing on a phone; refined below once the viewport is known.
         initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.9),
     ) {
