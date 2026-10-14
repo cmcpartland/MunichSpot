@@ -5,11 +5,19 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.inset
 import org.maplibre.compose.overlay.MapOverlay
 import org.maplibre.compose.overlay.DisappearingCompassButton
 import org.maplibre.compose.overlay.DisappearingScaleBar
+import org.maplibre.compose.overlay.AttributionDefaults
+import org.maplibre.compose.overlay.AttributionStyle
 import org.maplibre.compose.overlay.ExpandingAttributionButton
 import org.maplibre.compose.overlay.LocalViewportInsets
 import org.maplibre.compose.overlay.MaplibreLogo
@@ -400,7 +408,27 @@ private fun MapControls(mapState: MapState) {
             MaplibreLogo()
         }
         DisappearingCompassButton(Modifier.align(Alignment.TopEnd))
-        ExpandingAttributionButton(Modifier.align(Alignment.BottomEnd))
+        // MapLibre's defaults are always white with black text; follow the theme instead.
+        val container = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+        val content = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+        ExpandingAttributionButton(
+            Modifier.align(Alignment.BottomEnd),
+            toggleButton = { onClick ->
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onClick, role = Role.Button),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        AttributionDefaults.icon(),
+                        AttributionDefaults.contentDescription(),
+                        Modifier.size(24.dp),
+                        colorFilter = ColorFilter.tint(content),
+                    )
+                }
+            },
+            expandedStyle = AttributionStyle(container, content),
+            collapsedStyle = AttributionStyle(container.copy(alpha = 0f), content.copy(alpha = 0f)),
+        )
     }
 }
 
