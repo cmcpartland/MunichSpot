@@ -141,14 +141,17 @@ private fun PostBoxDetails(info: PostBoxInfo) {
 private val DAYS = mapOf(
     "Mo" to "Mo", "Tu" to "Di", "We" to "Mi", "Th" to "Do", "Fr" to "Fr", "Sa" to "Sa", "Su" to "So", "PH" to "Feiertag", "off" to "keine Leerung",
 )
-private val RULE_SPLIT = Regex(",\\s+(?=(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)\\b)")
+private val RULE_SPLIT = Regex("(\\d),\\s+(?=(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)\\b)")
 private val DAY_TOKEN = Regex("\\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\\b")
 private val DAY_RANGE = Regex("([A-Za-z])-([A-Za-z])")
 private val TIME_LIST = Regex("(\\d),(\\d)")
+private val DAY_LIST = Regex("([A-Za-z]),\\s*([A-Za-z])")
+private val SPACES = Regex("\\s+")
 
 internal fun formatCollectionTimes(raw: String): List<String> =
-    raw.split(';').flatMap { it.split(RULE_SPLIT) }.map { it.trim() }.filter { it.isNotEmpty() }.map { rule ->
-        rule.replace(DAY_TOKEN) { DAYS.getValue(it.value) }.replace(DAY_RANGE, "$1–$2").replace(TIME_LIST, "$1, $2")
+    raw.replace(RULE_SPLIT, "$1;").split(';').map { it.trim().replace(SPACES, " ") }.filter { it.isNotEmpty() }.map { rule ->
+        rule.replace(DAY_TOKEN) { DAYS.getValue(it.value) }.replace(DAY_RANGE, "$1–$2")
+            .replace(TIME_LIST, "$1, $2").replace(DAY_LIST, "$1, $2")
     }
 
 private fun formatEuro(price: Double): String {
