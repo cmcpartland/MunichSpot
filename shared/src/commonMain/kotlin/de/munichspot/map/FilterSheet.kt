@@ -53,7 +53,6 @@ internal fun FilterSheet(type: PoiType, filters: PoiFilters, onChange: (PoiFilte
                         ToiletFilter.ACCESSIBLE to "Nur barrierefrei",
                         ToiletFilter.FREE to "Nur kostenlos",
                         ToiletFilter.CHANGING to "Mit Wickeltisch",
-                        ToiletFilter.HIDE_DEFECT to "Defekte ausblenden",
                     )) {
                         CheckRow(label, entry in selected) {
                             onChange(filters.copy(toiletRequirements = if (it) selected + entry else selected - entry))

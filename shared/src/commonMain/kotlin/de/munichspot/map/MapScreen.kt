@@ -68,6 +68,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
+import de.munichspot.data.ToiletStatus
+import org.maplibre.compose.expressions.dsl.and
+import org.maplibre.compose.expressions.dsl.asBoolean
+import org.maplibre.compose.expressions.dsl.eq
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -135,6 +139,9 @@ private val PoiIconSize = 28.dp
 private val ClusterIconSize = 34.dp
 private val SelectedPoiIconSize = 42.dp
 private val SelectedGlowRadius = 36.dp
+internal val WarningAmber = Color(0xFFF59E0B)
+private val WarningMarkSize = 14.dp
+private val SelectedWarningMarkSize = 20.dp
 private val LocationBlue = Color(0xFF1A73E8)
 
 internal const val ATTRIBUTION =
@@ -210,6 +217,7 @@ internal fun MapScreen(
                     } != null
                 },
             )
+            if (t == PoiType.TOILET) PoiWarningLayer(t, sources.getValue(t))
             PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
             PoiCountLayers(t, sources.getValue(t), mapState, scope)
         }
@@ -395,6 +403,8 @@ private fun MapControls(mapState: MapState) {
 }
 
 private val BadgeOffset = DpOffset(13.dp, (-13).dp)
+private val WarningMarkOffset = DpOffset(9.dp, (-9).dp)
+private val SelectedWarningMarkOffset = DpOffset(14.dp, (-14).dp)
 private val ClothesOffset = DpOffset(16.dp, (-10).dp)
 
 private fun PoiType.pinOffset(): DpOffset = if (this == PoiType.CLOTHES) ClothesOffset else DpOffset.Zero
@@ -475,6 +485,12 @@ private fun SelectedPin(poi: Poi) {
     Canvas(Modifier.size(SelectedGlowRadius * 2)) {
         drawCircle(Brush.radialGradient(0f to glow, 0.4f to glow, 1f to Color.Transparent, radius = size.width / 2))
         inset((size.width - SelectedPoiIconSize.toPx()) / 2) { drawCategoryIcon(poi.type, ring = true) }
+        if (poi.possiblyDefect) {
+            val s = SelectedWarningMarkSize.toPx()
+            val l = center.x + SelectedWarningMarkOffset.x.toPx() - s / 2
+            val t = center.y + SelectedWarningMarkOffset.y.toPx() - s / 2
+            inset(l, t, size.width - l - s, size.height - t - s) { drawWarningMark() }
+        }
     }
 }
 
@@ -493,6 +509,23 @@ private fun PoiBadgeLayers(type: PoiType, source: GeoJsonSource, mapState: MapSt
         translate = const(BadgeOffset + type.pinOffset()),
         translateAnchor = const(TranslateAnchor.Viewport),
         onClick = zoomToCluster(source, mapState, scope),
+    )
+}
+
+/** Small warning mark at the pin's top-right corner for pois the dataset flags as possibly defective. */
+@Composable
+@MaplibreComposable
+private fun PoiWarningLayer(type: PoiType, source: GeoJsonSource) {
+    val painter = remember { WarningMarkPainter() }
+    SymbolLayer(
+        id = "${type.name.lowercase()}-warning",
+        source = source,
+        filter = !IsCluster and (feature["warn"].asBoolean() eq const(true)),
+        iconImage = image(painter, size = DpSize(WarningMarkSize, WarningMarkSize)),
+        iconTranslate = const(WarningMarkOffset + type.pinOffset()),
+        iconTranslateAnchor = const(TranslateAnchor.Viewport),
+        iconAllowOverlap = const(true),
+        iconIgnorePlacement = const(true),
     )
 }
 
@@ -515,13 +548,16 @@ private fun PoiCountLayers(type: PoiType, source: GeoJsonSource, mapState: MapSt
     )
 }
 
+/** Hint only: derived from dataset free text, so it adds a warning mark and never filters. */
+internal val Poi.possiblyDefect: Boolean get() = toilet?.status == ToiletStatus.DEFECT
+
 private fun List<Poi>.toGeoJson(): String = buildString {
     append("""{"type":"FeatureCollection","features":[""")
     this@toGeoJson.forEachIndexed { i, p ->
         if (i > 0) append(',')
         append("""{"type":"Feature","id":"${p.id.jsonEscape()}",""")
         append(""""geometry":{"type":"Point","coordinates":[${p.lon},${p.lat}]},""")
-        append(""""properties":{"type":"${p.type.name}","name":"${p.name.jsonEscape()}"}}""")
+        append(""""properties":{"type":"${p.type.name}","name":"${p.name.jsonEscape()}"${if (p.possiblyDefect) ""","warn":true""" else ""}}}""")
     }
     append("]}")
 }

@@ -152,7 +152,12 @@ def toilet_name(raw):
 def toilet_features():
     rooms = fetch(TOILET_URL)["features"]
     print(f"toilet rooms read: {len(rooms)}")
-    for group in toilet_groups(rooms):
+    groups = list(toilet_groups(rooms))
+    known = {"voll funktionsfähig", "defekt oder nicht zugänglich", "teilweise Beeinträchtigung"}
+    unknown = Counter(r["properties"].get("zustand") for r in rooms if r["properties"].get("zustand") not in known)
+    if unknown:
+        print(f"WARNING: unknown toilet zustand values: {dict(unknown)}")
+    for group in groups:
         props = [r["properties"] for r in group]
         x = sum(r["geometry"]["coordinates"][0] for r in group) / len(group)
         y = sum(r["geometry"]["coordinates"][1] for r in group) / len(group)

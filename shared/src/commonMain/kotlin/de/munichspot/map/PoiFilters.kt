@@ -3,14 +3,13 @@ package de.munichspot.map
 import de.munichspot.data.Material
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
-import de.munichspot.data.ToiletStatus
 
 internal enum class RecyclingFilter(val materials: Set<Material>) {
     GLASS(setOf(Material.GLASS_BROWN, Material.GLASS_GREEN, Material.GLASS_WHITE)),
     PACKAGING(setOf(Material.PACKAGING)),
 }
 
-internal enum class ToiletFilter { ACCESSIBLE, FREE, CHANGING, HIDE_DEFECT }
+internal enum class ToiletFilter { ACCESSIBLE, FREE, CHANGING }
 
 internal data class PoiFilters(
     val recyclingMaterials: Set<RecyclingFilter> = RecyclingFilter.entries.toSet(),
@@ -36,7 +35,6 @@ internal data class PoiFilters(
                 ToiletFilter.ACCESSIBLE -> toilet?.accessible == true
                 ToiletFilter.FREE -> toilet?.price == 0.0
                 ToiletFilter.CHANGING -> toilet?.changing == true
-                ToiletFilter.HIDE_DEFECT -> toilet?.status != ToiletStatus.DEFECT
             }
         }
     }
