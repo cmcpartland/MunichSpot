@@ -98,6 +98,7 @@ private val DrinkingWaterBlue = Color(0xFF81D4FA)
 private val ToiletPurple = Color(0xFF8E24AA)
 private val PoiIconSize = 28.dp
 private val ClusterIconSize = 34.dp
+private val SelectedPoiIconSize = 42.dp
 private val LocationBlue = Color(0xFF1A73E8)
 
 internal const val ATTRIBUTION =
@@ -136,6 +137,7 @@ internal fun MapScreen(
         }
         remember(pois, key) { pois.filter { it.type == t && f.matches(it) }.toGeoJson() }
     }
+    val selectedGeoJson = remember(selected) { listOfNotNull(selected).toGeoJson() }
     LaunchedEffect(type, filters) {
         if (type != null && selected?.let { it.type != type || !filters.matches(it) } == true) selected = null
     }
@@ -156,6 +158,7 @@ internal fun MapScreen(
                 clusterMaxZoom = 14
             }
         }
+        val selectedSource = rememberGeoJsonSource(GeoJsonData.JsonString(selectedGeoJson))
         val visible = PoiType.entries.filter { type == null || type == it }
         // Icons of every type first, then all badges, then all counts, so no icon covers another type's badge.
         for (t in visible) {
@@ -174,6 +177,7 @@ internal fun MapScreen(
         }
         for (t in visible) PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
         for (t in visible) PoiCountLayers(t, sources.getValue(t), mapState, scope)
+        selected?.let { SelectedPoiLayers(it.type, selectedSource) }
         LocationIndicatorLayer(
             id = "user-location",
             locationState = locationState,
@@ -341,6 +345,28 @@ private fun PoiIconLayers(
             val id = features.firstOrNull()?.id?.jsonPrimitive?.content
             if (onPoi(id)) ClickResult.Consume else ClickResult.Pass
         },
+    )
+}
+
+@Composable
+@MaplibreComposable
+private fun SelectedPoiLayers(type: PoiType, source: GeoJsonSource) {
+    val painter = remember(type) { CategoryIconPainter(type) }
+    CircleLayer(
+        id = "selected-glow",
+        source = source,
+        radius = const(36.dp),
+        color = const(type.pinColor().copy(alpha = 0.6f)),
+        blur = const(0.6f),
+        onClick = { ClickResult.Consume },
+    )
+    SymbolLayer(
+        id = "selected-icon",
+        source = source,
+        iconImage = image(painter, size = DpSize(SelectedPoiIconSize, SelectedPoiIconSize)),
+        iconAllowOverlap = const(true),
+        iconIgnorePlacement = const(true),
+        onClick = { ClickResult.Consume },
     )
 }
 
