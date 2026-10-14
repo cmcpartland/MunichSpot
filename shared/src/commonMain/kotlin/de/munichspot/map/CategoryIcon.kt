@@ -52,14 +52,14 @@ internal class WarningMarkPainter : Painter() {
     override fun DrawScope.onDraw() = drawWarningMark()
 }
 
-/** Amber disc with a white border and a white exclamation mark. */
+/** White disc with a black ring and a red exclamation mark. */
 internal fun DrawScope.drawWarningMark() {
     val d = size.minDimension
-    drawCircle(Color.White, d / 2)
-    drawCircle(WarningAmber, d / 2 - d * 0.1f)
+    drawCircle(Color.Black, d / 2)
+    drawCircle(Color.White, d / 2 - d * 0.12f)
     val w = d * 0.14f
-    drawLine(Color.White, Offset(d / 2, d * 0.26f), Offset(d / 2, d * 0.56f), w, StrokeCap.Round)
-    drawCircle(Color.White, w * 0.6f, Offset(d / 2, d * 0.74f))
+    drawLine(WarningRed, Offset(d / 2, d * 0.26f), Offset(d / 2, d * 0.56f), w, StrokeCap.Round)
+    drawCircle(WarningRed, w * 0.6f, Offset(d / 2, d * 0.74f))
 }
 
 private fun DrawScope.drawGlyph(type: PoiType, c: Color) {
