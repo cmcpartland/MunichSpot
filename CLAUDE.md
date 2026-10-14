@@ -6,7 +6,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - `App.kt`: loads data (cache or bundled data, then the nightly download), and holds the selected category (`PoiType?`, null = all) and `PoiFilters`.
 - `data/`:
   - `Poi.kt`: model, `PoiType`, `Material`, `ToiletInfo`.
-  - `PoiRepository.kt`: loading, `isPlausible`, the `LATEST_POIS_URL` fetch.
+  - `PoiRepository.kt`: loading, `isPlausible`, the `LATEST_POIS_URL` fetch. `parsePois` derives `CLOTHES` pois (id `<island>-clothes`) from recycling islands with `Material.CLOTHING` and strips CLOTHING from the island; the geojson has no clothes type.
   - `PoiCache*.kt`: per-platform cache file with atomic writes.
 - `map/MapScreen.kt`: the map. It holds:
   - one clustered GeoJSON source per type
@@ -26,6 +26,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - New icons are drawn with Canvas. Don't add icon dependencies.
 
 ## Gotchas
+- Clothes pins sit on their island's exact point, so `MapScreen` draws the clothes layers, the selected-pin overlay and the keep-visible pan with `ClothesOffset` (16 dp right, 10 dp up, viewport-anchored).
 - Android needs `androidResources.enable = true` in `shared/build.gradle.kts`, or `files/pois.geojson` is missing at runtime.
 - The OpenFreeMap styles (we use "positron") only have Noto Sans fonts. Use `"Noto Sans Bold"` for map text.
 - `toGeoJson` must escape control characters. A bad name once made a whole layer vanish silently.

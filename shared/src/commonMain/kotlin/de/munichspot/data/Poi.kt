@@ -1,6 +1,6 @@
 package de.munichspot.data
 
-enum class PoiType { RECYCLING, POST_BOX, DRINKING_WATER, TOILET }
+enum class PoiType { RECYCLING, CLOTHES, POST_BOX, DRINKING_WATER, TOILET }
 
 enum class Material { GLASS_BROWN, GLASS_GREEN, GLASS_WHITE, PACKAGING, CLOTHING }
 

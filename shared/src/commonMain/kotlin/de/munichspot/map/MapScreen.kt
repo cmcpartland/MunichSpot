@@ -2,6 +2,7 @@ package de.munichspot.map
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.inset
@@ -20,6 +21,11 @@ import org.maplibre.compose.camera.CameraAnimation
 import org.maplibre.spatialk.geojson.BoundingBox
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.hypot
+import kotlinx.serialization.json.JsonObject
+import org.maplibre.compose.interaction.ClickEvent
+import org.maplibre.spatialk.geojson.Feature
+import org.maplibre.spatialk.geojson.Geometry
 import kotlin.time.Duration
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -71,6 +77,7 @@ import org.maplibre.compose.expressions.dsl.format
 import org.maplibre.compose.expressions.dsl.image
 import org.maplibre.compose.expressions.dsl.not
 import org.maplibre.compose.expressions.dsl.span
+import org.maplibre.compose.expressions.value.TranslateAnchor
 import org.maplibre.compose.interaction.ClickResult
 import org.maplibre.compose.layers.FeaturesClickHandler
 import org.maplibre.compose.interaction.MapInteractions
@@ -94,6 +101,7 @@ import org.maplibre.spatialk.geojson.Position
 
 internal fun PoiType.pinColor(): Color = when (this) {
     PoiType.RECYCLING -> RecyclingGreen
+    PoiType.CLOTHES -> ClothesRed
     PoiType.POST_BOX -> PostBoxYellow
     PoiType.DRINKING_WATER -> DrinkingWaterBlue
     PoiType.TOILET -> ToiletPurple
@@ -101,6 +109,7 @@ internal fun PoiType.pinColor(): Color = when (this) {
 
 internal fun PoiType.label(): String = when (this) {
     PoiType.RECYCLING -> "Wertstoffinseln"
+    PoiType.CLOTHES -> "Altkleidercontainer"
     PoiType.POST_BOX -> "Briefkästen"
     PoiType.DRINKING_WATER -> "Trinkbrunnen"
     PoiType.TOILET -> "Toiletten"
@@ -109,6 +118,7 @@ internal fun PoiType.label(): String = when (this) {
 internal val DrinkingWaterText = Color(0xFF01579B)
 
 private val RecyclingGreen = Color(0xFF2E7D32)
+private val ClothesRed = Color(0xFFC62828)
 private val PostBoxYellow = Color(0xFFF9A825)
 private val DrinkingWaterBlue = Color(0xFF81D4FA)
 private val ToiletPurple = Color(0xFF8E24AA)
@@ -183,6 +193,7 @@ internal fun MapScreen(
                 source = sources.getValue(t),
                 mapState = mapState,
                 scope = scope,
+                islandVisible = type == null,
                 onPoi = { id ->
                     poisById[id]?.let {
                         selected = it
@@ -223,8 +234,8 @@ internal fun MapScreen(
         suspend fun reveal(sheet: Rect) {
             val pin = mapState.screenLocationFromPosition(position) ?: return
             val center = mapState.screenLocationFromPosition(mapState.cameraPosition.center) ?: return
-            val pinY = mapBounds.top + with(density) { pin.y.toPx() }
-            val pinX = mapBounds.left + with(density) { pin.x.toPx() }
+            val pinY = mapBounds.top + with(density) { (pin.y + poi.type.pinOffset().y).toPx() }
+            val pinX = mapBounds.left + with(density) { (pin.x + poi.type.pinOffset().x).toPx() }
             val reach = with(density) { (SelectedPoiIconSize.toPx() / 2 + 16.dp.toPx()) }
             val covered = pinX + reach > sheet.left && pinX - reach < sheet.right && pinY + reach > sheet.top
             if (!covered && pinY >= topInset) return
@@ -284,7 +295,10 @@ internal fun MapScreen(
             viewportInsets = PaddingValues(bottom = attributionBarHeight),
             overlay = {
                 include(MapOverlay.Default)
-                selected?.let { Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat))) { SelectedPin(it) } }
+                selected?.let {
+                    val o = it.type.pinOffset()
+                    Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it) }
+                }
             },
             interactions = MapInteractions {
                 callbacks { click { onUnhandled { _ ->
@@ -348,6 +362,10 @@ internal fun MapScreen(
 }
 
 private val BadgeOffset = DpOffset(13.dp, (-13).dp)
+private val ClothesOffset = DpOffset(16.dp, (-10).dp)
+
+private fun PoiType.pinOffset(): DpOffset = if (this == PoiType.CLOTHES) ClothesOffset else DpOffset.Zero
+private operator fun DpOffset.plus(o: DpOffset) = DpOffset(x + o.x, y + o.y)
 private val IsCluster = feature.has("point_count")
 
 private fun zoomToCluster(source: GeoJsonSource, mapState: MapState, scope: CoroutineScope): FeaturesClickHandler =
@@ -373,6 +391,7 @@ private fun PoiIconLayers(
     source: GeoJsonSource,
     mapState: MapState,
     scope: CoroutineScope,
+    islandVisible: Boolean,
     onPoi: (String?) -> Boolean,
 ) {
     val name = type.name.lowercase()
@@ -382,6 +401,8 @@ private fun PoiIconLayers(
         source = source,
         filter = IsCluster,
         iconImage = image(painter, size = DpSize(ClusterIconSize, ClusterIconSize)),
+        iconTranslate = const(type.pinOffset()),
+        iconTranslateAnchor = const(TranslateAnchor.Viewport),
         iconAllowOverlap = const(true),
         iconIgnorePlacement = const(true),
         hitPadding = 6.dp,
@@ -392,14 +413,27 @@ private fun PoiIconLayers(
         source = source,
         filter = !IsCluster,
         iconImage = image(painter, size = DpSize(PoiIconSize, PoiIconSize)),
+        iconTranslate = const(type.pinOffset()),
+        iconTranslateAnchor = const(TranslateAnchor.Viewport),
         iconAllowOverlap = const(true),
         iconIgnorePlacement = const(true),
         hitPadding = 8.dp,
         onClick = { features ->
-            val id = features.firstOrNull()?.id?.jsonPrimitive?.content
-            if (onPoi(id)) ClickResult.Consume else ClickResult.Pass
+            val feature = features.firstOrNull()
+            val id = feature?.id?.jsonPrimitive?.content
+            if (type == PoiType.CLOTHES && islandVisible && closerToIsland(feature, mapState)) {
+                ClickResult.Pass
+            } else if (onPoi(id)) ClickResult.Consume else ClickResult.Pass
         },
     )
+}
+
+/** True when the tap is nearer the island's own centre than the shifted clothes pin. */
+private fun ClickEvent.closerToIsland(feature: Feature<Geometry, JsonObject?>?, mapState: MapState): Boolean {
+    val point = (feature?.geometry as? Point)?.coordinates ?: return false
+    val island = mapState.screenLocationFromPosition(point) ?: return false
+    fun distance(o: DpOffset) = hypot(o.x.value - screenOffset.x.value, o.y.value - screenOffset.y.value)
+    return distance(island) < distance(island + ClothesOffset)
 }
 
 @Composable
@@ -423,7 +457,8 @@ private fun PoiBadgeLayers(type: PoiType, source: GeoJsonSource, mapState: MapSt
         color = const(Color.White),
         strokeColor = const(type.pinColor()),
         strokeWidth = const(2.dp),
-        translate = const(BadgeOffset),
+        translate = const(BadgeOffset + type.pinOffset()),
+        translateAnchor = const(TranslateAnchor.Viewport),
         onClick = zoomToCluster(source, mapState, scope),
     )
 }
@@ -439,7 +474,8 @@ private fun PoiCountLayers(type: PoiType, source: GeoJsonSource, mapState: MapSt
         textFont = const(listOf("Noto Sans Bold")),
         textSize = const(11.sp),
         textColor = const(Color(0xFF212121)),
-        textTranslate = const(BadgeOffset),
+        textTranslate = const(BadgeOffset + type.pinOffset()),
+        textTranslateAnchor = const(TranslateAnchor.Viewport),
         textAllowOverlap = const(true),
         textIgnorePlacement = const(true),
         onClick = zoomToCluster(source, mapState, scope),

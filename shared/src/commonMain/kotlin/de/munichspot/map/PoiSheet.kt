@@ -44,6 +44,7 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
     val uriHandler = LocalUriHandler.current
     val (title, source) = when (poi.type) {
         PoiType.RECYCLING -> "Wertstoffinsel" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
+        PoiType.CLOTHES -> "Altkleidercontainer" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
         PoiType.POST_BOX -> "Briefkasten" to "Quelle: © OpenStreetMap contributors"
         PoiType.DRINKING_WATER -> "Trinkbrunnen" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
         PoiType.TOILET -> "Öffentliche Toilette" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
@@ -83,6 +84,13 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
                     }
                 }
             }
+            if (poi.type == PoiType.CLOTHES) {
+                Text(
+                    "Saubere Kleidung und Schuhe, in Säcken verpackt.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (poi.type == PoiType.DRINKING_WATER) {
                 poi.note?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 if (poi.note?.contains("24/7") != true) {
@@ -109,7 +117,6 @@ private fun List<Material>.accepted(): List<String> = buildList {
     ).filter { it.first in this@accepted }
     if (glass.isNotEmpty()) add("Glas (${glass.joinToString(" · ") { it.second }})")
     if (Material.PACKAGING in this@accepted) add("Leichtverpackungen")
-    if (Material.CLOTHING in this@accepted) add("Altkleider")
 }
 
 @Composable
