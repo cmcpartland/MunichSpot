@@ -1,6 +1,12 @@
 package de.munichspot.map
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.inset
+import org.maplibre.compose.overlay.MapOverlay
+import org.maplibre.compose.overlay.include
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import org.maplibre.compose.camera.CameraAnimation
@@ -98,6 +104,8 @@ private val DrinkingWaterBlue = Color(0xFF81D4FA)
 private val ToiletPurple = Color(0xFF8E24AA)
 private val PoiIconSize = 28.dp
 private val ClusterIconSize = 34.dp
+private val SelectedPoiIconSize = 42.dp
+private val SelectedGlowRadius = 36.dp
 private val LocationBlue = Color(0xFF1A73E8)
 
 internal const val ATTRIBUTION =
@@ -228,6 +236,10 @@ internal fun MapScreen(
             modifier = Modifier.fillMaxSize(),
             // Keeps MapLibre's own attribution button clear of our attribution bar.
             viewportInsets = PaddingValues(bottom = attributionBarHeight),
+            overlay = {
+                include(MapOverlay.Default)
+                selected?.let { Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat))) { SelectedPin(it) } }
+            },
             interactions = MapInteractions {
                 callbacks { click { onUnhandled { _ ->
                     selected = null
@@ -342,6 +354,15 @@ private fun PoiIconLayers(
             if (onPoi(id)) ClickResult.Consume else ClickResult.Pass
         },
     )
+}
+
+@Composable
+private fun SelectedPin(poi: Poi) {
+    val glow = poi.type.pinColor().copy(alpha = 0.6f)
+    Canvas(Modifier.size(SelectedGlowRadius * 2)) {
+        drawCircle(Brush.radialGradient(0f to glow, 0.4f to glow, 1f to Color.Transparent, radius = size.width / 2))
+        inset((size.width - SelectedPoiIconSize.toPx()) / 2) { drawCategoryIcon(poi.type, ring = true) }
+    }
 }
 
 /** Count badge at the cluster icon's top-right corner: a white disc with a type-coloured border. */
