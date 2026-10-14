@@ -91,9 +91,16 @@ def mailbox_features():
         point = e if "lat" in e else e.get("center")
         if point is None:
             continue
-        times = (e.get("tags", {}).get("collection_times") or "").strip()
-        name = f"Briefkasten ({times})" if times else "Briefkasten"
-        yield feature(f"osm-{e['id']}", "POST_BOX", name, point["lon"], point["lat"])
+        tags = e.get("tags", {})
+        extra = {}
+        if times := (tags.get("collection_times") or "").strip():
+            extra["collectionTimes"] = times
+        if address := (tags.get("ref") or "").strip():
+            extra["address"] = address
+        if tags.get("indoor") == "yes":
+            extra["indoor"] = True
+        name = (tags.get("name") or "").strip() or "Briefkasten"
+        yield feature(f"osm-{e['id']}", "POST_BOX", name, point["lon"], point["lat"], **extra)
 
 
 def fountain_features():
