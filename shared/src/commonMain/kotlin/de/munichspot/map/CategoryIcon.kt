@@ -46,6 +46,22 @@ internal fun DrawScope.drawCategoryIcon(type: PoiType, ring: Boolean) {
     }
 }
 
+/** Paints [drawWarningMark] as a map image. */
+internal class WarningMarkPainter : Painter() {
+    override val intrinsicSize = Size.Unspecified
+    override fun DrawScope.onDraw() = drawWarningMark()
+}
+
+/** White disc with a black ring and a red exclamation mark. */
+internal fun DrawScope.drawWarningMark() {
+    val d = size.minDimension
+    drawCircle(Color.Black, d / 2)
+    drawCircle(Color.White, d / 2 - d * 0.12f)
+    val w = d * 0.14f
+    drawLine(WarningRed, Offset(d / 2, d * 0.26f), Offset(d / 2, d * 0.56f), w, StrokeCap.Round)
+    drawCircle(WarningRed, w * 0.6f, Offset(d / 2, d * 0.74f))
+}
+
 private fun DrawScope.drawGlyph(type: PoiType, c: Color) {
     val s = size.width
     val w = s * 0.07f

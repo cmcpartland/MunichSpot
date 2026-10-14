@@ -10,7 +10,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - `PoiCache*.kt`: per-platform cache file with atomic writes.
 - `map/MapScreen.kt`: the map. It holds:
   - one clustered GeoJSON source per type
-  - the layer order: per type its icons, badge circles and counts together, so a badge stacks with its own pin; the location puck on top
+  - the layer order: per type its icons, the toilet warning mark (`PoiWarningLayer`, for `Poi.possiblyDefect`), badge circles and counts together, so a badge stacks with its own pin; the location puck on top
   - the opening view (`boundsAround`, 700 m radius, Marienplatz fallback, moving to the user if the fix is in Munich)
   - the selected-pin highlight (`SelectedPin`), drawn in the map overlay, not as a layer
   - the locate and filter buttons, and the attribution bar
@@ -24,6 +24,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 ## Conventions
 - UI text is German. Code is concise with few comments, and map-package code is `internal`.
 - New icons are drawn with Canvas. Don't add icon dependencies.
+- Signals derived from dataset free text (e.g. toilet `zustand`) are hints: show a warning mark and hedged "Laut Stadt …" text, never filter or branch on them in the app; text matching lives only in `build_pois.py`.
 
 ## Gotchas
 - Clothes pins sit on their island's exact point, so `MapScreen` draws the clothes layers, the selected-pin overlay and the keep-visible pan with `ClothesOffset` (16 dp right, 10 dp up, viewport-anchored).

@@ -12,7 +12,7 @@ This is an early prototype, not a finished app.
 - The map opens framed on a 700 m radius (walking distance) around the user (if location is allowed and the fix is in Munich), otherwise around Marienplatz.
 - Pins clustered per type: green = recycling, red = clothes containers (shown offset beside their island), yellow = mailboxes, light blue = drinking fountains, purple = public toilets. Tapping a cluster zooms in.
 - Tapping a pin opens a details sheet with a Navigate action. Recycling islands list accepted materials: glass by colour, Leichtverpackungen.
-- Filter button (bottom right, only while the recycling or toilet category is selected) opens a filter sheet: recycling islands by material (glass, packaging), public toilets by requirement (accessible, free, with baby changing, hide defective ones).
+- Filter button (bottom right, only while the recycling or toilet category is selected) opens a filter sheet: recycling islands by material (glass, packaging), public toilets by requirement (accessible, free, with baby changing).
 - Drinking fountains show their name and remark; many are shut off in winter.
 - Public toilets show address, opening hours, price, floor, accessibility, baby changing, Euro key, room types and a warning if the city lists them as defective.
 - Locate button shows the user's position and centres the map on it. Location permission is asked when a map is first opened.
