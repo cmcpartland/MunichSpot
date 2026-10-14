@@ -10,7 +10,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - `PoiCache*.kt`: per-platform cache file with atomic writes.
 - `map/MapScreen.kt`: the map. It holds:
   - one clustered GeoJSON source per type
-  - the layer order: all icon layers, then all badge circles, then all counts, then the location puck, so badges stay on top
+  - the layer order: per type its icons, badge circles and counts together, so a badge stacks with its own pin; the location puck on top
   - the opening view (`boundsAround`, 700 m radius, Marienplatz fallback, moving to the user if the fix is in Munich)
   - the selected-pin highlight (`SelectedPin`), drawn in the map overlay, not as a layer
   - the locate and filter buttons, and the attribution bar
