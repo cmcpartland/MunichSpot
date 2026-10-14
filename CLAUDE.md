@@ -33,6 +33,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - `toGeoJson` must escape control characters. A bad name once made a whole layer vanish silently.
 - `BackHandler` from `ui-backhandler` is deprecated in CMP 1.12; the replacement is the navigationevent API.
 - Map style changes (source data, layer filters) take about 0.4 s to appear on the emulator. For instant feedback on a tap, such as the selected-pin highlight, draw in `MaplibreMap`'s `overlay` with `Modifier.placedAt(position)` instead of adding a layer.
+- Dark mode follows the system; the dark map style is OpenFreeMap "fiord" (it only lists Noto Sans Regular, but "Noto Sans Bold" is served from the shared font endpoint).
 - Overpass (mailboxes) often returns 504. The nightly workflow retries, and a failed run keeps the last deploy live.
 
 ## Local test loop (this Mac)

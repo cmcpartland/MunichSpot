@@ -117,7 +117,7 @@ internal fun CategorySearchBar(
                 ) {
                     CategoryIcon(t, 40.dp)
                     Column {
-                        Text(t.label(), style = MaterialTheme.typography.titleMedium)
+                        Text(t.label(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                         if (pois.isNotEmpty()) {
                             Text(
                                 "${counts[t] ?: 0} Orte",

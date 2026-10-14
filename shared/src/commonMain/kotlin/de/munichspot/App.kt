@@ -1,6 +1,9 @@
 package de.munichspot
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,7 +26,7 @@ fun App() {
     }
     var type by rememberSaveable { mutableStateOf<PoiType?>(null) }
     var filters by remember { mutableStateOf(PoiFilters()) }
-    MaterialTheme {
+    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
         MapScreen(pois, type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it })
     }
 }
