@@ -358,7 +358,6 @@ private fun SelectedPoiLayers(type: PoiType, source: GeoJsonSource) {
         radius = const(36.dp),
         color = const(type.pinColor().copy(alpha = 0.6f)),
         blur = const(0.6f),
-        onClick = { ClickResult.Consume },
     )
     SymbolLayer(
         id = "selected-icon",
