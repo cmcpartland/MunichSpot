@@ -1,6 +1,12 @@
 package de.munichspot.map
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.inset
+import org.maplibre.compose.overlay.MapOverlay
+import org.maplibre.compose.overlay.include
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import org.maplibre.compose.camera.CameraAnimation
@@ -51,8 +57,6 @@ import org.maplibre.compose.camera.CameraUpdate
 import org.maplibre.compose.expressions.dsl.asString
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.expressions.dsl.feature
-import org.maplibre.compose.expressions.dsl.and
-import org.maplibre.compose.expressions.dsl.eq
 import org.maplibre.compose.expressions.dsl.format
 import org.maplibre.compose.expressions.dsl.image
 import org.maplibre.compose.expressions.dsl.not
@@ -101,6 +105,7 @@ private val ToiletPurple = Color(0xFF8E24AA)
 private val PoiIconSize = 28.dp
 private val ClusterIconSize = 34.dp
 private val SelectedPoiIconSize = 42.dp
+private val SelectedGlowRadius = 36.dp
 private val LocationBlue = Color(0xFF1A73E8)
 
 internal const val ATTRIBUTION =
@@ -177,7 +182,6 @@ internal fun MapScreen(
         }
         for (t in visible) PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
         for (t in visible) PoiCountLayers(t, sources.getValue(t), mapState, scope)
-        for (t in PoiType.entries) SelectedPoiLayers(t, sources.getValue(t), selected?.id)
         LocationIndicatorLayer(
             id = "user-location",
             locationState = locationState,
@@ -232,6 +236,10 @@ internal fun MapScreen(
             modifier = Modifier.fillMaxSize(),
             // Keeps MapLibre's own attribution button clear of our attribution bar.
             viewportInsets = PaddingValues(bottom = attributionBarHeight),
+            overlay = {
+                include(MapOverlay.Default)
+                selected?.let { Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat))) { SelectedPin(it) } }
+            },
             interactions = MapInteractions {
                 callbacks { click { onUnhandled { _ ->
                     selected = null
@@ -349,27 +357,12 @@ private fun PoiIconLayers(
 }
 
 @Composable
-@MaplibreComposable
-private fun SelectedPoiLayers(type: PoiType, source: GeoJsonSource, selectedId: String?) {
-    val painter = remember(type) { CategoryIconPainter(type) }
-    val isSelected = !IsCluster and (feature.id().asString() eq const(selectedId.orEmpty()))
-    CircleLayer(
-        id = "${type.name.lowercase()}-selected-glow",
-        source = source,
-        filter = isSelected,
-        radius = const(36.dp),
-        color = const(type.pinColor().copy(alpha = 0.6f)),
-        blur = const(0.6f),
-    )
-    SymbolLayer(
-        id = "${type.name.lowercase()}-selected-icon",
-        source = source,
-        filter = isSelected,
-        iconImage = image(painter, size = DpSize(SelectedPoiIconSize, SelectedPoiIconSize)),
-        iconAllowOverlap = const(true),
-        iconIgnorePlacement = const(true),
-        onClick = { ClickResult.Consume },
-    )
+private fun SelectedPin(poi: Poi) {
+    val glow = poi.type.pinColor().copy(alpha = 0.6f)
+    Canvas(Modifier.size(SelectedGlowRadius * 2)) {
+        drawCircle(Brush.radialGradient(0f to glow, 0.4f to glow, 1f to Color.Transparent, radius = size.width / 2))
+        inset((size.width - SelectedPoiIconSize.toPx()) / 2) { drawCategoryIcon(poi.type, ring = true) }
+    }
 }
 
 /** Count badge at the cluster icon's top-right corner: a white disc with a type-coloured border. */
