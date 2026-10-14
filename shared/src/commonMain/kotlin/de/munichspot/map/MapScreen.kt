@@ -34,6 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.munichspot.data.Poi
@@ -46,15 +48,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.CameraUpdate
-import org.maplibre.compose.expressions.dsl.asNumber
 import org.maplibre.compose.expressions.dsl.asString
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.expressions.dsl.feature
 import org.maplibre.compose.expressions.dsl.format
+import org.maplibre.compose.expressions.dsl.image
 import org.maplibre.compose.expressions.dsl.not
 import org.maplibre.compose.expressions.dsl.span
-import org.maplibre.compose.expressions.dsl.step
 import org.maplibre.compose.interaction.ClickResult
+import org.maplibre.compose.layers.FeaturesClickHandler
 import org.maplibre.compose.interaction.MapInteractions
 import org.maplibre.compose.layers.CircleLayer
 import org.maplibre.compose.layers.LocationIndicatorDefaults
@@ -67,6 +69,7 @@ import org.maplibre.compose.map.MapState
 import org.maplibre.compose.map.MaplibreMap
 import org.maplibre.compose.map.rememberMapState
 import org.maplibre.compose.sources.GeoJsonData
+import org.maplibre.compose.sources.GeoJsonSource
 import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.compose.util.MaplibreComposable
@@ -93,6 +96,8 @@ private val RecyclingGreen = Color(0xFF2E7D32)
 private val PostBoxYellow = Color(0xFFF9A825)
 private val DrinkingWaterBlue = Color(0xFF81D4FA)
 private val ToiletPurple = Color(0xFF8E24AA)
+private val PoiIconSize = 28.dp
+private val ClusterIconSize = 34.dp
 private val LocationBlue = Color(0xFF1A73E8)
 
 internal const val ATTRIBUTION =
@@ -102,7 +107,7 @@ private val Marienplatz = Position(latitude = 48.1374, longitude = 11.5755)
 private var locationAsked = false
 
 /** Box of +-[radiusKm] around [center], so the map frames a circle of that radius. */
-private fun boundsAround(center: Position, radiusKm: Double = 5.0): BoundingBox {
+private fun boundsAround(center: Position, radiusKm: Double = 1.0): BoundingBox {
     val dLat = radiusKm / 111.32
     val dLon = radiusKm / (111.32 * cos(center.latitude * PI / 180))
     return BoundingBox(
@@ -141,14 +146,22 @@ internal fun MapScreen(
     lateinit var mapState: MapState
     mapState = rememberMapState(
         baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/liberty"),
-        // Roughly the 5 km framing on a phone; refined below once the viewport is known.
-        initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 11.1),
+        // Roughly the 1 km framing on a phone; refined below once the viewport is known.
+        initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.4),
     ) {
-        for (t in PoiType.entries) {
-            if (type != null && type != t) continue
-            PoiLayers(
+        val sources = PoiType.entries.associateWith { t ->
+            rememberGeoJsonSource(GeoJsonData.JsonString(geoJson.getValue(t))) {
+                cluster = true
+                clusterRadius = 50
+                clusterMaxZoom = 14
+            }
+        }
+        val visible = PoiType.entries.filter { type == null || type == it }
+        // Icons of every type first, then all badges, then all counts, so no icon covers another type's badge.
+        for (t in visible) {
+            PoiIconLayers(
                 type = t,
-                json = geoJson.getValue(t),
+                source = sources.getValue(t),
                 mapState = mapState,
                 scope = scope,
                 onPoi = { id ->
@@ -159,6 +172,8 @@ internal fun MapScreen(
                 },
             )
         }
+        for (t in visible) PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
+        for (t in visible) PoiCountLayers(t, sources.getValue(t), mapState, scope)
         LocationIndicatorLayer(
             id = "user-location",
             locationState = locationState,
@@ -274,74 +289,93 @@ internal fun MapScreen(
     }
 }
 
+private val BadgeOffset = DpOffset(13.dp, (-13).dp)
+private val IsCluster = feature.has("point_count")
+
+private fun zoomToCluster(source: GeoJsonSource, mapState: MapState, scope: CoroutineScope): FeaturesClickHandler =
+    { features ->
+        val cluster = features.firstOrNull()
+        val center = (cluster?.geometry as? Point)?.coordinates
+        if (cluster == null || center == null) {
+            ClickResult.Pass
+        } else {
+            scope.launch {
+                val zoom = mapState.style.sources[source]?.getClusterExpansionZoom(cluster)
+                    ?: (mapState.cameraPosition.zoom + 2)
+                mapState.animateCamera(CameraUpdate(center = center, zoom = zoom + 0.5))
+            }
+            ClickResult.Consume
+        }
+    }
+
 @Composable
 @MaplibreComposable
-private fun PoiLayers(
+private fun PoiIconLayers(
     type: PoiType,
-    json: String,
+    source: GeoJsonSource,
     mapState: MapState,
     scope: CoroutineScope,
     onPoi: (String?) -> Boolean,
 ) {
     val name = type.name.lowercase()
-    val color = type.pinColor()
-    val source = rememberGeoJsonSource(GeoJsonData.JsonString(json)) {
-        cluster = true
-        clusterRadius = 50
-        clusterMaxZoom = 14
-    }
-    CircleLayer(
+    val painter = remember(type) { CategoryIconPainter(type) }
+    SymbolLayer(
         id = "$name-clusters",
         source = source,
-        filter = feature.has("point_count"),
-        radius = step(
-            feature["point_count"].asNumber(),
-            const(14.dp),
-            10 to const(18.dp),
-            50 to const(24.dp),
-        ),
-        color = const(color),
-        strokeColor = const(Color.White),
-        strokeWidth = const(2.dp),
-        onClick = { features ->
-            val cluster = features.firstOrNull()
-            val center = (cluster?.geometry as? Point)?.coordinates
-            if (cluster == null || center == null) {
-                ClickResult.Pass
-            } else {
-                scope.launch {
-                    val zoom = mapState.style.sources[source]?.getClusterExpansionZoom(cluster)
-                        ?: (mapState.cameraPosition.zoom + 2)
-                    mapState.animateCamera(CameraUpdate(center = center, zoom = zoom + 0.5))
-                }
-                ClickResult.Consume
-            }
-        },
+        filter = IsCluster,
+        iconImage = image(painter, size = DpSize(ClusterIconSize, ClusterIconSize)),
+        iconAllowOverlap = const(true),
+        iconIgnorePlacement = const(true),
+        hitPadding = 6.dp,
+        onClick = zoomToCluster(source, mapState, scope),
     )
     SymbolLayer(
-        id = "$name-cluster-count",
-        source = source,
-        filter = feature.has("point_count"),
-        textField = format(span(feature["point_count_abbreviated"].asString())),
-        textFont = const(listOf("Noto Sans Bold")),
-        textSize = const(14.sp),
-        // White is unreadable on the pale fountain colour.
-        textColor = const(if (type == PoiType.DRINKING_WATER) DrinkingWaterText else Color.White),
-        textAllowOverlap = const(true),
-    )
-    CircleLayer(
         id = "$name-pois",
         source = source,
-        filter = !feature.has("point_count"),
-        radius = const(7.dp),
-        color = const(color),
-        strokeColor = const(Color.White),
-        strokeWidth = const(2.dp),
-        hitPadding = 12.dp,
+        filter = !IsCluster,
+        iconImage = image(painter, size = DpSize(PoiIconSize, PoiIconSize)),
+        iconAllowOverlap = const(true),
+        iconIgnorePlacement = const(true),
+        hitPadding = 8.dp,
         onClick = { features ->
             val id = features.firstOrNull()?.id?.jsonPrimitive?.content
             if (onPoi(id)) ClickResult.Consume else ClickResult.Pass
         },
+    )
+}
+
+/** Count badge at the cluster icon's top-right corner: a white disc with a type-coloured border. */
+@Composable
+@MaplibreComposable
+private fun PoiBadgeLayers(type: PoiType, source: GeoJsonSource, mapState: MapState, scope: CoroutineScope) {
+    CircleLayer(
+        id = "${type.name.lowercase()}-cluster-badge",
+        source = source,
+        filter = IsCluster,
+        radius = const(10.dp),
+        color = const(Color.White),
+        strokeColor = const(type.pinColor()),
+        strokeWidth = const(2.dp),
+        translate = const(BadgeOffset),
+        onClick = zoomToCluster(source, mapState, scope),
+    )
+}
+
+@Composable
+@MaplibreComposable
+private fun PoiCountLayers(type: PoiType, source: GeoJsonSource, mapState: MapState, scope: CoroutineScope) {
+    SymbolLayer(
+        id = "${type.name.lowercase()}-cluster-count",
+        source = source,
+        filter = IsCluster,
+        textField = format(span(feature["point_count_abbreviated"].asString())),
+        textFont = const(listOf("Noto Sans Bold")),
+        textSize = const(11.sp),
+        textColor = const(Color(0xFF212121)),
+        textTranslate = const(BadgeOffset),
+        textAllowOverlap = const(true),
+        textIgnorePlacement = const(true),
+        onClick = zoomToCluster(source, mapState, scope),
     )
 }
 

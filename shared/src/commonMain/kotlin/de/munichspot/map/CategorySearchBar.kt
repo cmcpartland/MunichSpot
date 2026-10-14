@@ -66,7 +66,16 @@ internal fun CategorySearchBar(
                 }
             },
             leadingIcon = {
-                if (type != null && collapsed) CategoryIcon(type, 32.dp) else SearchIcon(LocalContentColor.current)
+                when {
+                    !collapsed -> IconButton(onClick = {
+                        query.clearText()
+                        focus.clearFocus()
+                        keyboard?.hide()
+                        scope.launch { state.animateToCollapsed() }
+                    }) { BackIcon(LocalContentColor.current) }
+                    type != null -> CategoryIcon(type, 32.dp)
+                    else -> SearchIcon(LocalContentColor.current)
+                }
             },
             trailingIcon = if (type != null && collapsed) {
                 { IconButton(onClick = { onTypeChange(null) }) { CloseIcon(LocalContentColor.current) } }
