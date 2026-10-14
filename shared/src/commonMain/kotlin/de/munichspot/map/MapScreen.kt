@@ -220,14 +220,16 @@ internal fun MapScreen(
             val pinX = mapBounds.left + with(density) { pin.x.toPx() }
             val reach = with(density) { (SelectedPoiIconSize.toPx() / 2 + 16.dp.toPx()) }
             val covered = pinX + reach > sheet.left && pinX - reach < sheet.right && pinY + reach > sheet.top
-            if (!covered) return
+            if (!covered && pinY >= topInset) return
             val shift = with(density) { ((topInset + sheet.top) / 2 - pinY).toDp() }
             val target = mapState.positionFromScreenLocation(DpOffset(center.x, center.y - shift)) ?: return
             mapState.animateCamera(CameraUpdate(center = target), CameraAnimation.Ease { duration = 300.milliseconds })
         }
         val first = snapshotFlow { sheetBounds }.filterNotNull().first()
-        // The sheet keeps its size while sliding up, so its final top is the map's bottom minus its height.
-        reveal(Rect(first.left, mapBounds.bottom - first.height, first.right, mapBounds.bottom))
+        // The sheet keeps its size while sliding up, so its final top is the map's bottom minus its height,
+        // or half the screen when a tall sheet opens partially expanded.
+        val top = maxOf(mapBounds.bottom - first.height, mapBounds.center.y)
+        reveal(Rect(first.left, top, first.right, mapBounds.bottom))
         reveal(snapshotFlow { sheetBounds }.filterNotNull().debounce(150).first())
     }
     var attributionBarHeight by remember { mutableStateOf(0.dp) }
