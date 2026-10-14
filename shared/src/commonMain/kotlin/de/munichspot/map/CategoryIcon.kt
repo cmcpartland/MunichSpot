@@ -1,14 +1,9 @@
 package de.munichspot.map
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -18,7 +13,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.munichspot.data.PoiType
@@ -28,9 +25,24 @@ import kotlin.math.sin
 
 @Composable
 internal fun CategoryIcon(type: PoiType, size: Dp = 40.dp, modifier: Modifier = Modifier) {
-    Box(modifier.size(size).clip(CircleShape).background(type.pinColor()), contentAlignment = Alignment.Center) {
-        val glyph = if (type == PoiType.DRINKING_WATER) DrinkingWaterText else Color.White
-        Canvas(Modifier.size(size * 0.6f)) { drawGlyph(type, glyph) }
+    Canvas(modifier.size(size)) { drawCategoryIcon(type, ring = false) }
+}
+
+/** Paints [CategoryIcon] as a map image, with a white ring so it stands out on the map. */
+internal class CategoryIconPainter(private val type: PoiType) : Painter() {
+    override val intrinsicSize = Size.Unspecified
+    override fun DrawScope.onDraw() = drawCategoryIcon(type, ring = true)
+}
+
+/** The type-coloured circle with its glyph; [ring] adds a white outline inside the bounds. */
+internal fun DrawScope.drawCategoryIcon(type: PoiType, ring: Boolean) {
+    val d = size.minDimension
+    val inset = if (ring) 2.dp.toPx() else 0f
+    if (ring) drawCircle(Color.White, d / 2)
+    drawCircle(type.pinColor(), d / 2 - inset)
+    val glyph = (d - 2 * inset) * 0.6f
+    inset((d - glyph) / 2) {
+        drawGlyph(type, if (type == PoiType.DRINKING_WATER) DrinkingWaterText else Color.White)
     }
 }
 

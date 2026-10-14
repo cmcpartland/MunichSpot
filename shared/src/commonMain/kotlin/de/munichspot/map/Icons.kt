@@ -57,3 +57,15 @@ internal fun CloseIcon(color: Color, modifier: Modifier = Modifier) {
         drawLine(color, Offset(size.width - m, m), Offset(m, size.height - m), w, StrokeCap.Round)
     }
 }
+
+@Composable
+internal fun BackIcon(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(20.dp)) {
+        val w = 2.dp.toPx()
+        val m = size.width * 0.15f
+        val c = Offset(m, size.height / 2)
+        drawLine(color, c, Offset(size.width - m, size.height / 2), w, StrokeCap.Round)
+        drawLine(color, c, Offset(size.width / 2, m), w, StrokeCap.Round)
+        drawLine(color, c, Offset(size.width / 2, size.height - m), w, StrokeCap.Round)
+    }
+}
