@@ -322,6 +322,24 @@ internal fun MapScreen(
         centerRequested = false
     }
 
+    // Picking a category (or narrowing its filters) with none of its pins on screen slowly zooms out to the nearest two.
+    LaunchedEffect(type, filters) {
+        if (type == null || mapBounds == Rect.Zero) return@LaunchedEffect
+        val camera = mapState.cameraPosition
+        val center = mapState.screenLocationFromPosition(camera.center) ?: return@LaunchedEffect
+        val zoom = with(density) {
+            revealZoom(
+                pois = pois.filter { it.type == type && filters.matches(it) },
+                camera = camera,
+                mapSize = mapBounds.size.toDpSize(),
+                center = center,
+                top = (topInset - mapBounds.top).toDp(),
+                bottom = attributionBarHeight,
+            )
+        } ?: return@LaunchedEffect
+        mapState.animateCamera(CameraUpdate(zoom = zoom), CameraAnimation.Ease { duration = 1200.milliseconds })
+    }
+
     Box(Modifier.fillMaxSize()) {
         MaplibreMap(
             state = mapState,

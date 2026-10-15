@@ -13,6 +13,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - the layer order: per type its icons, the toilet warning mark (`PoiWarningLayer`, for `Poi.possiblyDefect`), badge circles and counts together, so a badge stacks with its own pin; the location puck on top
   - the opening view (`boundsAround`, 700 m radius, Marienplatz fallback, moving to the user if the fix is in Munich)
   - the selected-pin highlight (`SelectedPin`), drawn in the map overlay, not as a layer
+  - the reveal zoom: picking a category (or filter) with none of its pins on screen slowly zooms out, centre fixed, to the nearest two (`map/RevealZoom.kt`, plain Mercator math)
   - the locate and filter buttons, and the attribution bar
 - `map/CategorySearchBar.kt`: the M3 `SearchBar` plus `ExpandedFullScreenSearchBar`, the category list, and back handling.
 - `map/Categories.kt`: search keywords and `hasFilters()`.
