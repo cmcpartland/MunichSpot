@@ -8,7 +8,7 @@ pip install -r tools/data/requirements.txt
 python tools/data/build_pois.py [output-path]
 ```
 
-The script exits non-zero if `validate_pois.py` finds a problem (see below).
+The script exits non-zero if `validate_pois.py` finds a problem (see below). Requests that return 404, 429 or a 5xx error are retried with growing waits for up to 5 minutes; GeoServer briefly answers 404 for valid layers while it reloads.
 
 ## Nightly refresh
 
