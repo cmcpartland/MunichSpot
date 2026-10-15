@@ -8,13 +8,32 @@ pip install -r tools/data/requirements.txt
 python tools/data/build_pois.py [output-path]
 ```
 
-The script exits non-zero if a type has too few features (500 recycling islands, 500 mailboxes, 50 drinking fountains, 100 public toilet locations) or any point lies outside the Munich area.
+The script exits non-zero if `validate_pois.py` finds a problem (see below).
 
 ## Nightly refresh
 
-The `Nightly data` workflow (`.github/workflows/nightly-data.yml`) runs daily at 03:17 UTC, on manual dispatch, and on pushes to `main` that touch `tools/data/` or the workflow. It builds `pois.geojson` and publishes it to https://cmcpartland.github.io/MunichSpot/pois.geojson. If the script fails its sanity checks, the run fails and the last good file stays live.
+The `Nightly data` workflow (`.github/workflows/nightly-data.yml`) runs daily at 03:17 UTC, on manual dispatch, and on pushes to `main` that touch `tools/data/` or the workflow. It builds `pois.geojson` and publishes it to https://cmcpartland.github.io/MunichSpot/pois.geojson. If the build or the validation fails, the run fails and the last good file stays live.
 
 One-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions.
+
+## Validation
+
+`validate_pois.py` is called by `build_pois.py` before it writes, and runs as its own workflow step against the built file:
+
+```
+python tools/data/validate_pois.py site/pois.geojson --previous https://cmcpartland.github.io/MunichSpot/pois.geojson [--skip-previous]
+```
+
+It collects all problems and exits non-zero if there are any. Thresholds are constants at the top of the script.
+
+- Structure: a FeatureCollection of Point features with finite coordinates, unique string ids with the prefix of their type (`awm-`, `osm-`, `tb-`, `wc-`), a known type, a non-empty name, known materials.
+- Minimums: 500 recycling islands, 500 mailboxes, 50 drinking fountains, 100 toilet locations, 1000 in total, all points inside the Munich bounding box.
+- Content: at least 90 % distinct coordinates per type; recycling: 90 % with materials and at least 100 with CLOTHING; mailboxes: 80 % with `collectionTimes`; toilets: 50 % with `hours` and at most 50 % DEFECT/IMPAIRED.
+- Compared with `--previous` (URL or local path): each type's count must be 80 % to 150 % of the previous count, and CLOTHING at least 80 %. Fewer than 70 % of the previous ids kept is only a warning, as is a previous file that can't be fetched or parsed (the comparison is then skipped).
+
+It prints a previous/new/delta table and appends it to `$GITHUB_STEP_SUMMARY` when set.
+
+If the city really removes many features, dispatch the workflow manually with `skip_previous_check` enabled. That skips only the comparison; the new file then becomes the baseline.
 
 ## City boundary
 
