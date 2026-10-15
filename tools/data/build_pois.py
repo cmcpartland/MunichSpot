@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Fetches Munich recycling islands (AWM), mailboxes (OSM) drinking fountains and public toilets and writes pois.geojson."""
+import itertools
 import json
 import math
 import re
@@ -34,18 +35,24 @@ DEFAULT_OUT = Path(__file__).resolve().parents[2] / "shared/src/commonMain/compo
 
 TOILET_MERGE_METERS = 15
 ROOM_CODES = (("männlich", "M"), ("weiblich", "F"), ("unisex", "U"), ("barrierefrei", "A"))
+RETRY_STATUSES = (404, 429, 502, 503, 504)
+RETRY_SECONDS = 300
 
 
-def fetch(url, data=None, attempts=4):
-    for attempt in range(1, attempts + 1):
+def fetch(url, data=None):
+    """Retries 404 (GeoServer briefly 404s valid layers while reloading), rate limits and 5xx for up to RETRY_SECONDS."""
+    start = time.monotonic()
+    for attempt in itertools.count(1):
         resp = requests.request(
             "POST" if data else "GET", url, data=data, headers={"User-Agent": USER_AGENT}, timeout=180
         )
         if resp.ok:
             return resp.json()
-        if attempt == attempts or resp.status_code not in (429, 502, 503, 504):
+        wait = min(10 * attempt, 60)
+        if resp.status_code not in RETRY_STATUSES or time.monotonic() - start + wait > RETRY_SECONDS:
             resp.raise_for_status()
-        time.sleep(10 * attempt)
+        print(f"{resp.status_code} from {url.split('?')[0]}, retry {attempt} in {wait} s")
+        time.sleep(wait)
 
 
 MATERIAL_COLUMNS = {
