@@ -1,12 +1,18 @@
 # Rebuilds pois.geojson nightly and publishes it to GitHub Pages.
-# If build_pois.py fails its sanity checks, the build job fails, deploy never runs,
-# and the previous deployment stays live.
+# If build_pois.py or validate_pois.py (which also compares against the live file) fails,
+# the build job fails, deploy never runs, and the previous deployment stays live.
+# To accept a real, large change, dispatch manually with skip_previous_check.
 name: Nightly data
 
 on:
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
+    inputs:
+      skip_previous_check:
+        description: Skip the comparison with the currently deployed pois.geojson
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -34,6 +40,11 @@ jobs:
           cache-dependency-path: tools/data/requirements.txt
       - run: pip install -r tools/data/requirements.txt
       - run: python tools/data/build_pois.py site/pois.geojson
+      - name: Validate
+        run: >
+          python tools/data/validate_pois.py site/pois.geojson
+          --previous https://cmcpartland.github.io/MunichSpot/pois.geojson
+          ${{ inputs.skip_previous_check && '--skip-previous' || '' }}
       - name: Write index page
         run: |
           cat > site/index.html <<'HTML'

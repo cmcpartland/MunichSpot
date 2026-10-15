@@ -10,6 +10,7 @@ from pathlib import Path
 
 import requests
 from pyproj import Transformer
+from validate_pois import validate
 
 AWM_URL = (
     "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0"
@@ -31,9 +32,6 @@ out center tags;"""
 USER_AGENT = "MunichSpot-data/0.1 (+https://github.com/cmcpartland/MunichSpot)"
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / "shared/src/commonMain/composeResources/files/pois.geojson"
 
-MIN_PER_TYPE = {"RECYCLING": 500, "POST_BOX": 500, "DRINKING_WATER": 50, "TOILET": 100}
-LAT_RANGE = (47.9, 48.4)
-LON_RANGE = (11.2, 11.9)
 TOILET_MERGE_METERS = 15
 ROOM_CODES = (("männlich", "M"), ("weiblich", "F"), ("unisex", "U"), ("barrierefrei", "A"))
 
@@ -203,14 +201,12 @@ def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT
     features = sorted([*recycling_features(), *mailbox_features(), *fountain_features(), *toilet_features()], key=lambda f: f["id"])
 
-    counts = {t: sum(f["properties"]["type"] == t for f in features) for t in MIN_PER_TYPE}
-    errors = [f"only {n} {t} features" for t, n in counts.items() if n < MIN_PER_TYPE[t]]
-    for f in features:
-        lon, lat = f["geometry"]["coordinates"]
-        if not (LAT_RANGE[0] <= lat <= LAT_RANGE[1] and LON_RANGE[0] <= lon <= LON_RANGE[1]):
-            errors.append(f"{f['id']} outside Munich: {lat}, {lon}")
+    errors, warnings = validate(features)
+    for w in warnings:
+        print(f"WARNING: {w}")
     if errors:
-        sys.exit("sanity check failed:\n" + "\n".join(errors))
+        sys.exit("sanity check failed:\n" + "\n".join(errors[:50]))
+    counts = Counter(f["properties"]["type"] for f in features)
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
