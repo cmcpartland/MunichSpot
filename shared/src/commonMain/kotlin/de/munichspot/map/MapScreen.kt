@@ -322,9 +322,9 @@ internal fun MapScreen(
         centerRequested = false
     }
 
-    // Picking a category (or narrowing its filters) with none of its pins on screen slowly zooms out to the nearest two.
-    LaunchedEffect(type, filters) {
-        if (type == null || mapBounds == Rect.Zero) return@LaunchedEffect
+    // Picking a category, or closing the filter sheet, with none of its pins on screen slowly zooms out to the nearest two.
+    LaunchedEffect(type, filters, showFilters) {
+        if (type == null || showFilters || mapBounds == Rect.Zero) return@LaunchedEffect
         val camera = mapState.cameraPosition
         val center = mapState.screenLocationFromPosition(camera.center) ?: return@LaunchedEffect
         val zoom = with(density) {
