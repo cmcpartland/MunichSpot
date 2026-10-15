@@ -56,7 +56,6 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 ## Open ideas (not started)
 - More reliable nightly mailbox fetch: a second Overpass server, and reuse the last mailboxes if all fail.
 - "Trinkbrunnen" shows twice in the fountain details sheet.
-- Update the GitHub Actions versions to fix the Node 20 warning.
 - On the iOS simulator, the first time the search opens there is a 0.6–1.3 s pause. It comes from the first text-field focus and isn't our code. Check on a real iPhone; a possible cosmetic fix is to focus only after the open animation.
 - Android release setup: R8, a signing config, and a baseline profile.
 - With all categories shown, the city centre is crowded; a possible fix is a bigger cluster radius.
