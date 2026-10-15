@@ -187,7 +187,10 @@ def main():
     ap.add_argument("--skip-previous", action="store_true", help="skip the comparison with --previous")
     args = ap.parse_args()
     try:
-        features = json.loads(args.path.read_text(encoding="utf-8"))["features"]
+        data = json.loads(args.path.read_text(encoding="utf-8"))
+        if data.get("type") != "FeatureCollection":
+            raise ValueError(f"type is {data.get('type')!r}")
+        features = data["features"]
     except Exception as e:
         sys.exit(f"validation failed: {args.path} is not a readable FeatureCollection: {e}")
     previous = load_previous(args.previous) if args.previous and not args.skip_previous else None
