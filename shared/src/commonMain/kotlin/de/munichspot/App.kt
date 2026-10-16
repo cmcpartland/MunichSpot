@@ -5,20 +5,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.lifecycle.compose.LifecycleResumeEffect
-import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import de.munichspot.data.FetchResult
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
 import de.munichspot.data.PlaceSaver
-import de.munichspot.data.FetchResult
 import de.munichspot.data.PoiData
 import de.munichspot.data.PoiType
 import de.munichspot.data.fetchLatestPois
@@ -27,6 +26,7 @@ import de.munichspot.data.loadStartupPois
 import de.munichspot.map.DataStatus
 import de.munichspot.map.MapScreen
 import de.munichspot.map.PoiFilters
+import kotlinx.coroutines.launch
 
 @Composable
 fun App() {
@@ -66,7 +66,7 @@ fun App() {
     var type by rememberSaveable { mutableStateOf<PoiType?>(null) }
     var filters by remember { mutableStateOf(PoiFilters()) }
     val status = when {
-        data != null -> DataStatus.Ready
+        data != null || !loaded -> DataStatus.Ready
         failed -> DataStatus.Failed
         else -> DataStatus.Loading
     }
