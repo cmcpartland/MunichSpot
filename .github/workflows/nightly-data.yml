@@ -2,6 +2,10 @@
 # If build_pois.py or validate_pois.py (which also compares against the live file) fails,
 # the build job fails, deploy never runs, and the previous deployment stays live.
 # To accept a real, large change, dispatch manually with skip_previous_check.
+# places.json is rebuilt weekly (Monday schedule, rebuild_places dispatch, or when it is not live yet).
+# Every other run, and any failure of the places build or validation, re-publishes the live file
+# (or the bundled one on the first deploy), because each deploy replaces the whole site.
+# Places problems never fail the job.
 name: Nightly data
 
 on:
@@ -11,6 +15,10 @@ on:
     inputs:
       skip_previous_check:
         description: Skip the comparison with the currently deployed pois.geojson
+        type: boolean
+        default: false
+      rebuild_places:
+        description: Rebuild places.json from Overpass (otherwise only on Mondays)
         type: boolean
         default: false
   push:
@@ -23,6 +31,9 @@ permissions:
   contents: read
   pages: write
   id-token: write
+
+env:
+  LIVE_PLACES_URL: https://cmcpartland.github.io/MunichSpot/places.json
 
 concurrency:
   group: pages
@@ -45,6 +56,37 @@ jobs:
           python tools/data/validate_pois.py site/pois.geojson
           --previous https://cmcpartland.github.io/MunichSpot/pois.geojson
           ${{ inputs.skip_previous_check && '--skip-previous' || '' }}
+      - name: Places
+        id: places
+        continue-on-error: true
+        timeout-minutes: 20
+        env:
+          EVENT: ${{ github.event_name }}
+          REBUILD: ${{ inputs.rebuild_places }}
+        run: |
+          rebuild=false
+          [ "$EVENT" = schedule ] && [ "$(date -u +%u)" = 1 ] && rebuild=true
+          [ "$EVENT" = workflow_dispatch ] && [ "$REBUILD" = true ] && rebuild=true
+          code=$(curl -s -o /dev/null -w '%{http_code}' -L "$LIVE_PLACES_URL" || true)
+          [ "$code" = 404 ] && rebuild=true
+          if [ "$rebuild" = true ] \
+            && python tools/data/build_places.py site/places.new.json \
+            && python tools/data/validate_places.py site/places.new.json; then
+            mv site/places.new.json site/places.json
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rebuild=$rebuild, keeping the live places.json"
+          fi
+      - name: Reuse the live or bundled places.json
+        if: steps.places.outputs.ok != 'true'
+        run: |
+          rm -f site/places.new.json
+          if curl -fsSL --retry 3 -o site/places.live.json "$LIVE_PLACES_URL" && python tools/data/validate_places.py site/places.live.json; then
+            mv site/places.live.json site/places.json
+          else
+            rm -f site/places.live.json
+            cp shared/src/commonMain/composeResources/files/places.json site/places.json
+          fi
       - name: Write index page
         run: |
           cat > site/index.html <<'HTML'
@@ -52,10 +94,11 @@ jobs:
           <meta charset="utf-8">
           <title>MunichSpot data</title>
           <h1>MunichSpot data</h1>
-          <p>Nightly <a href="pois.geojson">pois.geojson</a>: recycling islands and mailboxes in Munich, used by the MunichSpot app.</p>
+          <p>Nightly <a href="pois.geojson">pois.geojson</a> and weekly <a href="places.json">places.json</a> (place search index), used by the MunichSpot app.</p>
           <ul>
             <li>Recycling islands: Landeshauptstadt München, AWM, <a href="https://www.govdata.de/dl-de/by-2-0">dl-by-de/2.0</a></li>
             <li>Mailboxes: © OpenStreetMap contributors, <a href="https://www.openstreetmap.org/copyright">ODbL 1.0</a></li>
+            <li>Place search index (places.json): © OpenStreetMap contributors, <a href="https://www.openstreetmap.org/copyright">ODbL 1.0</a></li>
           </ul>
           HTML
       - uses: actions/upload-pages-artifact@v5
