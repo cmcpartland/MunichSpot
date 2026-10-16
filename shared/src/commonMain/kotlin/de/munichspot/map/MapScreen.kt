@@ -304,7 +304,7 @@ internal fun MapScreen(
     val pickerTop = pickerBottom + CategoryPickerHeight
 
     // Reads the fix and the camera (both snapshot state), so it recomposes only when the boolean flips.
-    val userOnScreen by remember {
+    val userOnScreen by remember(topInset, pickerTop) {
         derivedStateOf {
             val me = locationState.lastLocation?.position
             val at = if (me != null && mapBounds != Rect.Zero) mapState.screenLocationFromPosition(me) else null
