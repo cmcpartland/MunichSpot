@@ -21,6 +21,7 @@ nwr["place"~"^(suburb|quarter|neighbourhood)$"][name](area.a);
 );
 out center tags;"""
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / "shared/src/commonMain/composeResources/files/places.json"
+BOUNDARY = DEFAULT_OUT.with_name("munich_boundary.geojson")
 MERGE_METERS = 500
 LANDMARK_TOURISM = ("attraction", "museum", "zoo")
 DISTRICT_PLACES = ("suburb", "quarter", "neighbourhood")
@@ -41,6 +42,22 @@ def kind_of(tags):
         return "district"
 
 
+def load_boundary():
+    """Munich's rings: the boundary file is a world polygon with the city (and its tiny exclaves) as holes."""
+    rings = json.loads(BOUNDARY.read_text())["geometry"]["coordinates"][1:]
+    return [[(x, y) for x, y in ring] for ring in rings]
+
+
+def in_munich(rings, lat, lon):
+    """Even-odd ray casting over all rings; exclaves are separate rings, so inside any ring means inside Munich."""
+    inside = False
+    for ring in rings:
+        for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
+            if (y1 > lat) != (y2 > lat) and lon < x1 + (lat - y1) * (x2 - x1) / (y2 - y1):
+                inside = not inside
+    return inside
+
+
 def meters(a, b):
     dy = (a[0] - b[0]) * 111320
     dx = (a[1] - b[1]) * 111320 * math.cos(math.radians(a[0]))
@@ -48,6 +65,7 @@ def meters(a, b):
 
 
 def main():
+    rings = load_boundary()
     groups = defaultdict(list)
     for e in fetch(OVERPASS_URL, {"data": QUERY})["elements"]:
         tags = e.get("tags", {})
@@ -65,7 +83,7 @@ def main():
                 if all(meters(p, q) > MERGE_METERS for q in merged):
                     merged.append(p)
         for lat, lon in merged:
-            if 47.9 <= lat <= 48.4 and 11.2 <= lon <= 11.9:
+            if in_munich(rings, lat, lon):
                 places.append([name, kind, round(lat, 5), round(lon, 5)])
     if len(places) < 1000:
         sys.exit(f"only {len(places)} places, something is wrong")

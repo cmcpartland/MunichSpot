@@ -41,7 +41,7 @@ If the city really removes many features, dispatch the workflow manually with `s
 
 ## Place index
 
-`build_places.py` writes `places.json` (a compact array of `[name, kind, lat, lon]`), the offline index behind the app's place search ("Wo?"): streets, parks, squares, stations, landmarks and districts in Munich. One Overpass query; streets with the same name become one entry at the mean of their ways, other features with the same name merge within 500 m. Run it manually with `python tools/data/build_places.py`; places basically never change, so it isn't part of the nightly workflow. Source: OSM via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
+`build_places.py` writes `places.json` (a compact array of `[name, kind, lat, lon]`), the offline index behind the app's place search ("Wo?"): streets, parks, squares, stations, landmarks and districts in Munich. One Overpass query; streets with the same name become one entry at the mean of their ways, other features with the same name merge within 500 m. Ways and areas are returned if they touch the city, so each final point is tested against `munich_boundary.geojson` (point in polygon) and dropped if it lies outside. Run it manually with `python tools/data/build_places.py`; places basically never change, so it isn't part of the nightly workflow. Source: OSM via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 
 ## Sources
 
