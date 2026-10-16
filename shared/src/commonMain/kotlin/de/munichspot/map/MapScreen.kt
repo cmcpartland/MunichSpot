@@ -118,6 +118,10 @@ import de.munichspot.shared.resources.Res
 import org.maplibre.compose.layers.LocationIndicatorDefaults
 import org.maplibre.compose.layers.LocationIndicatorLayer
 import org.maplibre.compose.layers.SymbolLayer
+import org.maplibre.compose.expressions.value.SymbolAnchor
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import org.maplibre.compose.location.LocationPermission
 import org.maplibre.compose.location.LocationTrackingStatus
 import org.maplibre.compose.location.rememberLocationState
@@ -261,6 +265,18 @@ internal fun MapScreen(
             topImage = LocationIndicatorDefaults.topImage(color = LocationBlue),
             bearingImage = null,
         )
+        val anchorSource = rememberGeoJsonSource(GeoJsonData.JsonString(anchor.toGeoJson()))
+        val anchorPainter = remember { AnchorPinPainter() }
+        SymbolLayer(
+            id = "anchor-pin",
+            source = anchorSource,
+            iconImage = image(anchorPainter, size = AnchorPinSize),
+            iconAnchor = const(SymbolAnchor.Bottom),
+            iconTranslate = const(DpOffset(0.dp, 2.dp)),
+            iconTranslateAnchor = const(TranslateAnchor.Viewport),
+            iconAllowOverlap = const(true),
+            iconIgnorePlacement = const(true),
+        )
     }
 
     val density = LocalDensity.current
@@ -396,9 +412,6 @@ internal fun MapScreen(
                 selected?.let {
                     val o = it.type.pinOffset()
                     Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it) }
-                }
-                anchor?.let {
-                    Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(y = -(AnchorPinSize.height / 2 - 2.dp))) { AnchorPin() }
                 }
             },
             interactions = MapInteractions {
@@ -607,9 +620,12 @@ private fun ClickEvent.closerToIsland(feature: Feature<Geometry, JsonObject?>?, 
 
 private val AnchorPinSize = DpSize(24.dp, 32.dp)
 
-@Composable
-private fun AnchorPin() {
-    Canvas(Modifier.size(AnchorPinSize)) {
+private fun Place?.toGeoJson() = """{"type":"FeatureCollection","features":[""" +
+    (this?.let { """{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[${it.lon},${it.lat}]}}""" } ?: "") + "]}"
+
+private class AnchorPinPainter : Painter() {
+    override val intrinsicSize = Size.Unspecified
+    override fun DrawScope.onDraw() {
         val pad = 2.dp.toPx()
         val w = size.width - 2 * pad
         val h = size.height - 2 * pad
