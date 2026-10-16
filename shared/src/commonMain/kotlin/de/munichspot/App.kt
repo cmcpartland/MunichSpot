@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -16,12 +15,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import de.munichspot.data.FetchResult
 import de.munichspot.data.Place
-import de.munichspot.data.PlaceIndex
+import de.munichspot.data.PlaceData
 import de.munichspot.data.PlaceSaver
 import de.munichspot.data.PoiData
 import de.munichspot.data.PoiType
 import de.munichspot.data.fetchLatestPois
-import de.munichspot.data.loadPlaces
+import de.munichspot.data.fetchLatestPlaces
+import de.munichspot.data.loadStartupPlaces
 import de.munichspot.data.loadStartupPois
 import de.munichspot.map.DataStatus
 import de.munichspot.map.MapScreen
@@ -53,15 +53,20 @@ fun App() {
             }
         }
     }
+    var places by remember { mutableStateOf<PlaceData?>(null) }
     LaunchedEffect(Unit) {
         data = loadStartupPois()
         loaded = true
+    }
+    // Places change weekly at most, so they are refreshed once per app start, not on every resume.
+    LaunchedEffect(Unit) {
+        places = loadStartupPlaces()
+        (fetchLatestPlaces(places?.generated) as? FetchResult.Updated)?.let { places = it.data }
     }
     LifecycleResumeEffect(loaded) {
         if (loaded) refresh()
         onPauseOrDispose {}
     }
-    val places by produceState<PlaceIndex?>(null) { value = PlaceIndex(loadPlaces()) }
     var anchor by rememberSaveable(stateSaver = PlaceSaver) { mutableStateOf<Place?>(null) }
     var type by rememberSaveable { mutableStateOf<PoiType?>(null) }
     var filters by remember { mutableStateOf(PoiFilters()) }
@@ -77,7 +82,7 @@ fun App() {
                 failed = false
                 refresh()
             },
-            type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places, anchor, onAnchorChange = { anchor = it },
+            type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places?.index, anchor, onAnchorChange = { anchor = it },
         )
     }
 }
