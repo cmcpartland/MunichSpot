@@ -77,7 +77,6 @@ internal fun CategoryPicker(
     places: PlaceIndex?,
     anchor: Place?,
     onAnchorChange: (Place?) -> Unit,
-    userOnScreen: Boolean,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     bottomInset: Dp,
@@ -209,10 +208,9 @@ internal fun CategoryPicker(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
-                                else if (userOnScreen) LocateIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
                                 else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
                                 Text(
-                                    anchor?.name ?: if (userOnScreen) "Mein Standort" else "Ort suchen",
+                                    anchor?.name ?: "Ort suchen",
                                     style = MaterialTheme.typography.labelLarge,
                                     color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
                                     maxLines = 1,
