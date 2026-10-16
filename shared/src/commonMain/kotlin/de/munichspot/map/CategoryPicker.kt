@@ -9,6 +9,8 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +26,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,6 +56,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
@@ -60,6 +65,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
@@ -80,6 +86,8 @@ internal fun CategoryPicker(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     bottomInset: Dp,
+    showLocate: Boolean,
+    onLocate: () -> Unit,
 ) {
     BackHandler(enabled = expanded) { onExpandedChange(false) }
     BackHandler(enabled = type != null && !expanded) { onTypeChange(null) }
@@ -91,6 +99,9 @@ internal fun CategoryPicker(
     val focusManager = LocalFocusManager.current
     val density = LocalDensity.current
     val imeBottom = with(density) { WindowInsets.ime.getBottom(density).toDp() }
+    var pickerWidth by remember { mutableIntStateOf(0) }
+    val gapPx = with(density) { 8.dp.roundToPx() }
+    val pillPx = with(density) { CategoryPickerHeight.roundToPx() }
     val pick = { place: Place ->
         onAnchorChange(place)
         query = ""
@@ -107,120 +118,148 @@ internal fun CategoryPicker(
                     },
             )
         }
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = animateColorAsState(
-                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (expanded) 0.85f else 1f),
-                tween(MorphMillis),
-            ).value,
-            tonalElevation = if (expanded) 0.dp else 3.dp,
-            shadowElevation = if (expanded) 0.dp else 4.dp,
-            modifier = Modifier
+        Box(
+            Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = maxOf(bottomInset, if (expanded) imeBottom + 8.dp else 0.dp))
-                .animateContentSize(tween(MorphMillis))
-                .then(if (expanded) Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp).fillMaxWidth() else Modifier),
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = maxOf(bottomInset, if (expanded) imeBottom + 8.dp else 0.dp)),
+            contentAlignment = Alignment.Center,
         ) {
-            AnimatedContent(
-                targetState = expanded,
-                transitionSpec = { fadeIn(tween(MorphMillis)) togetherWith fadeOut(tween(MorphMillis / 2)) using SizeTransform { _, _ -> snap() } },
-                label = "picker",
-            ) { open ->
-                if (open) {
-                    val suggestions = remember(query, places) { places?.search(query).orEmpty() }
-                    val searching = query.trim().length >= 2
-                    LaunchedEffect(Unit) {
-                        if (focusSearch) {
-                            delay(MorphMillis.toLong())
-                            focusRequester.requestFocus()
-                            focusSearch = false
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = animateColorAsState(
+                    MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (expanded) 0.85f else 1f),
+                    tween(MorphMillis),
+                ).value,
+                tonalElevation = if (expanded) 0.dp else 3.dp,
+                shadowElevation = if (expanded) 0.dp else 4.dp,
+                modifier = Modifier
+                    .padding(horizontal = if (showLocate && !expanded) CategoryPickerHeight + 8.dp else 0.dp)
+                    .onSizeChanged { pickerWidth = it.width }
+                    .animateContentSize(tween(MorphMillis))
+                    .then(if (expanded) Modifier.widthIn(max = 400.dp).fillMaxWidth() else Modifier),
+            ) {
+                AnimatedContent(
+                    targetState = expanded,
+                    transitionSpec = { fadeIn(tween(MorphMillis)) togetherWith fadeOut(tween(MorphMillis / 2)) using SizeTransform { _, _ -> snap() } },
+                    label = "picker",
+                ) { open ->
+                    if (open) {
+                        val suggestions = remember(query, places) { places?.search(query).orEmpty() }
+                        val searching = query.trim().length >= 2
+                        LaunchedEffect(Unit) {
+                            if (focusSearch) {
+                                delay(MorphMillis.toLong())
+                                focusRequester.requestFocus()
+                                focusSearch = false
+                            }
                         }
-                    }
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SearchField(query, { query = it }, focusRequester, onSearch = { suggestions.firstOrNull()?.let(pick) })
-                        if (searching) {
-                            if (suggestions.isEmpty()) {
-                                Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    Text("Keine Treffer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            SearchField(query, { query = it }, focusRequester, onSearch = { suggestions.firstOrNull()?.let(pick) })
+                            if (searching) {
+                                if (suggestions.isEmpty()) {
+                                    Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text("Keine Treffer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            "Die Suche umfasst nur Orte in der Stadt München.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                for (place in suggestions) SuggestionRow(place) { pick(place) }
+                            } else {
+                                if (anchor != null) AnchorRow(anchor) { onAnchorChange(null) }
+                                Text("Kategorie wählen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    for (t in listOf<PoiType?>(null) + PoiType.entries) {
+                                        CategoryChoice(t, selected = t == type) {
+                                            onTypeChange(t)
+                                            onExpandedChange(false)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Row(Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp), verticalAlignment = Alignment.CenterVertically) {
+                            val colors = MaterialTheme.colorScheme
+                            Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    Modifier.heightIn(min = CategoryPickerHeight)
+                                        .weight(1f, fill = false)
+                                        .clip(CircleShape)
+                                        .semantics { contentDescription = "Kategorie wählen" }
+                                        .clickable(role = Role.Button) { onExpandedChange(true) }
+                                        .padding(start = 16.dp, end = if (type != null) 4.dp else 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    CategoryGlyph(type)
                                     Text(
-                                        "Die Suche umfasst nur Orte in der Stadt München.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        type?.label() ?: "Alle Kategorien",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = colors.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
                                     )
                                 }
+                                if (type != null) ClearButton("Kategorie entfernen") { onTypeChange(null) }
                             }
-                            for (place in suggestions) SuggestionRow(place) { pick(place) }
-                        } else {
-                            if (anchor != null) AnchorRow(anchor) { onAnchorChange(null) }
-                            Text("Kategorie wählen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                for (t in listOf<PoiType?>(null) + PoiType.entries) {
-                                    CategoryChoice(t, selected = t == type) {
-                                        onTypeChange(t)
-                                        onExpandedChange(false)
-                                    }
+                            Box(Modifier.size(width = 1.dp, height = 20.dp).background(colors.outlineVariant))
+                            Row(
+                                Modifier.then(if (anchor != null) Modifier.weight(1f, fill = false) else Modifier),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Row(
+                                    Modifier.heightIn(min = CategoryPickerHeight)
+                                        .weight(1f, fill = false)
+                                        .clip(CircleShape)
+                                        .semantics { contentDescription = "Ort suchen" }
+                                        .clickable(role = Role.Button) {
+                                            focusSearch = true
+                                            onExpandedChange(true)
+                                        }
+                                        .padding(start = 12.dp, end = if (anchor != null) 4.dp else 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
+                                    else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
+                                    Text(
+                                        anchor?.name ?: "Ort suchen",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
                                 }
+                                if (anchor != null) ClearButton("Ort entfernen") { onAnchorChange(null) }
                             }
                         }
                     }
-                } else {
-                    Row(Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp), verticalAlignment = Alignment.CenterVertically) {
-                        val colors = MaterialTheme.colorScheme
-                        Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
-                            Row(
-                                Modifier.heightIn(min = CategoryPickerHeight)
-                                    .weight(1f, fill = false)
-                                    .clip(CircleShape)
-                                    .semantics { contentDescription = "Kategorie wählen" }
-                                    .clickable(role = Role.Button) { onExpandedChange(true) }
-                                    .padding(start = 16.dp, end = if (type != null) 4.dp else 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                CategoryGlyph(type)
-                                Text(
-                                    type?.label() ?: "Alle Kategorien",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = colors.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false),
-                                )
-                            }
-                            if (type != null) ClearButton("Kategorie entfernen") { onTypeChange(null) }
-                        }
-                        Box(Modifier.size(width = 1.dp, height = 20.dp).background(colors.outlineVariant))
-                        Row(
-                            Modifier.then(if (anchor != null) Modifier.weight(1f, fill = false) else Modifier),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Row(
-                                Modifier.heightIn(min = CategoryPickerHeight)
-                                    .weight(1f, fill = false)
-                                    .clip(CircleShape)
-                                    .semantics { contentDescription = "Ort suchen" }
-                                    .clickable(role = Role.Button) {
-                                        focusSearch = true
-                                        onExpandedChange(true)
-                                    }
-                                    .padding(start = 12.dp, end = if (anchor != null) 4.dp else 16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
-                                else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
-                                Text(
-                                    anchor?.name ?: "Ort suchen",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false),
-                                )
-                            }
-                            if (anchor != null) ClearButton("Ort entfernen") { onAnchorChange(null) }
-                        }
-                    }
+                }
+            }
+            AnimatedVisibility(
+                visible = showLocate && !expanded,
+                enter = fadeIn(tween(MorphMillis)) + scaleIn(tween(MorphMillis)),
+                exit = fadeOut(tween(MorphMillis)) + scaleOut(tween(MorphMillis)),
+                modifier = Modifier.offset { IntOffset(pickerWidth / 2 + gapPx + pillPx / 2, 0) },
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    tonalElevation = 3.dp,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.size(CategoryPickerHeight)
+                        .semantics { contentDescription = "Mein Standort" }
+                        .clip(CircleShape)
+                        .clickable(role = Role.Button, onClick = onLocate),
+                ) {
+                    Box(contentAlignment = Alignment.Center) { LocateIcon(MaterialTheme.colorScheme.primary, Modifier.size(24.dp)) }
                 }
             }
         }

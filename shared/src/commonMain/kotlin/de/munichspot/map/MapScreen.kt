@@ -96,6 +96,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import org.maplibre.compose.camera.CameraMoveReason
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.CameraUpdate
 import org.maplibre.compose.expressions.dsl.asString
@@ -212,6 +213,7 @@ internal fun MapScreen(
     val locationState = rememberLocationState()
     val snackbar = remember { SnackbarHostState() }
     var centerRequested by remember { mutableStateOf(false) }
+    var panned by remember { mutableStateOf(false) }
     val dark = isSystemInDarkTheme()
     val boundary by produceState<String?>(null) {
         value = runCatching { Res.readBytes("files/munich_boundary.geojson").decodeToString() }.getOrNull()
@@ -317,6 +319,11 @@ internal fun MapScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        snapshotFlow { mapState.isCameraMoving && mapState.cameraMoveReason == CameraMoveReason.Gesture }
+            .collect { if (it) panned = true }
+    }
+
     LaunchedEffect(centerRequested) {
         if (!centerRequested) return@LaunchedEffect
         // Waits for a fix; gives up on a known denial, a tracking failure or after a timeout.
@@ -330,6 +337,7 @@ internal fun MapScreen(
         }
         if (position != null) {
             mapState.animateCamera(CameraUpdate(center = position, zoom = 15.0))
+            panned = false
         } else {
             snackbar.showSnackbar("Standort nicht verfügbar")
         }
@@ -365,6 +373,7 @@ internal fun MapScreen(
             val me = locationState.lastLocation?.position
             if (me != null && me.latitude in 47.9..48.4 && me.longitude in 11.2..11.9) {
                 mapState.animateCameraToBounds(boundsAround(me))
+                panned = false
                 revealNearest()
             }
             return@LaunchedEffect
@@ -401,17 +410,6 @@ internal fun MapScreen(
         )
         selected?.let { PoiSheet(it, onBounds = { b -> sheetBounds = b }) { selected = null } }
         if (showFilters && type != null) FilterSheet(type, filters, onChange = onFiltersChange, onDismiss = { showFilters = false })
-        SmallFloatingActionButton(
-            onClick = {
-                if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
-                centerRequested = true
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = pickerTop + 56.dp),
-        ) {
-            LocateIcon(LocalContentColor.current)
-        }
         if (type != null && type.hasFilters()) SmallFloatingActionButton(
             onClick = {
                 selected = null
@@ -441,6 +439,11 @@ internal fun MapScreen(
                 }
             },
             bottomInset = pickerBottom,
+            showLocate = panned,
+            onLocate = {
+                if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
+                centerRequested = true
+            },
         )
         Surface(
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
