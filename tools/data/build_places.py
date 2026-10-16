@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Builds places.json: named Munich streets, parks, squares, stations, landmarks and districts as [name, kind, lat, lon]."""
+"""Builds places.json: {"generated": UTC timestamp, "places": [[name, kind, lat, lon], ...]} of named Munich streets, parks, squares, stations, landmarks and districts."""
 import json
 import math
 import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 from build_pois import OVERPASS_URL, fetch
@@ -89,7 +90,8 @@ def main():
         sys.exit(f"only {len(places)} places, something is wrong")
     places.sort(key=lambda p: (p[0], p[1], p[2], p[3]))
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT
-    out.write_text(json.dumps(places, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+    generated = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    out.write_text(json.dumps({"generated": generated, "places": places}, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
     counts = defaultdict(int)
     for p in places:
         counts[p[1]] += 1
