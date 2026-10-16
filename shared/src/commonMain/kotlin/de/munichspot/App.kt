@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
+import de.munichspot.data.PlaceSaver
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
 import de.munichspot.data.fetchLatestPois
@@ -28,7 +29,7 @@ fun App() {
         fetchLatestPois()?.let { value = it }
     }
     val places by produceState<PlaceIndex?>(null) { value = PlaceIndex(loadPlaces()) }
-    var anchor by remember { mutableStateOf<Place?>(null) }
+    var anchor by rememberSaveable(stateSaver = PlaceSaver) { mutableStateOf<Place?>(null) }
     var type by rememberSaveable { mutableStateOf<PoiType?>(null) }
     var filters by remember { mutableStateOf(PoiFilters()) }
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {

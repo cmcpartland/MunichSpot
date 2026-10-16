@@ -1,6 +1,7 @@
 package de.munichspot.data
 
 import de.munichspot.shared.resources.Res
+import androidx.compose.runtime.saveable.listSaver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,6 +20,11 @@ enum class PlaceKind(val label: String) {
 }
 
 data class Place(val name: String, val kind: PlaceKind, val lat: Double, val lon: Double)
+
+internal val PlaceSaver = listSaver<Place?, Any>(
+    save = { p -> if (p == null) emptyList() else listOf(p.name, p.kind.name, p.lat, p.lon) },
+    restore = { l -> if (l.isEmpty()) null else Place(l[0] as String, PlaceKind.valueOf(l[1] as String), l[2] as Double, l[3] as Double) },
+)
 
 // Streets, parks, squares, stations, landmarks and districts: © OpenStreetMap contributors (ODbL), built by tools/data/build_places.py
 suspend fun loadPlaces(): List<Place> = try {

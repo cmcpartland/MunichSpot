@@ -47,7 +47,7 @@ class PlaceIndex(val places: List<Place>) {
             compareBy<Triple<Int, Int, Int>>({ it.first }, { it.second })
                 .thenBy { distance(places[it.third]) }
                 .thenBy { names[it.third].length },
-        ).take(limit).map { places[it.third] }
+        ).distinctBy { names[it.third] }.take(limit).map { places[it.third] }
     }
 }
 
@@ -56,9 +56,6 @@ private fun kindPriority(kind: PlaceKind) = when (kind) {
     PlaceKind.PARK -> 1
     PlaceKind.STATION -> 2
     PlaceKind.SQUARE -> 3
-    PlaceKind.LANDMARK -> 4
-    PlaceKind.STREET -> 5
+    PlaceKind.STREET -> 4
+    PlaceKind.LANDMARK -> 5
 }
-
-fun searchPlaces(places: List<Place>, query: String, nearLat: Double? = null, nearLon: Double? = null, limit: Int = 6): List<Place> =
-    PlaceIndex(places).search(query, nearLat, nearLon, limit)

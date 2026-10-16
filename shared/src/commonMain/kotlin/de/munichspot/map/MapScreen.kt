@@ -357,14 +357,11 @@ internal fun MapScreen(
     // Picking a category, or closing the filter sheet, reveals the nearest pins.
     LaunchedEffect(type, filters, showFilters) { revealNearest() }
 
-    var anchorSeen by remember { mutableStateOf(anchor) }
     LaunchedEffect(anchor) {
-        if (anchor == anchorSeen) return@LaunchedEffect
-        anchorSeen = anchor
-        if (anchor == null) return@LaunchedEffect
+        val a = anchor ?: return@LaunchedEffect
         selected = null
-        val radius = if (anchor.kind == PlaceKind.DISTRICT) 1.5 else 0.7
-        mapState.animateCameraToBounds(boundsAround(Position(longitude = anchor.lon, latitude = anchor.lat), radius))
+        val radius = if (a.kind == PlaceKind.DISTRICT) 1.5 else 0.7
+        mapState.animateCameraToBounds(boundsAround(Position(longitude = a.lon, latitude = a.lat), radius))
         revealNearest()
     }
 
@@ -381,7 +378,7 @@ internal fun MapScreen(
                     Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it) }
                 }
                 anchor?.let {
-                    Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(y = -AnchorPinSize.height / 2)) { AnchorPin() }
+                    Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(y = -(AnchorPinSize.height / 2 - 2.dp))) { AnchorPin() }
                 }
             },
             interactions = MapInteractions {
