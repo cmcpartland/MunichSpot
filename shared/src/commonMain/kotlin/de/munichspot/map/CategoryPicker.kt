@@ -77,6 +77,7 @@ internal fun CategoryPicker(
     places: PlaceIndex?,
     anchor: Place?,
     onAnchorChange: (Place?) -> Unit,
+    locationGranted: Boolean,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     bottomInset: Dp,
@@ -162,7 +163,7 @@ internal fun CategoryPicker(
                         }
                     }
                 } else {
-                    Row(Modifier.widthIn(max = 320.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp), verticalAlignment = Alignment.CenterVertically) {
                         val colors = MaterialTheme.colorScheme
                         val hasSelection = type != null || anchor != null
                         Row(
@@ -201,9 +202,10 @@ internal fun CategoryPicker(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
+                                else if (locationGranted) LocateIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
                                 else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
                                 Text(
-                                    anchor?.name ?: "Ort",
+                                    anchor?.name ?: if (locationGranted) "Mein Standort" else "Ort suchen",
                                     style = MaterialTheme.typography.labelLarge,
                                     color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
                                     maxLines = 1,
