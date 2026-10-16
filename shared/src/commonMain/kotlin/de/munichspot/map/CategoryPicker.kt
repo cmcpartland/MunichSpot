@@ -172,7 +172,7 @@ internal fun CategoryPicker(
                                 .clip(CircleShape)
                                 .semantics { contentDescription = "Kategorie wählen" }
                                 .clickable(role = Role.Button) { onExpandedChange(true) }
-                                .padding(start = 16.dp, end = if (hasSelection) 8.dp else 16.dp),
+                                .padding(start = 16.dp, end = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
@@ -186,32 +186,32 @@ internal fun CategoryPicker(
                                 modifier = Modifier.weight(1f, fill = false),
                             )
                         }
+                        Box(Modifier.size(width = 1.dp, height = 20.dp).background(colors.outlineVariant))
+                        Row(
+                            Modifier.heightIn(min = CategoryPickerHeight)
+                                .then(if (anchor != null) Modifier.weight(1f, fill = false) else Modifier)
+                                .clip(CircleShape)
+                                .semantics { contentDescription = "Ort suchen" }
+                                .clickable(role = Role.Button) {
+                                    focusSearch = true
+                                    onExpandedChange(true)
+                                }
+                                .padding(start = 12.dp, end = if (hasSelection) 8.dp else 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
+                            else if (locationGranted) LocateIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
+                            else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
+                            Text(
+                                anchor?.name ?: if (locationGranted) "Mein Standort" else "Ort suchen",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                         if (hasSelection) {
-                            Box(Modifier.size(width = 1.dp, height = 20.dp).background(colors.outlineVariant))
-                            Row(
-                                Modifier.heightIn(min = CategoryPickerHeight)
-                                    .then(if (anchor != null) Modifier.weight(1f, fill = false) else Modifier)
-                                    .clip(CircleShape)
-                                    .semantics { contentDescription = "Ort suchen" }
-                                    .clickable(role = Role.Button) {
-                                        focusSearch = true
-                                        onExpandedChange(true)
-                                    }
-                                    .padding(start = 12.dp, end = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
-                                else if (locationGranted) LocateIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
-                                else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
-                                Text(
-                                    anchor?.name ?: if (locationGranted) "Mein Standort" else "Ort suchen",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
                             Box(
                                 Modifier.padding(end = 4.dp).size(40.dp).clip(CircleShape)
                                     .clickable(role = Role.Button) {
