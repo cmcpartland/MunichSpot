@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.geometry.Rect
@@ -185,6 +184,8 @@ internal fun MapScreen(
     var selected by remember { mutableStateOf<Poi?>(null) }
     val poisById = remember(pois) { pois.associateBy { it.id } }
     var showFilters by remember { mutableStateOf(false) }
+    var pickerOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(selected, showFilters) { if (selected != null || showFilters) pickerOpen = false }
     val geoJson = PoiType.entries.associateWith { t ->
         val f = if (type == t) filters else PoiFilters()
         val key = when (t) {
@@ -253,7 +254,7 @@ internal fun MapScreen(
     val density = LocalDensity.current
     var mapBounds by remember { mutableStateOf(Rect.Zero) }
     var sheetBounds by remember { mutableStateOf<Rect?>(null) }
-    val topInset = WindowInsets.statusBars.getTop(density) + with(density) { 72.dp.toPx() }
+    val topInset = WindowInsets.statusBars.getTop(density) + with(density) { 16.dp.toPx() }
 
     var panBack by remember { mutableStateOf<Position?>(null) }
     LaunchedEffect(selected?.id) {
@@ -334,7 +335,7 @@ internal fun MapScreen(
                 mapSize = mapBounds.size.toDpSize(),
                 center = center,
                 top = (topInset - mapBounds.top).toDp(),
-                bottom = attributionBarHeight,
+                bottom = attributionBarHeight + CategoryPickerHeight + 8.dp,
             )
         } ?: return@LaunchedEffect
         mapState.animateCamera(CameraUpdate(zoom = zoom), CameraAnimation.Ease { duration = 1200.milliseconds })
@@ -362,10 +363,6 @@ internal fun MapScreen(
         )
         selected?.let { PoiSheet(it, onBounds = { b -> sheetBounds = b }) { selected = null } }
         if (showFilters && type != null) FilterSheet(type, filters, onChange = onFiltersChange, onDismiss = { showFilters = false })
-        CategorySearchBar(
-            pois, type, onTypeChange,
-            Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
-        )
         SmallFloatingActionButton(
             onClick = {
                 if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
@@ -394,7 +391,18 @@ internal fun MapScreen(
             hostState = snackbar,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = attributionBarHeight + 8.dp),
+                .padding(bottom = attributionBarHeight + CategoryPickerHeight + 16.dp),
+        )
+        CategoryPicker(
+            type, onTypeChange, pickerOpen,
+            onExpandedChange = {
+                pickerOpen = it
+                if (it) {
+                    selected = null
+                    showFilters = false
+                }
+            },
+            modifier = Modifier.padding(bottom = attributionBarHeight + 8.dp),
         )
         Surface(
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
