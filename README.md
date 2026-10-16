@@ -9,6 +9,7 @@ This is an early prototype, not a finished app.
 **Features:**
 - About 1,900 real points (864 AWM recycling islands, 265 clothes containers, 747 OSM mailboxes, 115 drinking fountains, 165 public toilet locations) from a bundled `pois.geojson`.
 - The app opens on the map with a category pill at the bottom. Tapping it expands a panel of the five categories (and "Alle"); choosing one shows only that category on the map, and the pill then shows it with a button to clear the selection.
+- Place search: the expanded panel has a "Wo?" field that finds streets, parks, squares, stations, landmarks and districts from a bundled OSM index (`places.json`) and moves the map there, so you can combine it with a category (e.g. toilets near the Englischer Garten).
 - The map opens framed on a 700 m radius (walking distance) around the user (if location is allowed and the fix is in Munich), otherwise around Marienplatz.
 - Pins clustered per type: green = recycling, red = clothes containers (shown offset beside their island), yellow = mailboxes, light blue = drinking fountains, purple = public toilets. Tapping a cluster zooms in.
 - Tapping a pin opens a details sheet with a Navigate action. Recycling islands list accepted materials: glass by colour, Leichtverpackungen.
@@ -66,6 +67,7 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on 
 - **Mailboxes:** © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 - **Drinking fountains:** Landeshauptstadt München, via opendata.muenchen.de, dataset `opendata_trinkwasserbrunnen`. Licensed under [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). The source data is in EPSG:25832 and is converted to WGS84. Winter shut-off is not fully in the data.
 - **Public toilets:** Landeshauptstadt München, via opendata.muenchen.de, dataset `wc_finder`. Licensed under [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). The source data is in EPSG:25832 and is converted to WGS84. The dataset lists one entry per room; rooms within 15 m of each other are merged into one location. Only city-owned toilets are included.
+- **Place search index:** © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright), built by `tools/data/build_places.py`.
 - **Map tiles and style:** [OpenFreeMap](https://openfreemap.org). Data © OpenMapTiles and © OpenStreetMap contributors.
 
 `tools/data/build_pois.py` fetches all sources and generates `shared/src/commonMain/composeResources/files/pois.geojson`.

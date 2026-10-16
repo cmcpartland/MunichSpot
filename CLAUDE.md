@@ -7,6 +7,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - `data/`:
   - `Poi.kt`: model, `PoiType`, `Material`, `ToiletInfo`.
   - `PoiRepository.kt`: loading, `isPlausible`, the `LATEST_POIS_URL` fetch. `parsePois` derives `CLOTHES` pois (id `<island>-clothes`) from recycling islands with `Material.CLOTHING` and strips CLOTHING from the island; the geojson has no clothes type.
+  - `Place.kt`, `PlaceSearch.kt`: the place index (`files/places.json`, built by `tools/data/build_places.py`) and `PlaceIndex.search` (normalised prefix/word/substring ranking, ä/ß/"str." folded).
   - `PoiCache*.kt`: per-platform cache file with atomic writes.
 - `map/MapScreen.kt`: the map. It holds:
   - one clustered GeoJSON source per type
@@ -14,8 +15,9 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - the opening view (`boundsAround`, 700 m radius, Marienplatz fallback, moving to the user if the fix is in Munich)
   - the selected-pin highlight (`SelectedPin`), drawn in the map overlay, not as a layer
   - the reveal zoom: picking a category (or filter) with none of its pins on screen slowly zooms out, centre fixed, to the nearest two (`map/RevealZoom.kt`, plain Mercator math)
+  - the anchor pin (`AnchorPin`, overlay): picking a place animates to it (1.5 km for districts, else 700 m), then runs the reveal zoom for the selected category; clearing it flies back to the user's fix if it's in Munich
   - the locate and filter buttons, and the attribution bar
-- `map/CategoryPicker.kt`: the bottom pill showing the selected category, which expands into a panel of category pills. Back collapses the panel, or clears the category when collapsed.
+- `map/CategoryPicker.kt`: the bottom pill, two segments: the category, and the place (the anchor name, or "Mein Standort" / "Ort suchen" as a hint). Tapping either expands a panel with a place search field above the category pills; the place segment also focuses the field. Picking a place sets the anchor (`App.kt` state). Back collapses the panel, then clears the category, then the anchor.
 - `map/Categories.kt`: `hasFilters()`.
 - `map/CategoryIcon.kt`: `drawCategoryIcon`, shared by the picker (`CategoryIcon`) and the map pins (`CategoryIconPainter`).
 - `map/PoiFilters.kt` and `map/FilterSheet.kt`: filters per category; only recycling and toilets have options.
@@ -47,6 +49,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - Simulator UDID `544C056F-40A3-4E8B-AFEE-C6D6E362D57C`, bundle `de.munichspot.ios`.
   - Build: `xcodebuild -quiet -project iosApp/iosApp.xcodeproj -scheme iosApp -destination 'id=<udid>' -derivedDataPath <dd> build`.
   - Then `xcrun simctl install <udid> <dd>/Build/Products/Debug-iphonesimulator/MunichSpot.app` and `xcrun simctl launch`.
+  - This Xcode has no Simulator.app; the simulator window lives in `Xcode.app/Contents/Applications/DeviceHub.app`.
   - The simulator hides the on-screen keyboard while the Mac keyboard is connected (⌘K toggles it).
 - Keep screenshots and DerivedData out of the repo.
 
