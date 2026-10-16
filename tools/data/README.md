@@ -39,6 +39,10 @@ If the city really removes many features, dispatch the workflow manually with `s
 
 `build_boundary.py` writes `munich_boundary.geojson` (a world polygon with Munich's city boundary as a hole), which the app draws as a light veil outside the city. Run it manually with `python tools/data/build_boundary.py`; city boundaries basically never change, so it isn't part of the nightly workflow. Source: OSM relation 62428 via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 
+## Place index
+
+`build_places.py` writes `places.json` (a compact array of `[name, kind, lat, lon]`), the offline index behind the app's place search ("Wo?"): streets, parks, squares, stations, landmarks and districts in Munich. One Overpass query; streets with the same name become one entry at the mean of their ways, other features with the same name merge within 500 m. Run it manually with `python tools/data/build_places.py`; places basically never change, so it isn't part of the nightly workflow. Source: OSM via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
+
 ## Sources
 
 - Recycling islands: Landeshauptstadt München, AWM, WFS `gsm_wfs:awm_container` (EPSG:25832, reprojected to WGS84). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
