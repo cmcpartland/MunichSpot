@@ -70,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -288,6 +289,9 @@ internal fun MapScreen(
         reveal(snapshotFlow { sheetBounds }.filterNotNull().debounce(150).first())
     }
     var attributionBarHeight by remember { mutableStateOf(0.dp) }
+    var logoHeight by remember { mutableStateOf(0.dp) }
+    val pickerBottom = attributionBarHeight + maxOf(logoHeight, 40.dp) + MapOverlay.Spacing + 8.dp
+    val pickerTop = pickerBottom + CategoryPickerHeight
 
     LaunchedEffect(Unit) {
         mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
@@ -335,7 +339,7 @@ internal fun MapScreen(
                 mapSize = mapBounds.size.toDpSize(),
                 center = center,
                 top = (topInset - mapBounds.top).toDp(),
-                bottom = attributionBarHeight + CategoryPickerHeight + 8.dp,
+                bottom = pickerTop,
             )
         } ?: return@LaunchedEffect
         mapState.animateCamera(CameraUpdate(zoom = zoom), CameraAnimation.Ease { duration = 1200.milliseconds })
@@ -348,7 +352,7 @@ internal fun MapScreen(
             // Keeps MapLibre's own attribution button clear of our attribution bar.
             viewportInsets = PaddingValues(bottom = attributionBarHeight),
             overlay = {
-                MapControls(mapState)
+                MapControls(mapState) { logoHeight = it }
                 selected?.let {
                     val o = it.type.pinOffset()
                     Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it) }
@@ -370,7 +374,7 @@ internal fun MapScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = attributionBarHeight + 108.dp),
+                .padding(end = 16.dp, bottom = pickerTop + 56.dp),
         ) {
             LocateIcon(LocalContentColor.current)
         }
@@ -381,7 +385,7 @@ internal fun MapScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = attributionBarHeight + 56.dp),
+                .padding(end = 16.dp, bottom = pickerTop + 8.dp),
         ) {
             BadgedBox(badge = { if (!filters.isDefault(type)) Badge() }) {
                 FilterIcon(LocalContentColor.current)
@@ -391,7 +395,7 @@ internal fun MapScreen(
             hostState = snackbar,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = attributionBarHeight + CategoryPickerHeight + 16.dp),
+                .padding(bottom = pickerTop + 8.dp),
         )
         CategoryPicker(
             type, onTypeChange, pickerOpen,
@@ -402,7 +406,7 @@ internal fun MapScreen(
                     showFilters = false
                 }
             },
-            modifier = Modifier.padding(bottom = attributionBarHeight + 8.dp),
+            modifier = Modifier.padding(bottom = pickerBottom),
         )
         Surface(
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
@@ -424,7 +428,8 @@ internal fun MapScreen(
 
 // MapOverlay.Default, but with the scale bar at the bottom left, above the MapLibre logo.
 @Composable
-private fun MapControls(mapState: MapState) {
+private fun MapControls(mapState: MapState, onLogoHeight: (Dp) -> Unit) {
+    val density = LocalDensity.current
     val insets = LocalViewportInsets.current
     Box(
         Modifier
@@ -439,7 +444,7 @@ private fun MapControls(mapState: MapState) {
                 metersPerDp = { mapState.viewport?.metersPerDpAtCenter ?: 0.0 },
                 zoom = { mapState.cameraPosition.zoom },
             )
-            MaplibreLogo()
+            Box(Modifier.onSizeChanged { onLogoHeight(with(density) { it.height.toDp() }) }) { MaplibreLogo() }
         }
         DisappearingCompassButton(Modifier.align(Alignment.TopEnd))
         // MapLibre's defaults are always white with black text; follow the theme instead.
