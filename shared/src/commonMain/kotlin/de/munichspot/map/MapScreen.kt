@@ -357,7 +357,18 @@ internal fun MapScreen(
     // Picking a category, or closing the filter sheet, reveals the nearest pins.
     LaunchedEffect(type, filters, showFilters) { revealNearest() }
 
+    var hadAnchor by remember { mutableStateOf(anchor != null) }
     LaunchedEffect(anchor) {
+        val cleared = hadAnchor && anchor == null
+        hadAnchor = anchor != null
+        if (cleared) {
+            val me = locationState.lastLocation?.position
+            if (me != null && me.latitude in 47.9..48.4 && me.longitude in 11.2..11.9) {
+                mapState.animateCameraToBounds(boundsAround(me))
+                revealNearest()
+            }
+            return@LaunchedEffect
+        }
         val a = anchor ?: return@LaunchedEffect
         selected = null
         val radius = if (a.kind == PlaceKind.DISTRICT) 1.5 else 0.7
