@@ -210,9 +210,9 @@ internal fun CategoryPicker(
                             ) {
                                 if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
                                 else if (userOnScreen) LocateIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
-                                else MapCenterIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
+                                else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
                                 Text(
-                                    anchor?.name ?: if (userOnScreen) "Mein Standort" else "Kartenmitte",
+                                    anchor?.name ?: if (userOnScreen) "Mein Standort" else "Ort suchen",
                                     style = MaterialTheme.typography.labelLarge,
                                     color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
                                     maxLines = 1,

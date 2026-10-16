@@ -118,18 +118,3 @@ internal fun DrawScope.drawPin(color: Color, w: Float, h: Float, dot: Color?) {
 }
 
 internal val AnchorRed = Color(0xFFE6194B)
-
-@Composable
-internal fun MapCenterIcon(color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(18.dp)) {
-        val w = 2.dp.toPx()
-        val m = w / 2
-        val arm = size.width * 0.3f
-        val far = size.width - m
-        for ((x, dx) in listOf(m to 1f, far to -1f)) for ((y, dy) in listOf(m to 1f, far to -1f)) {
-            drawLine(color, Offset(x, y), Offset(x + dx * arm, y), w, StrokeCap.Round)
-            drawLine(color, Offset(x, y), Offset(x, y + dy * arm), w, StrokeCap.Round)
-        }
-        drawCircle(color, radius = 1.5.dp.toPx(), center = center)
-    }
-}
