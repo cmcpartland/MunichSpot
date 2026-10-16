@@ -8,7 +8,7 @@ This is an early prototype, not a finished app.
 
 **Features:**
 - About 1,900 real points (864 AWM recycling islands, 265 clothes containers, 747 OSM mailboxes, 115 drinking fountains, 165 public toilet locations) from a bundled `pois.geojson`.
-- The app opens on the map with a semi-transparent search bar at the top. Tapping it expands a list of the five categories (with the number of places), filtered as you type; choosing one shows only that category on the map, and the bar then shows it with a button to clear the selection.
+- The app opens on the map with a category pill at the bottom. Tapping it expands a panel of the five categories (and "Alle"); choosing one shows only that category on the map, and the pill then shows it with a button to clear the selection.
 - The map opens framed on a 700 m radius (walking distance) around the user (if location is allowed and the fix is in Munich), otherwise around Marienplatz.
 - Pins clustered per type: green = recycling, red = clothes containers (shown offset beside their island), yellow = mailboxes, light blue = drinking fountains, purple = public toilets. Tapping a cluster zooms in.
 - Tapping a pin opens a details sheet with a Navigate action. Recycling islands list accepted materials: glass by colour, Leichtverpackungen.

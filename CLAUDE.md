@@ -15,9 +15,9 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - the selected-pin highlight (`SelectedPin`), drawn in the map overlay, not as a layer
   - the reveal zoom: picking a category (or filter) with none of its pins on screen slowly zooms out, centre fixed, to the nearest two (`map/RevealZoom.kt`, plain Mercator math)
   - the locate and filter buttons, and the attribution bar
-- `map/CategorySearchBar.kt`: the M3 `SearchBar` plus `ExpandedFullScreenSearchBar`, the category list, and back handling.
-- `map/Categories.kt`: search keywords and `hasFilters()`.
-- `map/CategoryIcon.kt`: `drawCategoryIcon`, shared by the search list (`CategoryIcon`) and the map pins (`CategoryIconPainter`).
+- `map/CategoryPicker.kt`: the bottom pill showing the selected category, which expands into a panel of category pills. Back collapses the panel, or clears the category when collapsed.
+- `map/Categories.kt`: `hasFilters()`.
+- `map/CategoryIcon.kt`: `drawCategoryIcon`, shared by the picker (`CategoryIcon`) and the map pins (`CategoryIconPainter`).
 - `map/PoiFilters.kt` and `map/FilterSheet.kt`: filters per category; only recycling and toilets have options.
 - `map/PoiSheet.kt`: the details sheet. `map/Navigation*.kt`: the directions URI per platform.
 - `map/Icons.kt`: all UI icons, drawn with Canvas; there's no icon library.
@@ -57,6 +57,5 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 ## Open ideas (not started)
 - More reliable nightly mailbox fetch: a second Overpass server, and reuse the last mailboxes if all fail.
 - "Trinkbrunnen" shows twice in the fountain details sheet.
-- On the iOS simulator, the first time the search opens there is a 0.6–1.3 s pause. It comes from the first text-field focus and isn't our code. Check on a real iPhone; a possible cosmetic fix is to focus only after the open animation.
 - Android release setup: R8, a signing config, and a baseline profile.
 - With all categories shown, the city centre is crowded; a possible fix is a bigger cluster radius.

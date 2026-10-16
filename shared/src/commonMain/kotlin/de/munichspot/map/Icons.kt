@@ -4,7 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -37,18 +39,6 @@ internal fun LocateIcon(color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
-internal fun SearchIcon(color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(20.dp)) {
-        val w = 2.dp.toPx()
-        val r = size.width * 0.33f
-        val c = Offset(size.width * 0.42f, size.height * 0.42f)
-        drawCircle(color, radius = r, center = c, style = Stroke(w))
-        val d = r * 0.72f
-        drawLine(color, c + Offset(d, d), Offset(size.width * 0.92f, size.height * 0.92f), w, StrokeCap.Round)
-    }
-}
-
-@Composable
 internal fun CloseIcon(color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier.size(18.dp)) {
         val w = 2.dp.toPx()
@@ -59,13 +49,14 @@ internal fun CloseIcon(color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
-internal fun BackIcon(color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(20.dp)) {
-        val w = 2.dp.toPx()
-        val m = size.width * 0.15f
-        val c = Offset(m, size.height / 2)
-        drawLine(color, c, Offset(size.width - m, size.height / 2), w, StrokeCap.Round)
-        drawLine(color, c, Offset(size.width / 2, m), w, StrokeCap.Round)
-        drawLine(color, c, Offset(size.width / 2, size.height - m), w, StrokeCap.Round)
+internal fun AllCategoriesIcon(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(24.dp)) {
+        val gap = 3.dp.toPx()
+        val m = size.width * 0.17f
+        val side = (size.width - 2 * m - gap) / 2
+        val r = CornerRadius(2.dp.toPx())
+        for (i in 0..1) for (j in 0..1) {
+            drawRoundRect(color, Offset(m + i * (side + gap), m + j * (side + gap)), Size(side, side), r)
+        }
     }
 }
