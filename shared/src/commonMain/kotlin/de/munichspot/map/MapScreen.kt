@@ -12,6 +12,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.inset
 import org.maplibre.compose.overlay.MapOverlay
 import org.maplibre.compose.overlay.DisappearingCompassButton
@@ -75,6 +78,9 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.munichspot.data.Place
+import de.munichspot.data.PlaceIndex
+import de.munichspot.data.PlaceKind
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
 import de.munichspot.data.ToiletStatus
@@ -181,6 +187,9 @@ internal fun MapScreen(
     onTypeChange: (PoiType?) -> Unit,
     filters: PoiFilters,
     onFiltersChange: (PoiFilters) -> Unit,
+    places: PlaceIndex?,
+    anchor: Place?,
+    onAnchorChange: (Place?) -> Unit,
 ) {
     var selected by remember { mutableStateOf<Poi?>(null) }
     val poisById = remember(pois) { pois.associateBy { it.id } }
@@ -327,11 +336,11 @@ internal fun MapScreen(
         centerRequested = false
     }
 
-    // Picking a category, or closing the filter sheet, with none of its pins on screen slowly zooms out to the nearest two.
-    LaunchedEffect(type, filters, showFilters) {
-        if (type == null || showFilters || mapBounds == Rect.Zero) return@LaunchedEffect
+    // With none of the category's pins on screen, slowly zooms out (centre fixed) to the nearest two.
+    suspend fun revealNearest() {
+        if (type == null || showFilters || mapBounds == Rect.Zero) return
         val camera = mapState.cameraPosition
-        val center = mapState.screenLocationFromPosition(camera.center) ?: return@LaunchedEffect
+        val center = mapState.screenLocationFromPosition(camera.center) ?: return
         val zoom = with(density) {
             revealZoom(
                 pois = pois.filter { it.type == type && filters.matches(it) },
@@ -341,8 +350,22 @@ internal fun MapScreen(
                 top = (topInset - mapBounds.top).toDp(),
                 bottom = pickerTop,
             )
-        } ?: return@LaunchedEffect
+        } ?: return
         mapState.animateCamera(CameraUpdate(zoom = zoom), CameraAnimation.Ease { duration = 1200.milliseconds })
+    }
+
+    // Picking a category, or closing the filter sheet, reveals the nearest pins.
+    LaunchedEffect(type, filters, showFilters) { revealNearest() }
+
+    var anchorSeen by remember { mutableStateOf(anchor) }
+    LaunchedEffect(anchor) {
+        if (anchor == anchorSeen) return@LaunchedEffect
+        anchorSeen = anchor
+        if (anchor == null) return@LaunchedEffect
+        selected = null
+        val radius = if (anchor.kind == PlaceKind.DISTRICT) 1.5 else 0.7
+        mapState.animateCameraToBounds(boundsAround(Position(longitude = anchor.lon, latitude = anchor.lat), radius))
+        revealNearest()
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -356,6 +379,9 @@ internal fun MapScreen(
                 selected?.let {
                     val o = it.type.pinOffset()
                     Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it) }
+                }
+                anchor?.let {
+                    Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(y = -AnchorPinSize.height / 2)) { AnchorPin() }
                 }
             },
             interactions = MapInteractions {
@@ -398,7 +424,7 @@ internal fun MapScreen(
                 .padding(bottom = pickerTop + 8.dp),
         )
         CategoryPicker(
-            type, onTypeChange, pickerOpen,
+            type, onTypeChange, places, anchor, onAnchorChange, pickerOpen,
             onExpandedChange = {
                 pickerOpen = it
                 if (it) {
@@ -406,7 +432,7 @@ internal fun MapScreen(
                     showFilters = false
                 }
             },
-            modifier = Modifier.padding(bottom = pickerBottom),
+            bottomInset = pickerBottom,
         )
         Surface(
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
@@ -566,6 +592,22 @@ private fun ClickEvent.closerToIsland(feature: Feature<Geometry, JsonObject?>?, 
     val island = mapState.screenLocationFromPosition(point) ?: return false
     fun distance(o: DpOffset) = hypot(o.x.value - screenOffset.x.value, o.y.value - screenOffset.y.value)
     return distance(island) < distance(island + ClothesOffset)
+}
+
+private val AnchorPinSize = DpSize(24.dp, 32.dp)
+
+@Composable
+private fun AnchorPin() {
+    Canvas(Modifier.size(AnchorPinSize)) {
+        val pad = 2.dp.toPx()
+        val w = size.width - 2 * pad
+        val h = size.height - 2 * pad
+        translate(pad + 0.5.dp.toPx(), pad + 1.dp.toPx()) { drawPath(teardropPath(w, h), Color.Black.copy(alpha = 0.3f)) }
+        translate(pad, pad) {
+            drawPath(teardropPath(w, h), Color.White, style = Stroke(3.dp.toPx(), join = StrokeJoin.Round))
+            drawPin(AnchorRed, w, h, dot = Color.White)
+        }
+    }
 }
 
 @Composable

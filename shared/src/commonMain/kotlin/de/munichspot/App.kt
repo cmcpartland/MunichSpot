@@ -11,9 +11,12 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import de.munichspot.data.Place
+import de.munichspot.data.PlaceIndex
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
 import de.munichspot.data.fetchLatestPois
+import de.munichspot.data.loadPlaces
 import de.munichspot.data.loadStartupPois
 import de.munichspot.map.MapScreen
 import de.munichspot.map.PoiFilters
@@ -24,9 +27,11 @@ fun App() {
         value = loadStartupPois()
         fetchLatestPois()?.let { value = it }
     }
+    val places by produceState<PlaceIndex?>(null) { value = PlaceIndex(loadPlaces()) }
+    var anchor by remember { mutableStateOf<Place?>(null) }
     var type by rememberSaveable { mutableStateOf<PoiType?>(null) }
     var filters by remember { mutableStateOf(PoiFilters()) }
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-        MapScreen(pois, type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it })
+        MapScreen(pois, type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places, anchor, onAnchorChange = { anchor = it })
     }
 }

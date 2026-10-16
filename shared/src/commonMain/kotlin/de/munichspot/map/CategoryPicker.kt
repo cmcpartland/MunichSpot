@@ -23,6 +23,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import de.munichspot.data.Place
+import de.munichspot.data.PlaceIndex
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -42,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.munichspot.data.PoiType
 
@@ -53,12 +69,27 @@ private const val MorphMillis = 250
 internal fun CategoryPicker(
     type: PoiType?,
     onTypeChange: (PoiType?) -> Unit,
+    places: PlaceIndex?,
+    anchor: Place?,
+    onAnchorChange: (Place?) -> Unit,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
+    bottomInset: Dp,
 ) {
     BackHandler(enabled = expanded) { onExpandedChange(false) }
     BackHandler(enabled = type != null && !expanded) { onTypeChange(null) }
+    BackHandler(enabled = type == null && anchor != null && !expanded) { onAnchorChange(null) }
+    var query by remember { mutableStateOf("") }
+    LaunchedEffect(expanded) { if (!expanded) query = "" }
+    val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
+    val imeBottom = with(density) { WindowInsets.ime.getBottom(density).toDp() }
+    val pick = { place: Place ->
+        onAnchorChange(place)
+        query = ""
+        focusManager.clearFocus()
+        onExpandedChange(false)
+    }
 
     Box(Modifier.fillMaxSize()) {
         AnimatedVisibility(expanded, enter = fadeIn(tween(MorphMillis)), exit = fadeOut(tween(MorphMillis))) {
@@ -77,8 +108,9 @@ internal fun CategoryPicker(
             ).value,
             tonalElevation = if (expanded) 0.dp else 3.dp,
             shadowElevation = if (expanded) 0.dp else 4.dp,
-            modifier = modifier
+            modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .padding(bottom = maxOf(bottomInset, if (expanded) imeBottom + 8.dp else 0.dp))
                 .animateContentSize(tween(MorphMillis))
                 .then(if (expanded) Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp).fillMaxWidth() else Modifier),
         ) {
@@ -88,40 +120,62 @@ internal fun CategoryPicker(
                 label = "picker",
             ) { open ->
                 if (open) {
+                    val suggestions = remember(query, places) { places?.search(query).orEmpty() }
+                    val searching = query.trim().length >= 2
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Kategorie wählen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (t in listOf<PoiType?>(null) + PoiType.entries) {
-                                CategoryChoice(t, selected = t == type) {
-                                    onTypeChange(t)
-                                    onExpandedChange(false)
+                        SearchField(query, { query = it }, onSearch = { suggestions.firstOrNull()?.let(pick) })
+                        if (searching) {
+                            if (suggestions.isEmpty()) {
+                                Text(
+                                    "Keine Treffer",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
+                                )
+                            }
+                            for (place in suggestions) SuggestionRow(place) { pick(place) }
+                        } else {
+                            if (anchor != null) AnchorRow(anchor) { onAnchorChange(null) }
+                            Text("Kategorie wählen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                for (t in listOf<PoiType?>(null) + PoiType.entries) {
+                                    CategoryChoice(t, selected = t == type) {
+                                        onTypeChange(t)
+                                        onExpandedChange(false)
+                                    }
                                 }
                             }
                         }
                     }
                 } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.widthIn(max = 320.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val hasSelection = type != null || anchor != null
                         Row(
                             Modifier.heightIn(min = CategoryPickerHeight)
+                                .weight(1f, fill = false)
                                 .clip(CircleShape)
                                 .clickable(role = Role.Button) { onExpandedChange(true) }
-                                .padding(start = 16.dp, end = if (type == null) 16.dp else 4.dp),
+                                .padding(start = 16.dp, end = if (hasSelection) 4.dp else 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             CategoryGlyph(type)
                             Text(
-                                type?.label() ?: "Alle Kategorien",
+                                (type?.label() ?: "Alle Kategorien") + (anchor?.let { " · ${it.name}" } ?: ""),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
                             )
                         }
-                        if (type != null) {
+                        if (hasSelection) {
                             Box(
                                 Modifier.padding(end = 4.dp).size(40.dp).clip(CircleShape)
-                                    .clickable(role = Role.Button) { onTypeChange(null) },
+                                    .clickable(role = Role.Button) {
+                                        onTypeChange(null)
+                                        onAnchorChange(null)
+                                    },
                                 contentAlignment = Alignment.Center,
                             ) { CloseIcon(MaterialTheme.colorScheme.onSurfaceVariant) }
                         }
@@ -129,6 +183,68 @@ internal fun CategoryPicker(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SearchField(query: String, onQueryChange: (String) -> Unit, onSearch: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(CircleShape).background(colors.surfaceContainerHighest).padding(start = 14.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SearchIcon(colors.onSurfaceVariant)
+        Box(Modifier.weight(1f)) {
+            if (query.isEmpty()) {
+                Text("Ort suchen", style = MaterialTheme.typography.bodyLarge, color = colors.onSurfaceVariant, maxLines = 1)
+            }
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+                cursorBrush = SolidColor(colors.primary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (query.isNotEmpty()) {
+            Box(
+                Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button) { onQueryChange("") },
+                contentAlignment = Alignment.Center,
+            ) { CloseIcon(colors.onSurfaceVariant) }
+        }
+    }
+}
+
+@Composable
+private fun SuggestionRow(place: Place, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClick = onClick).padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        PlaceIcon(colors.onSurfaceVariant)
+        Column(Modifier.weight(1f)) {
+            Text(place.name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(place.kind.label, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AnchorRow(anchor: Place, onClear: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.padding(start = 4.dp)) { PlaceIcon(AnchorRed) }
+        Text(anchor.name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onClear),
+            contentAlignment = Alignment.Center,
+        ) { CloseIcon(colors.onSurfaceVariant) }
     }
 }
 
