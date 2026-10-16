@@ -7,32 +7,77 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
 import de.munichspot.data.PlaceSaver
-import de.munichspot.data.Poi
+import de.munichspot.data.FetchResult
+import de.munichspot.data.PoiData
 import de.munichspot.data.PoiType
 import de.munichspot.data.fetchLatestPois
 import de.munichspot.data.loadPlaces
 import de.munichspot.data.loadStartupPois
+import de.munichspot.map.DataStatus
 import de.munichspot.map.MapScreen
 import de.munichspot.map.PoiFilters
 
 @Composable
 fun App() {
-    val pois by produceState(emptyList<Poi>()) {
-        value = loadStartupPois()
-        fetchLatestPois()?.let { value = it }
+    var data by remember { mutableStateOf<PoiData?>(null) }
+    var loaded by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun refresh() {
+        if (refreshing) return
+        refreshing = true
+        scope.launch {
+            try {
+                when (val result = fetchLatestPois(conditional = data != null)) {
+                    is FetchResult.Updated -> {
+                        data = result.data
+                        failed = false
+                    }
+                    FetchResult.Unchanged -> failed = false
+                    FetchResult.Failed -> failed = data == null
+                }
+            } finally {
+                refreshing = false
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        data = loadStartupPois()
+        loaded = true
+    }
+    LifecycleResumeEffect(loaded) {
+        if (loaded) refresh()
+        onPauseOrDispose {}
     }
     val places by produceState<PlaceIndex?>(null) { value = PlaceIndex(loadPlaces()) }
     var anchor by rememberSaveable(stateSaver = PlaceSaver) { mutableStateOf<Place?>(null) }
     var type by rememberSaveable { mutableStateOf<PoiType?>(null) }
     var filters by remember { mutableStateOf(PoiFilters()) }
+    val status = when {
+        data != null -> DataStatus.Ready
+        failed -> DataStatus.Failed
+        else -> DataStatus.Loading
+    }
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-        MapScreen(pois, type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places, anchor, onAnchorChange = { anchor = it })
+        MapScreen(
+            data?.pois.orEmpty(), data?.generated, status,
+            onRetry = {
+                failed = false
+                refresh()
+            },
+            type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places, anchor, onAnchorChange = { anchor = it },
+        )
     }
 }

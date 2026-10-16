@@ -74,6 +74,13 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import de.munichspot.data.freshnessHint
+import kotlin.time.Clock
+import kotlin.time.Instant
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -182,6 +189,8 @@ private val WarningMarkSize = 14.dp
 private val SelectedWarningMarkSize = 20.dp
 private val LocationBlue = Color(0xFF1A73E8)
 
+internal enum class DataStatus { Loading, Ready, Failed }
+
 internal const val ATTRIBUTION =
     "© OpenStreetMap contributors · OpenFreeMap · Daten: Landeshauptstadt München (dl-by-de/2.0)"
 
@@ -202,6 +211,9 @@ private fun boundsAround(center: Position, radiusKm: Double = 0.7): BoundingBox 
 @Composable
 internal fun MapScreen(
     pois: List<Poi>,
+    generated: Instant?,
+    dataStatus: DataStatus,
+    onRetry: () -> Unit,
     type: PoiType?,
     onTypeChange: (PoiType?) -> Unit,
     filters: PoiFilters,
@@ -475,6 +487,10 @@ internal fun MapScreen(
             LocatePill(panned && !pickerOpen, locate)
             filterButton()
         }
+        DataNotice(
+            dataStatus, onRetry,
+            Modifier.align(Alignment.TopCenter).windowInsetsPadding(WindowInsets.statusBars).padding(top = 16.dp, start = 16.dp, end = 16.dp),
+        )
         SnackbarHost(
             hostState = snackbar,
             modifier = Modifier
@@ -500,8 +516,9 @@ internal fun MapScreen(
                 .onSizeChanged { attributionBarHeight = with(density) { it.height.toDp() } }
                 .navigationBarsPadding(),
         ) {
+            val hint = remember(generated) { freshnessHint(generated, Clock.System.now()) }
             Text(
-                text = ATTRIBUTION,
+                text = if (hint != null) "$ATTRIBUTION · $hint" else ATTRIBUTION,
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -764,6 +781,33 @@ private fun String.jsonEscape(): String = buildString {
 }
 
 private val WideBreakpoint = 680.dp
+
+@Composable
+private fun DataNotice(status: DataStatus, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    AnimatedVisibility(
+        visible = status != DataStatus.Ready,
+        modifier = modifier,
+        enter = fadeIn(tween(MorphMillis)),
+        exit = fadeOut(tween(MorphMillis)),
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 3.dp,
+            shadowElevation = 4.dp,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 4.dp)) {
+                Text(
+                    text = if (status == DataStatus.Failed) "Keine Daten – Internetverbindung prüfen" else "Lade Daten …",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 0.dp).weight(1f, fill = false),
+                )
+                if (status == DataStatus.Failed) TextButton(onClick = onRetry) { Text("Erneut versuchen") }
+                else Spacer(Modifier.width(12.dp))
+            }
+        }
+    }
+}
 
 @Composable
 private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, horizontal: Boolean = false) {
