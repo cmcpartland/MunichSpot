@@ -1,16 +1,5 @@
 package de.munichspot.data
 
-import io.ktor.client.HttpClient
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.request.get
-import io.ktor.client.request.header
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.isSuccess
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -28,56 +17,21 @@ private const val MIN_LATEST_POIS = 1000
 
 private val LEGACY_POST_BOX_NAME = Regex("^Briefkasten \\((.+)\\)$")
 
-private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutMillis = 10_000 } } }
-
 // Recycling islands: Landeshauptstadt München, AWM, opendata.muenchen.de (dl-by-de/2.0)
 // Mailboxes: © OpenStreetMap contributors (ODbL)
 // Clothes containers: derived from the recycling islands
 // Drinking fountains, public toilets: Landeshauptstadt München, opendata.muenchen.de (dl-by-de/2.0)
 data class PoiData(val pois: List<Poi>, val generated: Instant?)
 
-sealed interface FetchResult {
-    data class Updated(val data: PoiData) : FetchResult
-    data object Unchanged : FetchResult
-    data object Failed : FetchResult
-}
+private val cache = DataCache("pois-latest.geojson")
 
 // The cached copy of the last download if it is valid, otherwise null (a bad cache is deleted).
-suspend fun loadStartupPois(): PoiData? = withContext(Dispatchers.Default) {
-    val text = readCachedPoisText() ?: return@withContext null
-    val cached = try {
-        parsePoiData(text).takeIf { isPlausible(it.pois) }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        null
-    }
-    cached ?: run { deleteCachedPois(); null }
-}
+suspend fun loadStartupPois(): PoiData? = loadCached(cache, ::parseLatest)
 
-// With [conditional] and a cached download, asks the server only for newer data (304 -> Unchanged).
-suspend fun fetchLatestPois(conditional: Boolean): FetchResult = try {
-    val etag = if (conditional) readCachedEtag() else null
-    val response = client.get(LATEST_POIS_URL) { if (etag != null) header(HttpHeaders.IfNoneMatch, etag) }
-    when {
-        etag != null && response.status == HttpStatusCode.NotModified -> FetchResult.Unchanged
-        !response.status.isSuccess() -> FetchResult.Failed
-        else -> {
-            val text = response.bodyAsText()
-            val newEtag = response.headers[HttpHeaders.ETag]
-            withContext(Dispatchers.Default) {
-                parsePoiData(text).takeIf { isPlausible(it.pois) }
-                    ?.also { saveCachedPois(text, newEtag) }
-                    ?.let { FetchResult.Updated(it) }
-                    ?: FetchResult.Failed
-            }
-        }
-    }
-} catch (e: CancellationException) {
-    throw e
-} catch (e: Exception) {
-    FetchResult.Failed
-}
+suspend fun fetchLatestPois(conditional: Boolean): FetchResult<PoiData> =
+    fetchConditional(LATEST_POIS_URL, cache, conditional, parse = ::parseLatest)
+
+private fun parseLatest(text: String) = parsePoiData(text).takeIf { isPlausible(it.pois) }
 
 private fun isPlausible(pois: List<Poi>) =
     pois.size >= MIN_LATEST_POIS && PoiType.entries.all { type -> pois.any { it.type == type } }

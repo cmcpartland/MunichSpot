@@ -7,8 +7,8 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - `data/`:
   - `Poi.kt`: model, `PoiType`, `Material`, `ToiletInfo`.
   - `PoiRepository.kt`: `PoiData` (pois + `generated`), `loadStartupPois` (cache or null), `isPlausible`, the `LATEST_POIS_URL` fetch (`FetchResult`: Updated/Unchanged/Failed; ETag stored next to the cache, `If-None-Match` only with both), `freshnessHint`. `parsePois` derives `CLOTHES` pois (id `<island>-clothes`) from recycling islands with `Material.CLOTHING` and strips CLOTHING from the island; the geojson has no clothes type.
-  - `Place.kt`, `PlaceSearch.kt`: the place index (`files/places.json`, built by `tools/data/build_places.py`) and `PlaceIndex.search` (normalised prefix/word/substring ranking, ä/ß/"str." folded).
-  - `PoiCache*.kt`: per-platform cache file with atomic writes.
+  - `Place.kt`, `PlaceSearch.kt`: the place index (bundled `files/places.json`, `{generated, places}`, built by `tools/data/build_places.py`; refreshed from `PLACES_URL` silently, a cached or downloaded copy is used only if plausible and its `generated` is strictly newer than the current one) and `PlaceIndex.search` (normalised prefix/word/substring ranking, ä/ß/"str." folded).
+  - `DataCache*.kt`, `RemoteData.kt`: `DataCache(fileName)` (per-platform dir, atomic writes, ETag file next to it) and the shared `fetchConditional`/`loadCached` behind the pois and places downloads.
 - `map/MapScreen.kt`: the map. It holds:
   - one clustered GeoJSON source per type
   - the layer order: per type its icons, the toilet warning mark (`PoiWarningLayer`, for `Poi.possiblyDefect`), badge circles and counts together, so a badge stacks with its own pin; the location puck on top
