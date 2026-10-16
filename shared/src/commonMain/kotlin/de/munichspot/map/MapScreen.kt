@@ -421,6 +421,7 @@ internal fun MapScreen(
         }
         val a = anchor ?: return@LaunchedEffect
         selected = null
+        panned = true
         val radius = if (a.kind == PlaceKind.DISTRICT) 1.5 else 0.7
         mapState.animateCameraToBounds(boundsAround(Position(longitude = a.lon, latitude = a.lat), radius))
         revealNearest()
@@ -451,6 +452,11 @@ internal fun MapScreen(
         val wide = with(density) { mapBounds.width.toDp() } >= WideBreakpoint
         val locate = {
             if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
+            if (anchor != null) {
+                // Locate does its own fly-to, so skip the anchor-cleared fly-back.
+                hadAnchor = false
+                onAnchorChange(null)
+            }
             centerRequested = true
         }
         val filterButton: @Composable () -> Unit = {
