@@ -48,11 +48,15 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -60,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
 import de.munichspot.data.PoiType
+import kotlinx.coroutines.delay
 
 internal val CategoryPickerHeight = 48.dp
 private const val MorphMillis = 250
@@ -80,6 +85,8 @@ internal fun CategoryPicker(
     BackHandler(enabled = type != null && !expanded) { onTypeChange(null) }
     BackHandler(enabled = type == null && anchor != null && !expanded) { onAnchorChange(null) }
     var query by remember { mutableStateOf("") }
+    var focusSearch by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
     LaunchedEffect(expanded) { if (!expanded) query = "" }
     val focusManager = LocalFocusManager.current
     val density = LocalDensity.current
@@ -122,8 +129,15 @@ internal fun CategoryPicker(
                 if (open) {
                     val suggestions = remember(query, places) { places?.search(query).orEmpty() }
                     val searching = query.trim().length >= 2
+                    LaunchedEffect(Unit) {
+                        if (focusSearch) {
+                            delay(MorphMillis.toLong())
+                            focusRequester.requestFocus()
+                            focusSearch = false
+                        }
+                    }
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SearchField(query, { query = it }, onSearch = { suggestions.firstOrNull()?.let(pick) })
+                        SearchField(query, { query = it }, focusRequester, onSearch = { suggestions.firstOrNull()?.let(pick) })
                         if (searching) {
                             if (suggestions.isEmpty()) {
                                 Text(
@@ -149,27 +163,53 @@ internal fun CategoryPicker(
                     }
                 } else {
                     Row(Modifier.widthIn(max = 320.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val colors = MaterialTheme.colorScheme
                         val hasSelection = type != null || anchor != null
                         Row(
                             Modifier.heightIn(min = CategoryPickerHeight)
                                 .weight(1f, fill = false)
                                 .clip(CircleShape)
+                                .semantics { contentDescription = "Kategorie wählen" }
                                 .clickable(role = Role.Button) { onExpandedChange(true) }
-                                .padding(start = 16.dp, end = if (hasSelection) 4.dp else 16.dp),
+                                .padding(start = 16.dp, end = if (hasSelection) 8.dp else 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             CategoryGlyph(type)
                             Text(
-                                (type?.label() ?: "Alle Kategorien") + (anchor?.let { " · ${it.name}" } ?: ""),
+                                type?.label() ?: "Alle Kategorien",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = colors.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f, fill = false),
                             )
                         }
                         if (hasSelection) {
+                            Box(Modifier.size(width = 1.dp, height = 20.dp).background(colors.outlineVariant))
+                            Row(
+                                Modifier.heightIn(min = CategoryPickerHeight)
+                                    .then(if (anchor != null) Modifier.weight(1f, fill = false) else Modifier)
+                                    .clip(CircleShape)
+                                    .semantics { contentDescription = "Ort suchen" }
+                                    .clickable(role = Role.Button) {
+                                        focusSearch = true
+                                        onExpandedChange(true)
+                                    }
+                                    .padding(start = 12.dp, end = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
+                                else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
+                                Text(
+                                    anchor?.name ?: "Ort",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                             Box(
                                 Modifier.padding(end = 4.dp).size(40.dp).clip(CircleShape)
                                     .clickable(role = Role.Button) {
@@ -177,7 +217,7 @@ internal fun CategoryPicker(
                                         onAnchorChange(null)
                                     },
                                 contentAlignment = Alignment.Center,
-                            ) { CloseIcon(MaterialTheme.colorScheme.onSurfaceVariant) }
+                            ) { CloseIcon(colors.onSurfaceVariant) }
                         }
                     }
                 }
@@ -187,7 +227,7 @@ internal fun CategoryPicker(
 }
 
 @Composable
-private fun SearchField(query: String, onQueryChange: (String) -> Unit, onSearch: () -> Unit) {
+private fun SearchField(query: String, onQueryChange: (String) -> Unit, focusRequester: FocusRequester, onSearch: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(CircleShape).background(colors.surfaceContainerHighest).padding(start = 14.dp, end = 4.dp),
@@ -207,7 +247,7 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit, onSearch
                 cursorBrush = SolidColor(colors.primary),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
             )
         }
         if (query.isNotEmpty()) {
