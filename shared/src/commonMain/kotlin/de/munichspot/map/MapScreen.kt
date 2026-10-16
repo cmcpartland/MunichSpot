@@ -14,6 +14,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -34,6 +38,8 @@ import org.maplibre.compose.overlay.LocalViewportInsets
 import org.maplibre.compose.overlay.MaplibreLogo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -449,8 +455,16 @@ internal fun MapScreen(
             }
         }
         if (wide) {
-            Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp + (CategoryPickerHeight - 40.dp) / 2, bottom = pickerTop + 8.dp)) { filterButton() }
-            LocatePill(panned && !pickerOpen, locate, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = pickerBottom))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = pickerBottom)
+                    .height(CategoryPickerHeight),
+            ) {
+                filterButton()
+                LocatePill(panned && !pickerOpen, locate, horizontal = true)
+            }
         } else Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -752,12 +766,14 @@ private fun String.jsonEscape(): String = buildString {
 private val WideBreakpoint = 600.dp
 
 @Composable
-private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, horizontal: Boolean = false) {
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = fadeIn(tween(MorphMillis)) + scaleIn(tween(MorphMillis)),
-        exit = fadeOut(tween(MorphMillis)) + scaleOut(tween(MorphMillis)),
+        enter = fadeIn(tween(MorphMillis)) + scaleIn(tween(MorphMillis)) +
+            if (horizontal) expandHorizontally(tween(MorphMillis)) else EnterTransition.None,
+        exit = fadeOut(tween(MorphMillis)) + scaleOut(tween(MorphMillis)) +
+            if (horizontal) shrinkHorizontally(tween(MorphMillis)) else ExitTransition.None,
     ) {
         Surface(
             onClick = onClick,
@@ -765,7 +781,9 @@ private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 3.dp,
             shadowElevation = 4.dp,
-            modifier = Modifier.size(CategoryPickerHeight)
+            modifier = Modifier
+                .padding(start = if (horizontal) 8.dp else 0.dp)
+                .size(CategoryPickerHeight)
                 .semantics { contentDescription = "Mein Standort" },
         ) {
             Box(contentAlignment = Alignment.Center) { LocateIcon(MaterialTheme.colorScheme.primary, Modifier.size(24.dp)) }
