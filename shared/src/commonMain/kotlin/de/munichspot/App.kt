@@ -54,30 +54,17 @@ fun App() {
         }
     }
     var places by remember { mutableStateOf<PlaceData?>(null) }
-    var refreshingPlaces by remember { mutableStateOf(false) }
-    fun refreshPlaces() {
-        if (refreshingPlaces) return
-        refreshingPlaces = true
-        scope.launch {
-            try {
-                (fetchLatestPlaces(places?.generated) as? FetchResult.Updated)?.let { places = it.data }
-            } finally {
-                refreshingPlaces = false
-            }
-        }
-    }
     LaunchedEffect(Unit) {
         data = loadStartupPois()
         loaded = true
     }
-    LaunchedEffect(Unit) { places = loadStartupPlaces() }
+    // Places change weekly at most, so they are refreshed once per app start, not on every resume.
+    LaunchedEffect(Unit) {
+        places = loadStartupPlaces()
+        (fetchLatestPlaces(places?.generated) as? FetchResult.Updated)?.let { places = it.data }
+    }
     LifecycleResumeEffect(loaded) {
         if (loaded) refresh()
-        onPauseOrDispose {}
-    }
-    val placesLoaded = places != null
-    LifecycleResumeEffect(placesLoaded) {
-        if (placesLoaded) refreshPlaces()
         onPauseOrDispose {}
     }
     var anchor by rememberSaveable(stateSaver = PlaceSaver) { mutableStateOf<Place?>(null) }
