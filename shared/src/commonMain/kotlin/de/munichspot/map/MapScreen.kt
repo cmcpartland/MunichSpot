@@ -432,7 +432,7 @@ internal fun MapScreen(
                 .padding(bottom = pickerTop + 8.dp),
         )
         CategoryPicker(
-            type, onTypeChange, places, anchor, onAnchorChange, locationState.permission is LocationPermission.Granted, pickerOpen,
+            type, onTypeChange, places, anchor, onAnchorChange, pickerOpen,
             onExpandedChange = {
                 pickerOpen = it
                 if (it) {
