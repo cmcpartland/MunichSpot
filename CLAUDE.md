@@ -15,7 +15,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - the opening view (`boundsAround`, 700 m radius, Marienplatz fallback, moving to the user if the fix is in Munich)
   - the selected-pin highlight (`SelectedPin`), drawn in the map overlay, not as a layer
   - the reveal zoom: picking a category (or filter) with none of its pins on screen slowly zooms out, centre fixed, to the nearest two (`map/RevealZoom.kt`, plain Mercator math)
-  - the anchor pin (`AnchorPin`, overlay): picking a place animates to it (1.5 km for districts, else 700 m), then runs the reveal zoom for the selected category; clearing it flies back to the user's fix if it's in Munich
+  - the anchor pin (`AnchorPinPainter`, a symbol layer on top of the map, so it moves with panning): picking a place animates to it (1.5 km for districts, else 700 m), then runs the reveal zoom for the selected category; clearing it flies back to the user's fix if it's in Munich
   - the filter button and the attribution bar (the locate pill lives in `CategoryPicker`: it shows after a gesture pan and hides once the camera is back on the user's fix)
 - `map/CategoryPicker.kt`: the bottom pill, two segments: the category, and the place (the anchor name, or the hint "Ort suchen"). Each segment has its own ✕ while set (category, anchor). Tapping either expands a panel with a place search field above the category pills; the place segment also focuses the field. Picking a place sets the anchor (`App.kt` state). Back collapses the panel, then clears the category, then the anchor. A round locate pill sits to the right of the picker while `showLocate` is set (collapsed state only), without moving it: the picker stays centred and shrinks symmetrically on narrow screens.
 - `map/Categories.kt`: `hasFilters()`.
@@ -30,6 +30,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - Signals derived from dataset free text (e.g. toilet `zustand`) are hints: show a warning mark and hedged "Laut Stadt …" text, never filter or branch on them in the app; text matching lives only in `build_pois.py`.
 
 ## Gotchas
+- Overlay (`placedAt`) content lags behind the map while panning, so use it only for transient things like the selected-pin highlight; anything persistent belongs in a layer.
 - Clothes pins sit on their island's exact point, so `MapScreen` draws the clothes layers, the selected-pin overlay and the keep-visible pan with `ClothesOffset` (16 dp right, 10 dp up, viewport-anchored).
 - Android needs `androidResources.enable = true` in `shared/build.gradle.kts`, or `files/pois.geojson` is missing at runtime.
 - The OpenFreeMap styles (we use "positron") only have Noto Sans fonts. Use `"Noto Sans Bold"` for map text.
