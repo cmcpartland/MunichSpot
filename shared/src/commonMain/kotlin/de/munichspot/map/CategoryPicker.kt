@@ -141,12 +141,14 @@ internal fun CategoryPicker(
                         SearchField(query, { query = it }, focusRequester, onSearch = { suggestions.firstOrNull()?.let(pick) })
                         if (searching) {
                             if (suggestions.isEmpty()) {
-                                Text(
-                                    "Keine Treffer",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-                                )
+                                Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("Keine Treffer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        "Die Suche umfasst nur Orte in der Stadt München.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                             for (place in suggestions) SuggestionRow(place) { pick(place) }
                         } else {
