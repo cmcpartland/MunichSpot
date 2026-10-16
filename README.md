@@ -7,7 +7,7 @@ This is an early prototype, not a finished app.
 ## Status
 
 **Features:**
-- About 1,900 real points (864 AWM recycling islands, 265 clothes containers, 747 OSM mailboxes, 115 drinking fountains, 165 public toilet locations) from a bundled `pois.geojson`.
+- About 1,900 real points (864 AWM recycling islands, 265 clothes containers, 747 OSM mailboxes, 115 drinking fountains, 165 public toilet locations) from `pois.geojson`, downloaded at runtime (nothing is bundled).
 - The app opens on the map with a category pill at the bottom. Tapping it expands a panel of the five categories (and "Alle"); choosing one shows only that category on the map, and the pill then shows it with a button to clear the selection.
 - Place search: the expanded panel has a "Wo?" field that finds streets, parks, squares, stations, landmarks and districts from a bundled OSM index (`places.json`) and moves the map there, so you can combine it with a category (e.g. toilets near the Englischer Garten).
 - The map opens framed on a 700 m radius (walking distance) around the user (if location is allowed and the fix is in Munich), otherwise around Marienplatz.
@@ -18,7 +18,7 @@ This is an early prototype, not a finished app.
 - Public toilets show address, opening hours, price, floor, accessibility, baby changing, Euro key, room types and a warning if the city lists them as defective.
 - Dark mode follows the system setting; the map switches to OpenFreeMap's "fiord" style.
 - Locate button shows the user's position and centres the map on it. Location permission is asked when a map is first opened.
-- Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py` and publishes the result to GitHub Pages. On launch the app shows the last downloaded file if it has one, otherwise the bundled data, then switches to the nightly file when it is reachable. This also works offline.
+- Nightly data refresh: a GitHub Action runs `tools/data/build_pois.py` and publishes the result to GitHub Pages. On launch the app shows the last downloaded file if it has one (so it works offline), then checks for a newer one (conditional request via ETag) on launch and whenever it returns to the foreground. With no cache and no network it shows "Keine Daten" with a retry button. If the data is more than 30 days old, the attribution bar shows its date.
 
 **Platform status:**
 - **iOS:** all of the above has been run and checked in the iOS simulator, not on a physical device.
@@ -57,7 +57,7 @@ Commands:
 ./gradlew :shared:compileKotlinIosSimulatorArm64
 ```
 
-To refresh the bundled data, run `tools/data/build_pois.py` (see `tools/data/README.md`).
+To build the data locally, run `tools/data/build_pois.py` (see `tools/data/README.md`).
 
 For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on a simulator. The build phase uses `JAVA_HOME`, or Android Studio's JBR if `JAVA_HOME` is not set. To run on a device, set `TEAM_ID` in `iosApp/Configuration/Config.xcconfig`.
 
@@ -70,7 +70,7 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on 
 - **Place search index:** © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright), built by `tools/data/build_places.py`.
 - **Map tiles and style:** [OpenFreeMap](https://openfreemap.org). Data © OpenMapTiles and © OpenStreetMap contributors.
 
-`tools/data/build_pois.py` fetches all sources and generates `shared/src/commonMain/composeResources/files/pois.geojson`.
+`tools/data/build_pois.py` fetches all sources and writes `tools/data/out/pois.geojson` (gitignored).
 
 The Apache-2.0 license below covers the code only. The data remains under its own licenses.
 

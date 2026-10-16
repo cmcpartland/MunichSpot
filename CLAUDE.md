@@ -3,10 +3,10 @@
 A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps Munich open data: recycling islands, mailboxes, drinking fountains and public toilets. Read `README.md` for features, the tech stack, build commands and data sources, and `tools/data/README.md` for the data pipeline. This file covers only what the READMEs don't.
 
 ## Code map (`shared/src/commonMain/kotlin/de/munichspot/`)
-- `App.kt`: loads data (cache or bundled data, then the nightly download), and holds the selected category (`PoiType?`, null = all) and `PoiFilters`.
+- `App.kt`: loads data (cache, then the nightly download on launch and on every foreground resume; no bundled data; states loading/ready/failed), and holds the selected category (`PoiType?`, null = all) and `PoiFilters`.
 - `data/`:
   - `Poi.kt`: model, `PoiType`, `Material`, `ToiletInfo`.
-  - `PoiRepository.kt`: loading, `isPlausible`, the `LATEST_POIS_URL` fetch. `parsePois` derives `CLOTHES` pois (id `<island>-clothes`) from recycling islands with `Material.CLOTHING` and strips CLOTHING from the island; the geojson has no clothes type.
+  - `PoiRepository.kt`: `PoiData` (pois + `generated`), `loadStartupPois` (cache or null), `isPlausible`, the `LATEST_POIS_URL` fetch (`FetchResult`: Updated/Unchanged/Failed; ETag stored next to the cache, `If-None-Match` only with both), `freshnessHint`. `parsePois` derives `CLOTHES` pois (id `<island>-clothes`) from recycling islands with `Material.CLOTHING` and strips CLOTHING from the island; the geojson has no clothes type.
   - `Place.kt`, `PlaceSearch.kt`: the place index (`files/places.json`, built by `tools/data/build_places.py`) and `PlaceIndex.search` (normalised prefix/word/substring ranking, ä/ß/"str." folded).
   - `PoiCache*.kt`: per-platform cache file with atomic writes.
 - `map/MapScreen.kt`: the map. It holds:
@@ -17,7 +17,8 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - the reveal zoom: picking a category (or filter) with none of its pins on screen slowly zooms out, centre fixed, to the nearest two (`map/RevealZoom.kt`, plain Mercator math)
   - the anchor pin (`AnchorPinPainter`, a symbol layer on top of the map, so it moves with panning): picking a place animates to it (1.5 km for districts, else 700 m), then runs the reveal zoom for the selected category; clearing it flies back to the user's fix if it's in Munich
   - the filter button and the round locate pill (`LocatePill`; it shows after a gesture pan while the picker is collapsed, and hides once the camera is back on the user's fix). Compact (map < 680 dp wide): one bottom-end column above the picker, filter directly above the picker, locate above it. Wide (>= 680 dp, e.g. the unfolded Fold; below that the buttons could overlap a full-width picker): locate and filter in the picker's row at the right end (filter last). Either way the filter stays put while the locate pill comes and goes
-  - the attribution bar
+  - the attribution bar (plus "Datenstand: …" when `generated` is > 30 days old, "Daten seit über einem Jahr nicht aktualisiert" beyond 365)
+  - `DataNotice`: top-centre pill "Lade Daten …" / "Keine Daten …" + retry while there is no data
 - `map/CategoryPicker.kt`: the bottom pill, two segments: the category, and the place (the anchor name, or the hint "Ort suchen"). Each segment has its own ✕ while set (category, anchor). Tapping either expands a panel with a place search field above the category pills; the place segment also focuses the field. Picking a place sets the anchor (`App.kt` state). Back collapses the panel, then clears the category, then the anchor. The picker is always centred at full width.
 - `map/Categories.kt`: `hasFilters()`.
 - `map/CategoryIcon.kt`: `drawCategoryIcon`, shared by the picker (`CategoryIcon`) and the map pins (`CategoryIconPainter`).
@@ -33,7 +34,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 ## Gotchas
 - Overlay (`placedAt`) content lags behind the map while panning, so use it only for transient things like the selected-pin highlight; anything persistent belongs in a layer.
 - Clothes pins sit on their island's exact point, so `MapScreen` draws the clothes layers, the selected-pin overlay and the keep-visible pan with `ClothesOffset` (16 dp right, 10 dp up, viewport-anchored).
-- Android needs `androidResources.enable = true` in `shared/build.gradle.kts`, or `files/pois.geojson` is missing at runtime.
+- Android needs `androidResources.enable = true` in `shared/build.gradle.kts`, or `files/places.json` and `munich_boundary.geojson` are missing at runtime.
 - The OpenFreeMap styles (we use "positron") only have Noto Sans fonts. Use `"Noto Sans Bold"` for map text.
 - `toGeoJson` must escape control characters. A bad name once made a whole layer vanish silently.
 - `BackHandler` from `ui-backhandler` is deprecated in CMP 1.12; the replacement is the navigationevent API.
