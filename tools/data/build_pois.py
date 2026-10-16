@@ -7,6 +7,7 @@ import re
 import sys
 import time
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -31,7 +32,7 @@ area["boundary"="administrative"]["admin_level"="6"]["name"="München"]["de:amtl
 nwr["amenity"="post_box"](area.a);
 out center tags;"""
 USER_AGENT = "MunichSpot-data/0.1 (+https://github.com/cmcpartland/MunichSpot)"
-DEFAULT_OUT = Path(__file__).resolve().parents[2] / "shared/src/commonMain/composeResources/files/pois.geojson"
+DEFAULT_OUT = Path(__file__).resolve().parent / "out/pois.geojson"
 
 TOILET_MERGE_METERS = 15
 ROOM_CODES = (("männlich", "M"), ("weiblich", "F"), ("unisex", "U"), ("barrierefrei", "A"))
@@ -214,10 +215,15 @@ def main():
     if errors:
         sys.exit("sanity check failed:\n" + "\n".join(errors[:50]))
     counts = Counter(f["properties"]["type"] for f in features)
+    generated = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
-        json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":"), ensure_ascii=False),
+        json.dumps(
+            {"type": "FeatureCollection", "generated": generated, "features": features},
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ),
         encoding="utf-8",
     )
     print(", ".join(f"{t}: {n}" for t, n in counts.items()))

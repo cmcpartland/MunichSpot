@@ -14,7 +14,7 @@ kotlin {
         namespace = "de.munichspot.shared"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
-        // Needed so Compose resources (pois.geojson) are packaged into the APK.
+        // Needed so Compose resources (places.json, munich_boundary.geojson) are packaged into the APK.
         androidResources.enable = true
     }
 

@@ -1,6 +1,6 @@
 # Data pipeline
 
-`build_pois.py` fetches the live sources and writes `shared/src/commonMain/composeResources/files/pois.geojson`, which the app bundles.
+`build_pois.py` fetches the live sources and writes `tools/data/out/pois.geojson` (gitignored) with a top-level `generated` UTC timestamp. The app does not bundle it; it downloads the nightly file.
 
 ```
 python3 -m venv .venv && . .venv/bin/activate

@@ -6,6 +6,7 @@ import math
 import os
 import sys
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -44,6 +45,16 @@ def counts(features):
     c = {t: sum(props(f).get("type") == t for f in features) for t in ID_PREFIX}
     c["CLOTHING"] = sum("CLOTHING" in (props(f).get("materials") or ()) for f in features)
     return c
+
+
+def check_generated(value):
+    if not isinstance(value, str) or not value:
+        return ["generated: missing"]
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return [f"generated: {value!r} is not an ISO 8601 timestamp"]
+    return []
 
 
 def check_structure(features, errors):
@@ -195,6 +206,7 @@ def main():
         sys.exit(f"validation failed: {args.path} is not a readable FeatureCollection: {e}")
     previous = load_previous(args.previous) if args.previous and not args.skip_previous else None
     errors, warnings = validate(features, previous)
+    errors.extend(check_generated(data.get("generated")))
     for w in warnings:
         print(f"WARNING: {w}")
     if isinstance(features, list):

@@ -16,3 +16,6 @@ DerivedData/
 
 # Python
 __pycache__/
+
+# Local build output
+tools/data/out/
