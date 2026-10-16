@@ -763,7 +763,7 @@ private fun String.jsonEscape(): String = buildString {
     }
 }
 
-private val WideBreakpoint = 600.dp
+private val WideBreakpoint = 680.dp
 
 @Composable
 private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, horizontal: Boolean = false) {
