@@ -462,8 +462,8 @@ internal fun MapScreen(
                     .padding(end = 16.dp, bottom = pickerBottom)
                     .height(CategoryPickerHeight),
             ) {
-                filterButton()
                 LocatePill(panned && !pickerOpen, locate, horizontal = true)
+                filterButton()
             }
         } else Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -472,8 +472,8 @@ internal fun MapScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = pickerTop + 8.dp),
         ) {
-            filterButton()
             LocatePill(panned && !pickerOpen, locate)
+            filterButton()
         }
         SnackbarHost(
             hostState = snackbar,
@@ -782,7 +782,7 @@ private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier
             tonalElevation = 3.dp,
             shadowElevation = 4.dp,
             modifier = Modifier
-                .padding(start = if (horizontal) 8.dp else 0.dp)
+                .padding(end = if (horizontal) 8.dp else 0.dp)
                 .size(CategoryPickerHeight)
                 .semantics { contentDescription = "Mein Standort" },
         ) {
