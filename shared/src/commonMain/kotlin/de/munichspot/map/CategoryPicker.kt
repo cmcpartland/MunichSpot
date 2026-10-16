@@ -136,11 +136,12 @@ internal fun CategoryPicker(
                 shadowElevation = if (expanded) 0.dp else 4.dp,
                 modifier = Modifier
                     .padding(horizontal = if (showLocate && !expanded) CategoryPickerHeight + 8.dp else 0.dp)
-                    .onSizeChanged { pickerWidth = it.width }
-                    .animateContentSize(tween(MorphMillis))
-                    .then(if (expanded) Modifier.widthIn(max = 400.dp).fillMaxWidth() else Modifier),
+                    .onSizeChanged { pickerWidth = it.width },
             ) {
                 AnimatedContent(
+                    modifier = Modifier
+                        .animateContentSize(tween(MorphMillis))
+                        .then(if (expanded) Modifier.widthIn(max = 400.dp).fillMaxWidth() else Modifier),
                     targetState = expanded,
                     transitionSpec = { fadeIn(tween(MorphMillis)) togetherWith fadeOut(tween(MorphMillis / 2)) using SizeTransform { _, _ -> snap() } },
                     label = "picker",
@@ -250,14 +251,13 @@ internal fun CategoryPicker(
                 modifier = Modifier.offset { IntOffset(pickerWidth / 2 + gapPx + pillPx / 2, 0) },
             ) {
                 Surface(
+                    onClick = onLocate,
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 3.dp,
                     shadowElevation = 4.dp,
                     modifier = Modifier.size(CategoryPickerHeight)
-                        .semantics { contentDescription = "Mein Standort" }
-                        .clip(CircleShape)
-                        .clickable(role = Role.Button, onClick = onLocate),
+                        .semantics { contentDescription = "Mein Standort" },
                 ) {
                     Box(contentAlignment = Alignment.Center) { LocateIcon(MaterialTheme.colorScheme.primary, Modifier.size(24.dp)) }
                 }
