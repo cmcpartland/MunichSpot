@@ -167,67 +167,76 @@ internal fun CategoryPicker(
                 } else {
                     Row(Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp), verticalAlignment = Alignment.CenterVertically) {
                         val colors = MaterialTheme.colorScheme
-                        val hasSelection = type != null || anchor != null
-                        Row(
-                            Modifier.heightIn(min = CategoryPickerHeight)
-                                .weight(1f, fill = false)
-                                .clip(CircleShape)
-                                .semantics { contentDescription = "Kategorie wählen" }
-                                .clickable(role = Role.Button) { onExpandedChange(true) }
-                                .padding(start = 16.dp, end = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            CategoryGlyph(type)
-                            Text(
-                                type?.label() ?: "Alle Kategorien",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = colors.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false),
-                            )
+                        Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                Modifier.heightIn(min = CategoryPickerHeight)
+                                    .weight(1f, fill = false)
+                                    .clip(CircleShape)
+                                    .semantics { contentDescription = "Kategorie wählen" }
+                                    .clickable(role = Role.Button) { onExpandedChange(true) }
+                                    .padding(start = 16.dp, end = if (type != null) 4.dp else 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                CategoryGlyph(type)
+                                Text(
+                                    type?.label() ?: "Alle Kategorien",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = colors.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                            }
+                            if (type != null) ClearButton("Kategorie entfernen") { onTypeChange(null) }
                         }
                         Box(Modifier.size(width = 1.dp, height = 20.dp).background(colors.outlineVariant))
                         Row(
-                            Modifier.heightIn(min = CategoryPickerHeight)
-                                .then(if (anchor != null) Modifier.weight(1f, fill = false) else Modifier)
-                                .clip(CircleShape)
-                                .semantics { contentDescription = "Ort suchen" }
-                                .clickable(role = Role.Button) {
-                                    focusSearch = true
-                                    onExpandedChange(true)
-                                }
-                                .padding(start = 12.dp, end = if (hasSelection) 8.dp else 16.dp),
+                            Modifier.then(if (anchor != null) Modifier.weight(1f, fill = false) else Modifier),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
-                            else if (locationGranted) LocateIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
-                            else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
-                            Text(
-                                anchor?.name ?: if (locationGranted) "Mein Standort" else "Ort suchen",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        if (hasSelection) {
-                            Box(
-                                Modifier.padding(end = 4.dp).size(40.dp).clip(CircleShape)
+                            Row(
+                                Modifier.heightIn(min = CategoryPickerHeight)
+                                    .weight(1f, fill = false)
+                                    .clip(CircleShape)
+                                    .semantics { contentDescription = "Ort suchen" }
                                     .clickable(role = Role.Button) {
-                                        onTypeChange(null)
-                                        onAnchorChange(null)
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) { CloseIcon(colors.onSurfaceVariant) }
+                                        focusSearch = true
+                                        onExpandedChange(true)
+                                    }
+                                    .padding(start = 12.dp, end = if (anchor != null) 4.dp else 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
+                                else if (locationGranted) LocateIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
+                                else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
+                                Text(
+                                    anchor?.name ?: if (locationGranted) "Mein Standort" else "Ort suchen",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                            }
+                            if (anchor != null) ClearButton("Ort entfernen") { onAnchorChange(null) }
                         }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ClearButton(description: String, onClick: () -> Unit) {
+    Box(
+        Modifier.padding(end = 4.dp).size(40.dp).clip(CircleShape)
+            .semantics { contentDescription = description }
+            .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { CloseIcon(MaterialTheme.colorScheme.onSurfaceVariant) }
 }
 
 @Composable
