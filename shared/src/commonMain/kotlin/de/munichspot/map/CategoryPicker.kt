@@ -3,6 +3,7 @@ package de.munichspot.map
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -70,9 +71,12 @@ internal fun CategoryPicker(
         }
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 3.dp,
-            shadowElevation = 4.dp,
+            color = animateColorAsState(
+                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (expanded) 0.85f else 1f),
+                tween(MorphMillis),
+            ).value,
+            tonalElevation = if (expanded) 0.dp else 3.dp,
+            shadowElevation = if (expanded) 0.dp else 4.dp,
             modifier = modifier
                 .align(Alignment.BottomCenter)
                 .animateContentSize(tween(MorphMillis))
