@@ -62,6 +62,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -302,6 +303,21 @@ internal fun MapScreen(
     val pickerBottom = attributionBarHeight + maxOf(logoHeight, 40.dp) + MapOverlay.Spacing + 8.dp
     val pickerTop = pickerBottom + CategoryPickerHeight
 
+    // Reads the fix and the camera (both snapshot state), so it recomposes only when the boolean flips.
+    val userOnScreen by remember {
+        derivedStateOf {
+            val me = locationState.lastLocation?.position
+            val at = if (me != null && mapBounds != Rect.Zero) mapState.screenLocationFromPosition(me) else null
+            if (at == null) {
+                false
+            } else {
+                val size = with(density) { mapBounds.size.toDpSize() }
+                val top = with(density) { (topInset - mapBounds.top).toDp() }
+                at.x in 0.dp..size.width && at.y in top..(size.height - pickerTop)
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
         val permission = locationState.permission
@@ -432,7 +448,7 @@ internal fun MapScreen(
                 .padding(bottom = pickerTop + 8.dp),
         )
         CategoryPicker(
-            type, onTypeChange, places, anchor, onAnchorChange, locationState.permission is LocationPermission.Granted, pickerOpen,
+            type, onTypeChange, places, anchor, onAnchorChange, userOnScreen, pickerOpen,
             onExpandedChange = {
                 pickerOpen = it
                 if (it) {
