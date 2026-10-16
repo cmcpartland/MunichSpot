@@ -7,6 +7,7 @@
     <application
         android:allowBackup="true"
         android:label="MunichSpot"
+        android:localeConfig="@xml/locales_config"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity

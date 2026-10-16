@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import de.munichspot.data.PoiType
+import org.jetbrains.compose.resources.stringResource
+import de.munichspot.shared.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,17 +32,17 @@ internal fun FilterSheet(type: PoiType, filters: PoiFilters, onChange: (PoiFilte
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 24.dp, vertical = 8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Filter", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Text(stringResource(Res.string.filter), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 TextButton(onClick = { onChange(filters.reset(type)) }, enabled = !filters.isDefault(type)) {
-                    Text("Zurücksetzen")
+                    Text(stringResource(Res.string.reset))
                 }
             }
             when (type) {
                 PoiType.RECYCLING -> {
                     val selected = filters.recyclingMaterials
                     for ((entry, label) in listOf(
-                        RecyclingFilter.GLASS to "Glas",
-                        RecyclingFilter.PACKAGING to "Leichtverpackungen",
+                        RecyclingFilter.GLASS to stringResource(Res.string.glass),
+                        RecyclingFilter.PACKAGING to stringResource(Res.string.packaging),
                     )) {
                         CheckRow(label, entry in selected) {
                             onChange(filters.copy(recyclingMaterials = if (it) selected + entry else selected - entry))
@@ -50,9 +52,9 @@ internal fun FilterSheet(type: PoiType, filters: PoiFilters, onChange: (PoiFilte
                 PoiType.TOILET -> {
                     val selected = filters.toiletRequirements
                     for ((entry, label) in listOf(
-                        ToiletFilter.ACCESSIBLE to "Nur barrierefrei",
-                        ToiletFilter.FREE to "Nur kostenlos",
-                        ToiletFilter.CHANGING to "Mit Wickeltisch",
+                        ToiletFilter.ACCESSIBLE to stringResource(Res.string.filter_accessible),
+                        ToiletFilter.FREE to stringResource(Res.string.filter_free),
+                        ToiletFilter.CHANGING to stringResource(Res.string.filter_changing),
                     )) {
                         CheckRow(label, entry in selected) {
                             onChange(filters.copy(toiletRequirements = if (it) selected + entry else selected - entry))

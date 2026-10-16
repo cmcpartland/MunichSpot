@@ -27,7 +27,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - `map/Icons.kt`: all UI icons, drawn with Canvas; there's no icon library.
 
 ## Conventions
-- UI text is German. Code is concise with few comments, and map-package code is `internal`.
+- UI text follows the device language (German on German devices, English otherwise). It lives in `shared/src/commonMain/composeResources/values/strings.xml` (English, fallback) and `values-de/strings.xml` (German); add every new string to both and use `stringResource(Res.string.x)` (`getString` outside composables). Non-UI code returns values, not text. iOS permission text is in `iosApp/iosApp/{en,de}.lproj/InfoPlist.strings`. Code is concise with few comments, and map-package code is `internal`.
 - New icons are drawn with Canvas. Don't add icon dependencies.
 - Signals derived from dataset free text (e.g. toilet `zustand`) are hints: show a warning mark and hedged "Laut Stadt …" text, never filter or branch on them in the app; text matching lives only in `build_pois.py`.
 
@@ -62,6 +62,5 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 
 ## Open ideas (not started)
 - More reliable nightly mailbox fetch: a second Overpass server, and reuse the last mailboxes if all fail.
-- "Trinkbrunnen" shows twice in the fountain details sheet.
 - Android release setup: R8, a signing config, and a baseline profile.
 - With all categories shown, the city centre is crowded; a possible fix is a bigger cluster radius.

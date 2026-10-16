@@ -26,7 +26,7 @@ python tools/data/validate_pois.py site/pois.geojson --previous https://cmcpartl
 
 It collects all problems and exits non-zero if there are any. Thresholds are constants at the top of the script.
 
-- Structure: a FeatureCollection of Point features with finite coordinates, unique string ids with the prefix of their type (`awm-`, `osm-`, `tb-`, `wc-`), a known type, a non-empty name, known materials.
+- Structure: a FeatureCollection of Point features with finite coordinates, unique string ids with the prefix of their type (`awm-`, `osm-`, `tb-`, `wc-`), a known type, a string name (empty when the source has none), known materials.
 - Minimums: 500 recycling islands, 500 mailboxes, 50 drinking fountains, 100 toilet locations, 1000 in total, all points inside the Munich bounding box.
 - Content: at least 90 % distinct coordinates per type; recycling: 90 % with materials and at least 100 with CLOTHING; mailboxes: 80 % with `collectionTimes`; toilets: 50 % with `hours` and at most 50 % DEFECT/IMPAIRED.
 - Compared with `--previous` (URL or local path): each type's count must be 80 % to 150 % of the previous count, and CLOTHING at least 80 %. Fewer than 70 % of the previous ids kept is only a warning, as is a previous file that can't be fetched or parsed (the comparison is then skipped).

@@ -75,8 +75,8 @@ def check_structure(features, errors):
             errors.append(f"{id_}: unknown type {t!r}")
         elif isinstance(id_, str) and not id_.startswith(ID_PREFIX[t]):
             errors.append(f"{id_}: id of a {t} should start with {ID_PREFIX[t]!r}")
-        if not isinstance(p.get("name"), str) or not p["name"].strip():
-            errors.append(f"{id_}: empty or missing name")
+        if not isinstance(p.get("name"), str):
+            errors.append(f"{id_}: missing name")
         bad = set(p.get("materials") or ()) - MATERIALS
         if bad:
             errors.append(f"{id_}: unknown materials {sorted(bad)}")

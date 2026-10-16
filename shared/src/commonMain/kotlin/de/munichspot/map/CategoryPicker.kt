@@ -65,6 +65,8 @@ import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
 import de.munichspot.data.PoiType
 import kotlinx.coroutines.delay
+import de.munichspot.shared.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 internal val CategoryPickerHeight = 48.dp
 internal const val MorphMillis = 250
@@ -147,9 +149,9 @@ internal fun CategoryPicker(
                             if (searching) {
                                 if (suggestions.isEmpty()) {
                                     Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Text("Keine Treffer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(stringResource(Res.string.no_results), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         Text(
-                                            "Die Suche umfasst nur Orte in der Stadt München.",
+                                            stringResource(Res.string.search_scope),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -158,7 +160,7 @@ internal fun CategoryPicker(
                                 for (place in suggestions) SuggestionRow(place) { pick(place) }
                             } else {
                                 if (anchor != null) AnchorRow(anchor) { onAnchorChange(null) }
-                                Text("Kategorie wählen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                                Text(stringResource(Res.string.choose_category), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     for (t in listOf<PoiType?>(null) + PoiType.entries) {
                                         CategoryChoice(t, selected = t == type) {
@@ -172,12 +174,14 @@ internal fun CategoryPicker(
                     } else {
                         Row(Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp), verticalAlignment = Alignment.CenterVertically) {
                             val colors = MaterialTheme.colorScheme
+                            val chooseCategory = stringResource(Res.string.choose_category)
+                            val searchPlaces = stringResource(Res.string.search_places)
                             Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
                                 Row(
                                     Modifier.heightIn(min = CategoryPickerHeight)
                                         .weight(1f, fill = false)
                                         .clip(CircleShape)
-                                        .semantics { contentDescription = "Kategorie wählen" }
+                                        .semantics { contentDescription = chooseCategory }
                                         .clickable(role = Role.Button) { onExpandedChange(true) }
                                         .padding(start = 16.dp, end = if (type != null) 4.dp else 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -185,7 +189,7 @@ internal fun CategoryPicker(
                                 ) {
                                     CategoryGlyph(type)
                                     Text(
-                                        type?.label() ?: "Alle Kategorien",
+                                        type?.label() ?: stringResource(Res.string.all_categories),
                                         style = MaterialTheme.typography.labelLarge,
                                         color = colors.onSurface,
                                         maxLines = 1,
@@ -193,7 +197,7 @@ internal fun CategoryPicker(
                                         modifier = Modifier.weight(1f, fill = false),
                                     )
                                 }
-                                if (type != null) ClearButton("Kategorie entfernen") { onTypeChange(null) }
+                                if (type != null) ClearButton(stringResource(Res.string.clear_category)) { onTypeChange(null) }
                             }
                             Box(Modifier.size(width = 1.dp, height = 20.dp).background(colors.outlineVariant))
                             Row(
@@ -204,7 +208,7 @@ internal fun CategoryPicker(
                                     Modifier.heightIn(min = CategoryPickerHeight)
                                         .weight(1f, fill = false)
                                         .clip(CircleShape)
-                                        .semantics { contentDescription = "Ort suchen" }
+                                        .semantics { contentDescription = searchPlaces }
                                         .clickable(role = Role.Button) {
                                             focusSearch = true
                                             onExpandedChange(true)
@@ -216,7 +220,7 @@ internal fun CategoryPicker(
                                     if (anchor != null) PlaceIcon(AnchorRed, Modifier.size(16.dp))
                                     else SearchIcon(colors.onSurfaceVariant, Modifier.size(16.dp))
                                     Text(
-                                        anchor?.name ?: "Ort suchen",
+                                        anchor?.name ?: searchPlaces,
                                         style = MaterialTheme.typography.labelLarge,
                                         color = if (anchor != null) colors.onSurface else colors.onSurfaceVariant,
                                         maxLines = 1,
@@ -224,7 +228,7 @@ internal fun CategoryPicker(
                                         modifier = Modifier.weight(1f, fill = false),
                                     )
                                 }
-                                if (anchor != null) ClearButton("Ort entfernen") { onAnchorChange(null) }
+                                if (anchor != null) ClearButton(stringResource(Res.string.clear_place)) { onAnchorChange(null) }
                             }
                         }
                     }
@@ -255,7 +259,7 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit, focusReq
         SearchIcon(colors.onSurfaceVariant)
         Box(Modifier.weight(1f)) {
             if (query.isEmpty()) {
-                Text("Ort suchen", style = MaterialTheme.typography.bodyLarge, color = colors.onSurfaceVariant, maxLines = 1)
+                Text(stringResource(Res.string.search_places), style = MaterialTheme.typography.bodyLarge, color = colors.onSurfaceVariant, maxLines = 1)
             }
             BasicTextField(
                 value = query,
@@ -288,7 +292,7 @@ private fun SuggestionRow(place: Place, onClick: () -> Unit) {
         PlaceIcon(colors.onSurfaceVariant)
         Column(Modifier.weight(1f)) {
             Text(place.name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(place.kind.label, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(place.kind.label(), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
         }
     }
 }
@@ -328,7 +332,7 @@ private fun CategoryChoice(type: PoiType?, selected: Boolean, onClick: () -> Uni
     ) {
         CategoryGlyph(type)
         Text(
-            type?.label() ?: "Alle",
+            type?.label() ?: stringResource(Res.string.all),
             style = MaterialTheme.typography.labelLarge,
             color = if (selected) colors.onSecondaryContainer else colors.onSurface,
         )

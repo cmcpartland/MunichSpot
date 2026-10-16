@@ -87,7 +87,7 @@ def recycling_features():
     for f in fetch(AWM_URL)["features"]:
         x, y = f["geometry"]["coordinates"][:2]
         lon, lat = to_wgs84.transform(x, y)
-        name = (f["properties"].get("adresse") or "").strip() or "Wertstoffinsel"
+        name = (f["properties"].get("adresse") or "").strip()
         materials = [m for col, m in MATERIAL_COLUMNS.items() if (f["properties"].get(col) or 0) > 0]
         yield feature("awm-" + f["id"], "RECYCLING", name, lon, lat, materials)
 
@@ -105,16 +105,23 @@ def mailbox_features():
             extra["address"] = address
         if tags.get("indoor") == "yes":
             extra["indoor"] = True
-        name = (tags.get("name") or "").strip() or "Briefkasten"
+        name = (tags.get("name") or "").strip()
         yield feature(f"osm-{e['id']}", "POST_BOX", name, point["lon"], point["lat"], **extra)
+
+
+GENERIC_FOUNTAIN_TEXT = {"trinkbrunnen", "trinkwasserbrunnen", "trinkwasserspender", "kein name"}
 
 
 def fountain_features():
     for f in fetch(FOUNTAIN_URL)["features"]:
         x, y = f["geometry"]["coordinates"][:2]
         lon, lat = to_wgs84.transform(x, y)
-        name = " ".join((f["properties"].get("bezeichnung") or "").split()) or "Trinkbrunnen"
+        name = " ".join((f["properties"].get("bezeichnung") or "").split())
+        if name.lower() in GENERIC_FOUNTAIN_TEXT:
+            name = ""
         note = (f["properties"].get("bemerkung") or "").strip()
+        if note.lower() in GENERIC_FOUNTAIN_TEXT:
+            note = ""
         yield feature("tb-" + f["id"], "DRINKING_WATER", name, lon, lat, note=note)
 
 
@@ -169,7 +176,7 @@ def toilet_features():
         y = sum(r["geometry"]["coordinates"][1] for r in group) / len(group)
         lon, lat = to_wgs84.transform(x, y)
         names = Counter(n for n in (toilet_name(p.get("name")) for p in props) if n)
-        name = min(names, key=lambda n: (-names[n], n)) if names else "Öffentliche Toilette"
+        name = min(names, key=lambda n: (-names[n], n)) if names else ""
         first = min(group, key=lambda r: int(r["id"].rsplit(".", 1)[1]))
         categories = [p.get("kategorie") or "" for p in props]
 
