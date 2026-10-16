@@ -15,6 +15,9 @@ const val LATEST_POIS_URL = "https://cmcpartland.github.io/MunichSpot/pois.geojs
 
 private const val MIN_LATEST_POIS = 1000
 
+// Placeholder names of older data; the list can go once the nameless-as-"" data is live.
+private val OLD_PLACEHOLDER_NAMES = setOf("Wertstoffinsel", "Briefkasten", "Trinkbrunnen", "Öffentliche Toilette")
+
 private val LEGACY_POST_BOX_NAME = Regex("^Briefkasten \\((.+)\\)$")
 
 // Recycling islands: Landeshauptstadt München, AWM, opendata.muenchen.de (dl-by-de/2.0)
@@ -63,12 +66,12 @@ private fun parseFeatures(root: JsonObject): List<Poi> =
         val type = PoiType.entries.firstOrNull { it.name == properties.getValue("type").jsonPrimitive.content }
             ?: return@mapNotNull null
         val coordinates = feature.getValue("geometry").jsonObject.getValue("coordinates").jsonArray
-        val rawName = properties.getValue("name").jsonPrimitive.content
+        val rawName = properties["name"]?.jsonPrimitive?.contentOrNull.orEmpty().trim()
         val legacyTimes = if (type == PoiType.POST_BOX) LEGACY_POST_BOX_NAME.matchEntire(rawName)?.groupValues?.get(1) else null
         Poi(
             id = feature.getValue("id").jsonPrimitive.content,
             type = type,
-            name = if (legacyTimes != null) "Briefkasten" else rawName,
+            name = if (legacyTimes != null || rawName in OLD_PLACEHOLDER_NAMES) "" else rawName,
             lat = coordinates[1].jsonPrimitive.content.toDouble(),
             lon = coordinates[0].jsonPrimitive.content.toDouble(),
             materials = properties["materials"]?.jsonArray.orEmpty().mapNotNull { m ->
@@ -122,12 +125,17 @@ internal fun Instant.toGermanDate(): String {
 internal val STALE_AFTER = 30.days
 internal val VERY_STALE_AFTER = 365.days
 
+internal sealed interface Freshness {
+    data object VeryOld : Freshness
+    data class AsOf(val date: String) : Freshness
+}
+
 /** Subtle note for the attribution bar when the data is old; null when it is recent or its age is unknown. */
-internal fun freshnessHint(generated: Instant?, now: Instant): String? {
+internal fun freshnessHint(generated: Instant?, now: Instant): Freshness? {
     val age = now - (generated ?: return null)
     return when {
-        age > VERY_STALE_AFTER -> "Daten seit über einem Jahr nicht aktualisiert"
-        age > STALE_AFTER -> "Datenstand: ${generated.toGermanDate()}"
+        age > VERY_STALE_AFTER -> Freshness.VeryOld
+        age > STALE_AFTER -> Freshness.AsOf(generated.toGermanDate())
         else -> null
     }
 }

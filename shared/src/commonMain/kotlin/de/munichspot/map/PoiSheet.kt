@@ -34,6 +34,8 @@ import de.munichspot.data.PostBoxInfo
 import de.munichspot.data.ToiletInfo
 import de.munichspot.data.ToiletStatus
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.stringResource
+import de.munichspot.shared.resources.*
 
 private val DragHandleHeight = 48.dp
 
@@ -43,13 +45,15 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
     val density = LocalDensity.current
     var handleTop by remember { mutableStateOf(0f) }
     val uriHandler = LocalUriHandler.current
-    val (title, source) = when (poi.type) {
-        PoiType.RECYCLING -> "Wertstoffinsel" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
-        PoiType.CLOTHES -> "Altkleidercontainer" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
-        PoiType.POST_BOX -> "Briefkasten" to "Quelle: © OpenStreetMap contributors"
-        PoiType.DRINKING_WATER -> "Trinkbrunnen" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
-        PoiType.TOILET -> "Öffentliche Toilette" to "Quelle: Landeshauptstadt München (dl-by-de/2.0)"
+    val (titleRes, sourceRes) = when (poi.type) {
+        PoiType.RECYCLING -> Res.string.title_recycling to Res.string.source_city
+        PoiType.CLOTHES -> Res.string.title_clothes to Res.string.source_city
+        PoiType.POST_BOX -> Res.string.title_post_box to Res.string.source_osm
+        PoiType.DRINKING_WATER -> Res.string.title_drinking_water to Res.string.source_city
+        PoiType.TOILET -> Res.string.title_toilet to Res.string.source_city
     }
+    val title = stringResource(titleRes)
+    val source = stringResource(sourceRes)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         dragHandle = {
@@ -70,12 +74,12 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
                 CategoryIcon(poi.type, size = 32.dp)
                 Text(title, style = MaterialTheme.typography.titleLarge)
             }
-            if (poi.name != title) Text(poi.name, style = MaterialTheme.typography.bodyLarge)
+            if (poi.name.isNotEmpty() && poi.name != title) Text(poi.name, style = MaterialTheme.typography.bodyLarge)
             if (poi.type == PoiType.RECYCLING) {
                 val lines = poi.materials.accepted()
                 if (lines.isEmpty()) {
                     Text(
-                        "Keine Containerdaten verfügbar",
+                        stringResource(Res.string.no_container_data),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -87,35 +91,36 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
             }
             if (poi.type == PoiType.CLOTHES) {
                 Text(
-                    "Saubere Kleidung und Schuhe, in Säcken verpackt.",
+                    stringResource(Res.string.clothes_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (poi.type == PoiType.DRINKING_WATER) {
-                poi.note?.let { Text("Bemerkung: $it", style = MaterialTheme.typography.bodyMedium) }
+                poi.note?.let { Text(stringResource(Res.string.note, it), style = MaterialTheme.typography.bodyMedium) }
                 Text(
-                    "Viele Trinkbrunnen sind im Winter abgeschaltet oder abgedeckt.",
+                    stringResource(Res.string.fountain_winter_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             poi.toilet?.let { ToiletDetails(it) }
             poi.postBox?.let { PostBoxDetails(it) }
-            Button(onClick = { uriHandler.openUri(navigationUri(poi)) }) { Text("Route") }
+            Button(onClick = { uriHandler.openUri(navigationUri(poi)) }) { Text(stringResource(Res.string.directions)) }
             Text(source, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
 
+@Composable
 private fun List<Material>.accepted(): List<String> = buildList {
     val glass = listOf(
-        Material.GLASS_BROWN to "braun",
-        Material.GLASS_GREEN to "grün",
-        Material.GLASS_WHITE to "weiß",
+        Material.GLASS_BROWN to stringResource(Res.string.glass_brown),
+        Material.GLASS_GREEN to stringResource(Res.string.glass_green),
+        Material.GLASS_WHITE to stringResource(Res.string.glass_white),
     ).filter { it.first in this@accepted }
-    if (glass.isNotEmpty()) add("Glas (${glass.joinToString(" · ") { it.second }})")
-    if (Material.PACKAGING in this@accepted) add("Leichtverpackungen")
+    if (glass.isNotEmpty()) add(stringResource(Res.string.glass_colors, glass.joinToString(" · ") { it.second }))
+    if (Material.PACKAGING in this@accepted) add(stringResource(Res.string.packaging))
 }
 
 @Composable
@@ -123,22 +128,22 @@ private fun ToiletDetails(toilet: ToiletInfo) {
     val body = MaterialTheme.typography.bodyMedium
     toilet.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        toilet.hours?.let { Text("Geöffnet: $it", style = body) }
-        toilet.price?.let { Text(if (it == 0.0) "Kostenlos" else formatEuro(it), style = body) }
-        toilet.floor?.let { Text("Etage: $it", style = body) }
+        toilet.hours?.let { Text(stringResource(Res.string.opening_hours, it), style = body) }
+        toilet.price?.let { Text(if (it == 0.0) stringResource(Res.string.free) else formatEuro(it), style = body) }
+        toilet.floor?.let { Text(stringResource(Res.string.floor, it), style = body) }
         listOfNotNull(
-            "Barrierefrei".takeIf { toilet.accessible },
-            "Wickeltisch".takeIf { toilet.changing },
-            "Euroschlüssel".takeIf { toilet.euroKey },
+            stringResource(Res.string.accessible).takeIf { toilet.accessible },
+            stringResource(Res.string.changing_table).takeIf { toilet.changing },
+            stringResource(Res.string.euro_key).takeIf { toilet.euroKey },
         ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), style = body) }
-        listOf("F" to "Damen", "M" to "Herren", "U" to "Unisex")
+        listOf("F" to stringResource(Res.string.room_women), "M" to stringResource(Res.string.room_men), "U" to stringResource(Res.string.room_unisex))
             .filter { it.first in toilet.rooms }
             .takeIf { it.isNotEmpty() }
             ?.let { Text(it.joinToString(" · ") { r -> r.second }, style = body) }
     }
     val warning = when (toilet.status) {
-        ToiletStatus.DEFECT -> "Laut Stadt defekt oder nicht zugänglich"
-        ToiletStatus.IMPAIRED -> "Laut Stadt teilweise beeinträchtigt"
+        ToiletStatus.DEFECT -> stringResource(Res.string.toilet_defect)
+        ToiletStatus.IMPAIRED -> stringResource(Res.string.toilet_impaired)
         null -> null
     }
     warning?.let { Text(it, style = body, color = MaterialTheme.colorScheme.error) }
@@ -148,21 +153,23 @@ private fun ToiletDetails(toilet: ToiletInfo) {
 private fun PostBoxDetails(info: PostBoxInfo) {
     val body = MaterialTheme.typography.bodyMedium
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val days = mapOf(
+        "Mo" to stringResource(Res.string.day_mo), "Tu" to stringResource(Res.string.day_tu), "We" to stringResource(Res.string.day_we),
+        "Th" to stringResource(Res.string.day_th), "Fr" to stringResource(Res.string.day_fr), "Sa" to stringResource(Res.string.day_sa),
+        "Su" to stringResource(Res.string.day_su), "PH" to stringResource(Res.string.day_ph), "off" to stringResource(Res.string.day_off),
+    )
     info.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
     if (info.collectionTimes != null) {
-        Text("Leerungszeiten", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(Res.string.collection_times), style = MaterialTheme.typography.titleSmall)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            formatCollectionTimes(info.collectionTimes).forEach { Text(it, style = body) }
+            formatCollectionTimes(info.collectionTimes, days).forEach { Text(it, style = body) }
         }
     } else {
-        Text("Keine Leerungszeiten bekannt", style = body, color = muted)
+        Text(stringResource(Res.string.no_collection_times), style = body, color = muted)
     }
-    if (info.indoor) Text("Im Gebäude – nur während dessen Öffnungszeiten zugänglich", style = body, color = muted)
+    if (info.indoor) Text(stringResource(Res.string.indoor_note), style = body, color = muted)
 }
 
-private val DAYS = mapOf(
-    "Mo" to "Mo", "Tu" to "Di", "We" to "Mi", "Th" to "Do", "Fr" to "Fr", "Sa" to "Sa", "Su" to "So", "PH" to "Feiertag", "off" to "keine Leerung",
-)
 private val RULE_SPLIT = Regex("(\\d),\\s+(?=(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)\\b)")
 private val DAY_TOKEN = Regex("\\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\\b")
 private val DAY_RANGE = Regex("([A-Za-z])-([A-Za-z])")
@@ -170,9 +177,9 @@ private val TIME_LIST = Regex("(\\d),(\\d)")
 private val DAY_LIST = Regex("([A-Za-z]),\\s*([A-Za-z])")
 private val SPACES = Regex("\\s+")
 
-internal fun formatCollectionTimes(raw: String): List<String> =
+internal fun formatCollectionTimes(raw: String, days: Map<String, String>): List<String> =
     raw.replace(RULE_SPLIT, "$1;").split(';').map { it.trim().replace(SPACES, " ") }.filter { it.isNotEmpty() }.map { rule ->
-        rule.replace(DAY_TOKEN) { DAYS.getValue(it.value) }.replace(DAY_RANGE, "$1–$2")
+        rule.replace(DAY_TOKEN) { days.getValue(it.value) }.replace(DAY_RANGE, "$1–$2")
             .replace(TIME_LIST, "$1, $2").replace(DAY_LIST, "$1, $2")
     }
 

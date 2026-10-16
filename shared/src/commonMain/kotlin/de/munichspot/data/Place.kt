@@ -15,14 +15,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Instant
 
-enum class PlaceKind(val label: String) {
-    STREET("Straße"),
-    PARK("Park"),
-    SQUARE("Platz"),
-    STATION("Bahnhof"),
-    LANDMARK("Sehenswürdigkeit"),
-    DISTRICT("Stadtteil"),
-}
+enum class PlaceKind { STREET, PARK, SQUARE, STATION, LANDMARK, DISTRICT }
 
 data class Place(val name: String, val kind: PlaceKind, val lat: Double, val lon: Double)
 

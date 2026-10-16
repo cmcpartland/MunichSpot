@@ -155,6 +155,10 @@ import org.maplibre.compose.style.BaseStyle
 import org.maplibre.compose.util.MaplibreComposable
 import org.maplibre.spatialk.geojson.Point
 import org.maplibre.spatialk.geojson.Position
+import de.munichspot.data.Freshness
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
+import de.munichspot.shared.resources.*
 
 internal fun PoiType.pinColor(): Color = when (this) {
     PoiType.RECYCLING -> RecyclingGreen
@@ -164,13 +168,28 @@ internal fun PoiType.pinColor(): Color = when (this) {
     PoiType.TOILET -> ToiletPurple
 }
 
-internal fun PoiType.label(): String = when (this) {
-    PoiType.RECYCLING -> "Wertstoffinseln"
-    PoiType.CLOTHES -> "Altkleidercontainer"
-    PoiType.POST_BOX -> "Briefkästen"
-    PoiType.DRINKING_WATER -> "Trinkbrunnen"
-    PoiType.TOILET -> "Toiletten"
-}
+@Composable
+internal fun PoiType.label(): String = stringResource(
+    when (this) {
+        PoiType.RECYCLING -> Res.string.type_recycling
+        PoiType.CLOTHES -> Res.string.type_clothes
+        PoiType.POST_BOX -> Res.string.type_post_box
+        PoiType.DRINKING_WATER -> Res.string.type_drinking_water
+        PoiType.TOILET -> Res.string.type_toilet
+    },
+)
+
+@Composable
+internal fun PlaceKind.label(): String = stringResource(
+    when (this) {
+        PlaceKind.STREET -> Res.string.kind_street
+        PlaceKind.PARK -> Res.string.kind_park
+        PlaceKind.SQUARE -> Res.string.kind_square
+        PlaceKind.STATION -> Res.string.kind_station
+        PlaceKind.LANDMARK -> Res.string.kind_landmark
+        PlaceKind.DISTRICT -> Res.string.kind_district
+    },
+)
 
 internal val DrinkingWaterText = Color(0xFF01579B)
 
@@ -189,9 +208,6 @@ private val SelectedWarningMarkSize = 20.dp
 private val LocationBlue = Color(0xFF1A73E8)
 
 internal enum class DataStatus { Loading, Ready, Failed }
-
-internal const val ATTRIBUTION =
-    "© OpenStreetMap contributors · OpenFreeMap · Daten: Landeshauptstadt München (dl-by-de/2.0)"
 
 private val Marienplatz = Position(latitude = 48.1374, longitude = 11.5755)
 private var locationAsked = false
@@ -380,7 +396,7 @@ internal fun MapScreen(
             mapState.animateCamera(CameraUpdate(center = position, zoom = 15.0))
             panned = false
         } else {
-            snackbar.showSnackbar("Standort nicht verfügbar")
+            snackbar.showSnackbar(getString(Res.string.location_unavailable))
         }
         centerRequested = false
     }
@@ -521,9 +537,14 @@ internal fun MapScreen(
                 .onSizeChanged { attributionBarHeight = with(density) { it.height.toDp() } }
                 .navigationBarsPadding(),
         ) {
-            val hint = remember(generated) { freshnessHint(generated, Clock.System.now()) }
+            val hint = when (val f = remember(generated) { freshnessHint(generated, Clock.System.now()) }) {
+                Freshness.VeryOld -> stringResource(Res.string.data_very_old)
+                is Freshness.AsOf -> stringResource(Res.string.data_as_of, f.date)
+                null -> null
+            }
+            val attribution = stringResource(Res.string.attribution)
             Text(
-                text = if (hint != null) "$ATTRIBUTION · $hint" else ATTRIBUTION,
+                text = if (hint != null) "$attribution · $hint" else attribution,
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -803,11 +824,11 @@ private fun DataNotice(status: DataStatus, onRetry: () -> Unit, modifier: Modifi
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 4.dp)) {
                 Text(
-                    text = if (status == DataStatus.Failed) "Keine Daten – Internetverbindung prüfen" else "Lade Daten …",
+                    text = stringResource(if (status == DataStatus.Failed) Res.string.no_data else Res.string.loading_data),
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.padding(vertical = 12.dp, horizontal = 0.dp).weight(1f, fill = false),
                 )
-                if (status == DataStatus.Failed) TextButton(onClick = onRetry) { Text("Erneut versuchen") }
+                if (status == DataStatus.Failed) TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
                 else Spacer(Modifier.width(12.dp))
             }
         }
@@ -816,6 +837,7 @@ private fun DataNotice(status: DataStatus, onRetry: () -> Unit, modifier: Modifi
 
 @Composable
 private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, horizontal: Boolean = false) {
+    val description = stringResource(Res.string.my_location)
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
@@ -833,7 +855,7 @@ private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier
             modifier = Modifier
                 .padding(end = if (horizontal) 8.dp else 0.dp)
                 .size(CategoryPickerHeight)
-                .semantics { contentDescription = "Mein Standort" },
+                .semantics { contentDescription = description },
         ) {
             Box(contentAlignment = Alignment.Center) { LocateIcon(MaterialTheme.colorScheme.primary, Modifier.size(24.dp)) }
         }
