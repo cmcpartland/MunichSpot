@@ -11,6 +11,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -423,17 +431,42 @@ internal fun MapScreen(
         )
         selected?.let { PoiSheet(it, onBounds = { b -> sheetBounds = b }) { selected = null } }
         if (showFilters && type != null) FilterSheet(type, filters, onChange = onFiltersChange, onDismiss = { showFilters = false })
-        if (type != null && type.hasFilters()) SmallFloatingActionButton(
-            onClick = {
-                selected = null
-                showFilters = true
-            },
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = pickerTop + 8.dp),
         ) {
-            BadgedBox(badge = { if (!filters.isDefault(type)) Badge() }) {
-                FilterIcon(LocalContentColor.current)
+            if (type != null && type.hasFilters()) SmallFloatingActionButton(
+                onClick = {
+                    selected = null
+                    showFilters = true
+                },
+            ) {
+                BadgedBox(badge = { if (!filters.isDefault(type)) Badge() }) {
+                    FilterIcon(LocalContentColor.current)
+                }
+            }
+            AnimatedVisibility(
+                visible = panned && !pickerOpen,
+                enter = fadeIn(tween(MorphMillis)) + scaleIn(tween(MorphMillis)),
+                exit = fadeOut(tween(MorphMillis)) + scaleOut(tween(MorphMillis)),
+            ) {
+                Surface(
+                    onClick = {
+                        if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
+                        centerRequested = true
+                    },
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    tonalElevation = 3.dp,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.size(CategoryPickerHeight)
+                        .semantics { contentDescription = "Mein Standort" },
+                ) {
+                    Box(contentAlignment = Alignment.Center) { LocateIcon(MaterialTheme.colorScheme.primary, Modifier.size(24.dp)) }
+                }
             }
         }
         SnackbarHost(
@@ -452,11 +485,6 @@ internal fun MapScreen(
                 }
             },
             bottomInset = pickerBottom,
-            showLocate = panned,
-            onLocate = {
-                if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
-                centerRequested = true
-            },
         )
         Surface(
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),

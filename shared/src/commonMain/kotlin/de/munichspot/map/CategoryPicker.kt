@@ -9,8 +9,6 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +24,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -43,7 +40,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,7 +52,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
@@ -65,7 +60,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
@@ -73,7 +67,7 @@ import de.munichspot.data.PoiType
 import kotlinx.coroutines.delay
 
 internal val CategoryPickerHeight = 48.dp
-private const val MorphMillis = 250
+internal const val MorphMillis = 250
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -86,8 +80,6 @@ internal fun CategoryPicker(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     bottomInset: Dp,
-    showLocate: Boolean,
-    onLocate: () -> Unit,
 ) {
     BackHandler(enabled = expanded) { onExpandedChange(false) }
     BackHandler(enabled = type != null && !expanded) { onTypeChange(null) }
@@ -99,9 +91,6 @@ internal fun CategoryPicker(
     val focusManager = LocalFocusManager.current
     val density = LocalDensity.current
     val imeBottom = with(density) { WindowInsets.ime.getBottom(density).toDp() }
-    var pickerWidth by remember { mutableIntStateOf(0) }
-    val gapPx = with(density) { 8.dp.roundToPx() }
-    val pillPx = with(density) { CategoryPickerHeight.roundToPx() }
     val pick = { place: Place ->
         onAnchorChange(place)
         query = ""
@@ -134,10 +123,7 @@ internal fun CategoryPicker(
                 ).value,
                 tonalElevation = if (expanded) 0.dp else 3.dp,
                 shadowElevation = if (expanded) 0.dp else 4.dp,
-                modifier = Modifier
-                    .padding(horizontal = if (showLocate && !expanded) CategoryPickerHeight + 8.dp else 0.dp)
-                    .onSizeChanged { pickerWidth = it.width },
-            ) {
+) {
                 AnimatedContent(
                     modifier = Modifier
                         .animateContentSize(tween(MorphMillis))
@@ -242,24 +228,6 @@ internal fun CategoryPicker(
                             }
                         }
                     }
-                }
-            }
-            AnimatedVisibility(
-                visible = showLocate && !expanded,
-                enter = fadeIn(tween(MorphMillis)) + scaleIn(tween(MorphMillis)),
-                exit = fadeOut(tween(MorphMillis)) + scaleOut(tween(MorphMillis)),
-                modifier = Modifier.offset { IntOffset(pickerWidth / 2 + gapPx + pillPx / 2, 0) },
-            ) {
-                Surface(
-                    onClick = onLocate,
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    tonalElevation = 3.dp,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.size(CategoryPickerHeight)
-                        .semantics { contentDescription = "Mein Standort" },
-                ) {
-                    Box(contentAlignment = Alignment.Center) { LocateIcon(MaterialTheme.colorScheme.primary, Modifier.size(24.dp)) }
                 }
             }
         }
