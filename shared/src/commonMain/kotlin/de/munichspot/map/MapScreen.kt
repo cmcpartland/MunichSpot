@@ -431,13 +431,12 @@ internal fun MapScreen(
         )
         selected?.let { PoiSheet(it, onBounds = { b -> sheetBounds = b }) { selected = null } }
         if (showFilters && type != null) FilterSheet(type, filters, onChange = onFiltersChange, onDismiss = { showFilters = false })
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = pickerTop + 8.dp),
-        ) {
+        val wide = with(density) { mapBounds.width.toDp() } >= WideBreakpoint
+        val locate = {
+            if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
+            centerRequested = true
+        }
+        val filterButton: @Composable () -> Unit = {
             if (type != null && type.hasFilters()) SmallFloatingActionButton(
                 onClick = {
                     selected = null
@@ -448,26 +447,19 @@ internal fun MapScreen(
                     FilterIcon(LocalContentColor.current)
                 }
             }
-            AnimatedVisibility(
-                visible = panned && !pickerOpen,
-                enter = fadeIn(tween(MorphMillis)) + scaleIn(tween(MorphMillis)),
-                exit = fadeOut(tween(MorphMillis)) + scaleOut(tween(MorphMillis)),
-            ) {
-                Surface(
-                    onClick = {
-                        if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
-                        centerRequested = true
-                    },
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    tonalElevation = 3.dp,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.size(CategoryPickerHeight)
-                        .semantics { contentDescription = "Mein Standort" },
-                ) {
-                    Box(contentAlignment = Alignment.Center) { LocateIcon(MaterialTheme.colorScheme.primary, Modifier.size(24.dp)) }
-                }
-            }
+        }
+        if (wide) {
+            Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp + (CategoryPickerHeight - 40.dp) / 2, bottom = pickerTop + 8.dp)) { filterButton() }
+            LocatePill(panned && !pickerOpen, locate, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = pickerBottom))
+        } else Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = pickerTop + 8.dp),
+        ) {
+            filterButton()
+            LocatePill(panned && !pickerOpen, locate)
         }
         SnackbarHost(
             hostState = snackbar,
@@ -754,5 +746,29 @@ private fun String.jsonEscape(): String = buildString {
         c == '"' -> append("\\\"")
         c < ' ' -> append("\\u").append(c.code.toString(16).padStart(4, '0'))
         else -> append(c)
+    }
+}
+
+private val WideBreakpoint = 600.dp
+
+@Composable
+private fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = fadeIn(tween(MorphMillis)) + scaleIn(tween(MorphMillis)),
+        exit = fadeOut(tween(MorphMillis)) + scaleOut(tween(MorphMillis)),
+    ) {
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 3.dp,
+            shadowElevation = 4.dp,
+            modifier = Modifier.size(CategoryPickerHeight)
+                .semantics { contentDescription = "Mein Standort" },
+        ) {
+            Box(contentAlignment = Alignment.Center) { LocateIcon(MaterialTheme.colorScheme.primary, Modifier.size(24.dp)) }
+        }
     }
 }
