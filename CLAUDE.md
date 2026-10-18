@@ -13,7 +13,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
   - one clustered GeoJSON source per type
   - the layer order: per type its icons, the toilet warning mark (`PoiWarningLayer`, for `Poi.possiblyDefect`), badge circles and counts together, so a badge stacks with its own pin; the location puck on top
   - the opening view (`boundsAround`, 700 m radius, Marienplatz fallback, moving to the user if the fix is in Munich)
-  - the selected-pin highlight (`SelectedPin`), drawn in the map overlay, not as a layer
+  - the selected-pin highlight: `SelectedPinLayers` (a one-feature source, so it pans with the map), with the overlay `SelectedPin` shown only until a frame polling `queryRenderedFeatures` finds the layer on screen
   - the reveal zoom: picking a category (or filter) with none of its pins on screen slowly zooms out, centre fixed, to the nearest two (`map/RevealZoom.kt`, plain Mercator math)
   - the anchor pin (`AnchorPinPainter`, a symbol layer on top of the map, so it moves with panning): picking a place animates to it (1.5 km for districts, else 700 m), then runs the reveal zoom for the selected category; clearing it flies back to the user's fix if it's in Munich
   - the filter button and the round locate pill (`LocatePill`; it shows after a gesture pan while the picker is collapsed, and hides once the camera is back on the user's fix). Compact (map < 680 dp wide): one bottom-end column above the picker, filter directly above the picker, locate above it. Wide (>= 680 dp, e.g. the unfolded Fold; below that the buttons could overlap a full-width picker): locate and filter in the picker's row at the right end (filter last). Either way the filter stays put while the locate pill comes and goes
@@ -32,13 +32,13 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - Signals derived from dataset free text (e.g. toilet `zustand`) are hints: show a warning mark and hedged "Laut Stadt …" text, never filter or branch on them in the app; text matching lives only in `build_pois.py`.
 
 ## Gotchas
-- Overlay (`placedAt`) content lags behind the map while panning, so use it only for transient things like the selected-pin highlight; anything persistent belongs in a layer.
-- Clothes pins sit on their island's exact point, so `MapScreen` draws the clothes layers, the selected-pin overlay and the keep-visible pan with `ClothesOffset` (16 dp right, 10 dp up, viewport-anchored).
+- Overlay (`placedAt`) content lags behind the map while panning, so use it only for transient things like the selected-pin bridge; anything persistent belongs in a layer.
+- Clothes pins sit on their island's exact point, so `MapScreen` draws the clothes layers, the selected-pin layers and overlay and the keep-visible pan with `ClothesOffset` (16 dp right, 10 dp up, viewport-anchored).
 - Android needs `androidResources.enable = true` in `shared/build.gradle.kts`, or `files/places.json` and `munich_boundary.geojson` are missing at runtime.
 - The OpenFreeMap styles (we use "positron") only have Noto Sans fonts. Use `"Noto Sans Bold"` for map text.
 - `toGeoJson` must escape control characters. A bad name once made a whole layer vanish silently.
 - `BackHandler` from `ui-backhandler` is deprecated in CMP 1.12; the replacement is the navigationevent API.
-- Map style changes (source data, layer filters) take about 0.4 s to appear on the emulator. For instant feedback on a tap, such as the selected-pin highlight, draw in `MaplibreMap`'s `overlay` with `Modifier.placedAt(position)` instead of adding a layer.
+- Map style changes (source data, layer filters) take about 0.4 s to appear on the emulator. For instant feedback on a tap, such as the selected-pin highlight, draw in `MaplibreMap`'s `overlay` with `Modifier.placedAt(position)` only until the layer is rendered.
 - Dark mode follows the system; the dark map style is OpenFreeMap "fiord" (it only lists Noto Sans Regular, but "Noto Sans Bold" is served from the shared font endpoint).
 - Overpass (mailboxes) often returns 504. The nightly workflow retries, and a failed run keeps the last deploy live.
 
