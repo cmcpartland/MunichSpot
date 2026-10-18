@@ -16,6 +16,7 @@
     <string name="data_as_of">Datenstand: %1$s</string>
     <string name="data_very_old">Daten seit über einem Jahr nicht aktualisiert</string>
     <string name="location_unavailable">Standort nicht verfügbar</string>
+    <string name="outside_munich">MunichSpot funktioniert nur in München</string>
     <string name="loading_data">Lade Daten …</string>
     <string name="no_data">Keine Daten – Internetverbindung prüfen</string>
     <string name="retry">Erneut versuchen</string>
