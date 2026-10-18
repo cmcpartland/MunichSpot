@@ -87,6 +87,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -96,6 +97,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -253,6 +255,8 @@ internal fun MapScreen(
         }
         remember(pois, key) { pois.filter { it.type == t && f.matches(it) }.toGeoJson() }
     }
+    val selectedGeoJson = remember(selected) { listOfNotNull(selected).toGeoJson() }
+    var selectedOnMap by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(type, filters) {
         if (type != null && selected?.let { it.type != type || !filters.matches(it) } == true) selected = null
     }
@@ -300,6 +304,7 @@ internal fun MapScreen(
             PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
             PoiCountLayers(t, sources.getValue(t), mapState, scope)
         }
+        SelectedPinLayers(rememberGeoJsonSource(GeoJsonData.JsonString(selectedGeoJson)))
         LocationIndicatorLayer(
             id = "user-location",
             locationState = locationState,
@@ -327,6 +332,22 @@ internal fun MapScreen(
     var mapBounds by remember { mutableStateOf(Rect.Zero) }
     var sheetBounds by remember { mutableStateOf<Rect?>(null) }
     val topInset = WindowInsets.statusBars.getTop(density) + with(density) { 16.dp.toPx() }
+
+    LaunchedEffect(selected?.id) {
+        selectedOnMap = null
+        val poi = selected ?: return@LaunchedEffect
+        val position = Position(longitude = poi.lon, latitude = poi.lat)
+        val layerIds = PoiType.entries.mapTo(mutableSetOf()) { "${it.name.lowercase()}-selected" }
+        while (selectedOnMap != poi.id) {
+            withFrameNanos { }
+            val pin = mapState.screenLocationFromPosition(position) ?: continue
+            val o = poi.type.pinOffset()
+            val x = pin.x + o.x
+            val y = pin.y + o.y
+            val rendered = mapState.queryRenderedFeatures(DpRect(x - 6.dp, y - 6.dp, x + 6.dp, y + 6.dp), layerIds)
+            if (rendered.any { it.id?.jsonPrimitive?.content == poi.id }) selectedOnMap = poi.id
+        }
+    }
 
     var panBack by remember { mutableStateOf<Position?>(null) }
     LaunchedEffect(selected?.id) {
@@ -461,7 +482,7 @@ internal fun MapScreen(
             viewportInsets = PaddingValues(bottom = attributionBarHeight),
             overlay = {
                 MapControls(mapState) { logoHeight = it }
-                selected?.let {
+                selected?.takeIf { it.id != selectedOnMap }?.let {
                     val o = it.type.pinOffset()
                     Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it) }
                 }
@@ -726,10 +747,8 @@ private class AnchorPinPainter : Painter() {
 
 @Composable
 private fun SelectedPin(poi: Poi) {
-    val glow = poi.type.pinColor().copy(alpha = 0.6f)
     Canvas(Modifier.size(SelectedGlowRadius * 2)) {
-        drawCircle(Brush.radialGradient(0f to glow, 0.4f to glow, 1f to Color.Transparent, radius = size.width / 2))
-        inset((size.width - SelectedPoiIconSize.toPx()) / 2) { drawCategoryIcon(poi.type, ring = true) }
+        drawSelectedPin(poi.type)
         if (poi.possiblyDefect) {
             val s = SelectedWarningMarkSize.toPx()
             val l = center.x + SelectedWarningMarkOffset.x.toPx() - s / 2
@@ -737,6 +756,47 @@ private fun SelectedPin(poi: Poi) {
             inset(l, t, size.width - l - s, size.height - t - s) { drawWarningMark() }
         }
     }
+}
+
+private fun DrawScope.drawSelectedPin(type: PoiType) {
+    val glow = type.pinColor().copy(alpha = 0.6f)
+    drawCircle(Brush.radialGradient(0f to glow, 0.4f to glow, 1f to Color.Transparent, radius = size.width / 2))
+    inset((size.width - SelectedPoiIconSize.toPx()) / 2) { drawCategoryIcon(type, ring = true) }
+}
+
+private class SelectedPinPainter(private val type: PoiType) : Painter() {
+    override val intrinsicSize = Size.Unspecified
+    override fun DrawScope.onDraw() = drawSelectedPin(type)
+}
+
+/** The selected pin's highlight as layers, so it pans with the map; the overlay [SelectedPin] only bridges until it renders. */
+@Composable
+@MaplibreComposable
+private fun SelectedPinLayers(source: GeoJsonSource) {
+    for (t in PoiType.entries) {
+        val painter = remember(t) { SelectedPinPainter(t) }
+        SymbolLayer(
+            id = "${t.name.lowercase()}-selected",
+            source = source,
+            filter = feature["type"].asString() eq const(t.name),
+            iconImage = image(painter, size = DpSize(SelectedGlowRadius * 2, SelectedGlowRadius * 2)),
+            iconTranslate = const(t.pinOffset()),
+            iconTranslateAnchor = const(TranslateAnchor.Viewport),
+            iconAllowOverlap = const(true),
+            iconIgnorePlacement = const(true),
+        )
+    }
+    val warning = remember { WarningMarkPainter() }
+    SymbolLayer(
+        id = "selected-warning",
+        source = source,
+        filter = feature["warn"].asBoolean() eq const(true),
+        iconImage = image(warning, size = DpSize(SelectedWarningMarkSize, SelectedWarningMarkSize)),
+        iconTranslate = const(SelectedWarningMarkOffset),
+        iconTranslateAnchor = const(TranslateAnchor.Viewport),
+        iconAllowOverlap = const(true),
+        iconIgnorePlacement = const(true),
+    )
 }
 
 /** Count badge at the cluster icon's top-right corner: a white disc with a type-coloured border. */
