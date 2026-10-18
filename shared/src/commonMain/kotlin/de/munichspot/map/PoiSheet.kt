@@ -3,6 +3,7 @@ package de.munichspot.map
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -56,6 +57,7 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
     val source = stringResource(sourceRes)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
         dragHandle = {
             BottomSheetDefaults.DragHandle(
                 Modifier.onGloballyPositioned { handleTop = it.positionOnScreen().y },
