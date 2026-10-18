@@ -86,6 +86,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -263,6 +264,7 @@ internal fun MapScreen(
     val boundary by produceState<String?>(null) {
         value = runCatching { Res.readBytes("files/munich_boundary.geojson").decodeToString() }.getOrNull()
     }
+    val munich = remember(boundary) { boundary?.let { MunichArea.parse(it) } }
     lateinit var mapState: MapState
     mapState = rememberMapState(
         baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/" + if (dark) "fiord" else "positron"),
@@ -361,6 +363,7 @@ internal fun MapScreen(
     val pickerBottom = attributionBarHeight + maxOf(logoHeight, 40.dp) + MapOverlay.Spacing + 8.dp
     val pickerTop = pickerBottom + CategoryPickerHeight
 
+    val currentAnchor by rememberUpdatedState(anchor)
     LaunchedEffect(Unit) {
         mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
         val permission = locationState.permission
@@ -368,10 +371,14 @@ internal fun MapScreen(
             locationAsked = true
             locationState.requestPermission()
         }
-        val position = withTimeoutOrNull(5.seconds) {
+        snapshotFlow { locationState.permission is LocationPermission.Granted }.first { it }
+        val position = withTimeoutOrNull(10.seconds) {
             snapshotFlow { locationState.lastLocation?.position }.first { it != null }
-        }
-        if (position != null && position.latitude in 47.9..48.4 && position.longitude in 11.2..11.9) {
+        } ?: return@LaunchedEffect
+        val area = withTimeoutOrNull(3.seconds) { snapshotFlow { boundary }.first { it != null } }?.let { MunichArea.parse(it) }
+        if (!area.containsOrBox(position)) {
+            snackbar.showSnackbar(getString(Res.string.outside_munich))
+        } else if (!panned && currentAnchor == null) {
             mapState.animateCameraToBounds(boundsAround(position))
         }
     }
@@ -392,7 +399,9 @@ internal fun MapScreen(
                 locationState.lastLocation?.position to failed
             }.first { (position, failed) -> position != null || failed }.first
         }
-        if (position != null) {
+        if (position != null && !munich.containsOrBox(position)) {
+            snackbar.showSnackbar(getString(Res.string.outside_munich))
+        } else if (position != null) {
             mapState.animateCamera(CameraUpdate(center = position, zoom = 15.0))
             panned = false
         } else {
@@ -428,7 +437,7 @@ internal fun MapScreen(
         hadAnchor = anchor != null
         if (cleared) {
             val me = locationState.lastLocation?.position
-            if (me != null && me.latitude in 47.9..48.4 && me.longitude in 11.2..11.9) {
+            if (me != null && munich.containsOrBox(me)) {
                 mapState.animateCameraToBounds(boundsAround(me))
                 panned = false
                 revealNearest()
