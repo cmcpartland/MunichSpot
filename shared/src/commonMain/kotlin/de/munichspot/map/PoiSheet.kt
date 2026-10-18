@@ -7,15 +7,19 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.BottomSheet
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,9 +46,37 @@ private val DragHandleHeight = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit) {
-    val density = LocalDensity.current
+internal fun PoiSheet(poi: Poi?, onBounds: (Rect) -> Unit, onDismiss: () -> Unit) {
+    val state = rememberBottomSheetState(initialValue = SheetValue.Hidden)
+    var kept by remember { mutableStateOf(poi) }
+    if (poi != null) kept = poi
+    LaunchedEffect(poi == null) {
+        if (poi != null) {
+            state.show()
+        } else {
+            state.hide()
+            kept = null
+        }
+    }
     var handleTop by remember { mutableStateOf(0f) }
+    BottomSheet(
+        modifier = Modifier.fillMaxWidth().wrapContentWidth(),
+        state = state,
+        onDismissRequest = onDismiss,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(
+                Modifier.onGloballyPositioned { handleTop = it.positionOnScreen().y },
+            )
+        },
+    ) {
+        kept?.let { PoiSheetContent(it, handleTop) { b -> if (poi != null) onBounds(b) } }
+    }
+}
+
+@Composable
+private fun PoiSheetContent(poi: Poi, handleTop: Float, onBounds: (Rect) -> Unit) {
+    val density = LocalDensity.current
     val uriHandler = LocalUriHandler.current
     val (titleRes, sourceRes) = when (poi.type) {
         PoiType.RECYCLING -> Res.string.title_recycling to Res.string.source_city
@@ -55,62 +87,52 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
     }
     val title = stringResource(titleRes)
     val source = stringResource(sourceRes)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-        dragHandle = {
-            BottomSheetDefaults.DragHandle(
-                Modifier.onGloballyPositioned { handleTop = it.positionOnScreen().y },
-            )
-        },
+    Column(
+        Modifier.fillMaxWidth().onGloballyPositioned {
+            val p = it.positionOnScreen()
+            with(density) { onBounds(Rect(p.x, if (handleTop > 0f) handleTop else p.y - DragHandleHeight.toPx(), p.x + it.size.width, p.y + it.size.height)) }
+        }.navigationBarsPadding().verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
-            Modifier.fillMaxWidth().onGloballyPositioned {
-                val p = it.positionOnScreen()
-                with(density) { onBounds(Rect(p.x, if (handleTop > 0f) handleTop else p.y - DragHandleHeight.toPx(), p.x + it.size.width, p.y + it.size.height)) }
-            }.navigationBarsPadding().verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CategoryIcon(poi.type, size = 32.dp)
-                Text(title, style = MaterialTheme.typography.titleLarge)
-            }
-            if (poi.name.isNotEmpty() && poi.name != title) Text(poi.name, style = MaterialTheme.typography.bodyLarge)
-            if (poi.type == PoiType.RECYCLING) {
-                val lines = poi.materials.accepted()
-                if (lines.isEmpty()) {
-                    Text(
-                        stringResource(Res.string.no_container_data),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        lines.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
-                    }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CategoryIcon(poi.type, size = 32.dp)
+            Text(title, style = MaterialTheme.typography.titleLarge)
+        }
+        if (poi.name.isNotEmpty() && poi.name != title) Text(poi.name, style = MaterialTheme.typography.bodyLarge)
+        if (poi.type == PoiType.RECYCLING) {
+            val lines = poi.materials.accepted()
+            if (lines.isEmpty()) {
+                Text(
+                    stringResource(Res.string.no_container_data),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    lines.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 }
             }
-            if (poi.type == PoiType.CLOTHES) {
-                Text(
-                    stringResource(Res.string.clothes_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (poi.type == PoiType.DRINKING_WATER) {
-                poi.note?.let { Text(stringResource(Res.string.note, it), style = MaterialTheme.typography.bodyMedium) }
-                Text(
-                    stringResource(Res.string.fountain_winter_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            poi.toilet?.let { ToiletDetails(it) }
-            poi.postBox?.let { PostBoxDetails(it) }
-            Button(onClick = { openDirections(poi, uriHandler) }) { Text(stringResource(Res.string.directions)) }
-            Text(source, style = MaterialTheme.typography.labelSmall)
         }
+        if (poi.type == PoiType.CLOTHES) {
+            Text(
+                stringResource(Res.string.clothes_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (poi.type == PoiType.DRINKING_WATER) {
+            poi.note?.let { Text(stringResource(Res.string.note, it), style = MaterialTheme.typography.bodyMedium) }
+            Text(
+                stringResource(Res.string.fountain_winter_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        poi.toilet?.let { ToiletDetails(it) }
+        poi.postBox?.let { PostBoxDetails(it) }
+        Button(onClick = { openDirections(poi, uriHandler) }) { Text(stringResource(Res.string.directions)) }
+        Text(source, style = MaterialTheme.typography.labelSmall)
     }
 }
 

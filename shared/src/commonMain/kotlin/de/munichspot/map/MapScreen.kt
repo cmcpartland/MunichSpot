@@ -243,6 +243,7 @@ internal fun MapScreen(
     var showFilters by remember { mutableStateOf(false) }
     var pickerOpen by remember { mutableStateOf(false) }
     LaunchedEffect(selected, showFilters) { if (selected != null || showFilters) pickerOpen = false }
+    LaunchedEffect(showFilters) { if (showFilters) selected = null }
     val geoJson = PoiType.entries.associateWith { t ->
         val f = if (type == t) filters else PoiFilters()
         val key = when (t) {
@@ -329,14 +330,14 @@ internal fun MapScreen(
 
     var panBack by remember { mutableStateOf<Position?>(null) }
     LaunchedEffect(selected?.id) {
-        val back = panBack
-        panBack = null
         val poi = selected
         if (poi == null) {
+            val back = panBack
+            panBack = null
+            sheetBounds = null
             if (back != null) mapState.animateCamera(CameraUpdate(center = back), CameraAnimation.Ease { duration = 300.milliseconds })
             return@LaunchedEffect
         }
-        sheetBounds = null
         val position = Position(longitude = poi.lon, latitude = poi.lat)
         suspend fun reveal(sheet: Rect) {
             val pin = mapState.screenLocationFromPosition(position) ?: return
@@ -472,7 +473,6 @@ internal fun MapScreen(
                 } } }
             },
         )
-        selected?.let { PoiSheet(it, onBounds = { b -> sheetBounds = b }) { selected = null } }
         if (showFilters && type != null) FilterSheet(type, filters, onChange = onFiltersChange, onDismiss = { showFilters = false })
         val wide = with(density) { mapBounds.width.toDp() } >= WideBreakpoint
         val locate = {
@@ -559,6 +559,7 @@ internal fun MapScreen(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             )
         }
+        PoiSheet(selected, onBounds = { b -> sheetBounds = b }) { selected = null }
     }
 }
 
