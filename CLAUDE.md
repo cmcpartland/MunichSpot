@@ -23,7 +23,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - `map/Categories.kt`: `hasFilters()`.
 - `map/CategoryIcon.kt`: `drawCategoryIcon`, shared by the picker (`CategoryIcon`) and the map pins (`CategoryIconPainter`).
 - `map/PoiFilters.kt` and `map/FilterSheet.kt`: filters per category; only recycling and toilets have options.
-- `map/PoiSheet.kt`: the details sheet. `map/Navigation*.kt`: the directions URI per platform.
+- `map/PoiSheet.kt`: the details sheet. `map/Navigation*.kt`: `openDirections` per platform (Android: Google Maps URL; iOS tries the default navigation app via `geo-navigation:`, then Apple Maps, Google Maps, the web, moving on only when opening fails).
 - `map/Icons.kt`: all UI icons, drawn with Canvas; there's no icon library.
 
 ## Conventions

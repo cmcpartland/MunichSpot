@@ -106,7 +106,7 @@ internal fun PoiSheet(poi: Poi, onBounds: (Rect) -> Unit, onDismiss: () -> Unit)
             }
             poi.toilet?.let { ToiletDetails(it) }
             poi.postBox?.let { PostBoxDetails(it) }
-            Button(onClick = { uriHandler.openUri(navigationUri(poi)) }) { Text(stringResource(Res.string.directions)) }
+            Button(onClick = { openDirections(poi, uriHandler) }) { Text(stringResource(Res.string.directions)) }
             Text(source, style = MaterialTheme.typography.labelSmall)
         }
     }
