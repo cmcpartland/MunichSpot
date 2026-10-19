@@ -51,9 +51,12 @@
     <string name="note">Note: %1$s</string>
     <string name="fountain_winter_hint">Many drinking fountains are switched off or covered in winter.</string>
     <string name="directions">Directions</string>
-    <string name="opening_hours">Open: %1$s</string>
+    <string name="opening_hours">Opening hours</string>
     <string name="free">Free</string>
-    <string name="floor">Floor: %1$s</string>
+    <string name="floor">Floor</string>
+    <string name="floor_ground">Ground floor</string>
+    <string name="floor_basement">Basement %1$d</string>
+    <string name="floor_upper">Floor %1$d</string>
     <string name="accessible">Accessible</string>
     <string name="changing_table">Changing table</string>
     <string name="euro_key">Eurokey</string>

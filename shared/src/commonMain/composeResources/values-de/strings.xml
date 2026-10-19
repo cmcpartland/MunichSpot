@@ -51,9 +51,12 @@
     <string name="note">Bemerkung: %1$s</string>
     <string name="fountain_winter_hint">Viele Trinkbrunnen sind im Winter abgeschaltet oder abgedeckt.</string>
     <string name="directions">Route</string>
-    <string name="opening_hours">Geöffnet: %1$s</string>
+    <string name="opening_hours">Öffnungszeiten</string>
     <string name="free">Kostenlos</string>
-    <string name="floor">Etage: %1$s</string>
+    <string name="floor">Etage</string>
+    <string name="floor_ground">Erdgeschoss</string>
+    <string name="floor_basement">%1$d. Untergeschoss</string>
+    <string name="floor_upper">%1$d. Obergeschoss</string>
     <string name="accessible">Barrierefrei</string>
     <string name="changing_table">Wickeltisch</string>
     <string name="euro_key">Euroschlüssel</string>
