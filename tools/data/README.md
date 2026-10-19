@@ -20,6 +20,8 @@ In the nightly workflow, warnings from these scripts (`ci.warn`) show up as anno
 
 Alerts: a Healthchecks.io check (period 1 day, grace 12 h) is pinged by the `healthcheck` job after every run on `main`; its URL is the `HEALTHCHECK_URL` repo secret, and without the secret the job is skipped. A failed run pings `/fail` and alerts immediately; no successful deploy for ~36 h (e.g. the run never started) alerts by email. If GitHub disabled the schedule after 60 days without repo activity, re-enable it under Actions → Nightly data.
 
+How to see what a run did and what went wrong (alerts, annotations, job summary, run history): [OBSERVABILITY.md](OBSERVABILITY.md).
+
 ## Validation
 
 `validate_pois.py` is called by `build_pois.py` before it writes, and runs as its own workflow step against the built file:
