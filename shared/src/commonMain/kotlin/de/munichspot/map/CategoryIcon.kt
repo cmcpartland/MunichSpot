@@ -62,6 +62,24 @@ internal fun DrawScope.drawWarningMark() {
     drawCircle(WarningRed, w * 0.6f, Offset(d / 2, d * 0.74f))
 }
 
+/** Paints [drawClockMark] as a map image. */
+internal class ClockMarkPainter : Painter() {
+    override val intrinsicSize = Size.Unspecified
+    override fun DrawScope.onDraw() = drawClockMark()
+}
+
+/** White disc with a dark-grey ring and clock hands, for pois that are closed right now. */
+internal fun DrawScope.drawClockMark() {
+    val d = size.minDimension
+    val ink = Color(0xFF424242)
+    drawCircle(ink, d / 2)
+    drawCircle(Color.White, d / 2 - d * 0.12f)
+    val w = d * 0.1f
+    val c = Offset(d / 2, d / 2)
+    drawLine(ink, c, Offset(d / 2, d * 0.24f), w, StrokeCap.Round)
+    drawLine(ink, c, Offset(d * 0.68f, d * 0.6f), w, StrokeCap.Round)
+}
+
 private fun DrawScope.drawGlyph(type: PoiType, c: Color) {
     val s = size.width
     val w = s * 0.07f

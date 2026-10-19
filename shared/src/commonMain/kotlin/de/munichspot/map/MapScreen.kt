@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,6 +61,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.getString
 import org.maplibre.compose.camera.CameraAnimation
@@ -109,6 +111,7 @@ internal fun MapScreen(
     places: PlaceIndex?,
     anchor: Place?,
     onAnchorChange: (Place?) -> Unit,
+    now: LocalDateTime,
 ) {
     var selected by remember { mutableStateOf<Poi?>(null) }
     val poisById = remember(pois) { pois.associateBy { it.id } }
@@ -116,19 +119,25 @@ internal fun MapScreen(
     var pickerOpen by remember { mutableStateOf(false) }
     LaunchedEffect(selected, showFilters) { if (selected != null || showFilters) pickerOpen = false }
     LaunchedEffect(showFilters) { if (showFilters) selected = null }
+    val currentNow by rememberUpdatedState(now)
+    // Only changes when a toilet opens or closes, so the toilet source isn't rebuilt every minute.
+    val closedIds by remember(pois) {
+        derivedStateOf { pois.filter { it.knownClosed(currentNow) }.mapTo(mutableSetOf()) { it.id } as Set<String> }
+    }
     val geoJson = PoiType.entries.associateWith { t ->
         val f = if (type == t) filters else PoiFilters()
         val key = when (t) {
             PoiType.RECYCLING -> f.recyclingMaterials
-            PoiType.TOILET -> f.toiletRequirements
+            PoiType.TOILET -> f.toiletRequirements to closedIds
             else -> null
         }
-        remember(pois, key) { pois.filter { it.type == t && f.matches(it) }.toGeoJson() }
+        remember(pois, key) { pois.filter { it.type == t && f.matches(it, currentNow) }.toGeoJson(closedIds) }
     }
-    val selectedGeoJson = remember(selected) { listOfNotNull(selected).toGeoJson() }
+    val selectedClosed = selected?.id in closedIds
+    val selectedGeoJson = remember(selected, selectedClosed) { listOfNotNull(selected).toGeoJson(closedIds) }
     var selectedOnMap by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(type, filters) {
-        if (type != null && selected?.let { it.type != type || !filters.matches(it) } == true) selected = null
+    LaunchedEffect(type, filters, closedIds) {
+        if (type != null && selected?.let { it.type != type || !filters.matches(it, currentNow) } == true) selected = null
     }
     val scope = rememberCoroutineScope()
     val locationState = rememberLocationState()
@@ -172,7 +181,10 @@ internal fun MapScreen(
                     } != null
                 },
             )
-            if (t == PoiType.TOILET) PoiWarningLayer(t, sources.getValue(t))
+            if (t == PoiType.TOILET) {
+                PoiWarningLayer(t, sources.getValue(t))
+                PoiClosedLayer(t, sources.getValue(t))
+            }
             PoiBadgeLayers(t, sources.getValue(t), mapState, scope, clearSelection)
             PoiCountLayers(t, sources.getValue(t), mapState, scope, clearSelection)
         }
@@ -318,7 +330,7 @@ internal fun MapScreen(
         val center = mapState.screenLocationFromPosition(camera.center) ?: return
         val zoom = with(density) {
             revealZoom(
-                pois = pois.filter { it.type == type && filters.matches(it) },
+                pois = pois.filter { it.type == type && filters.matches(it, now) },
                 camera = camera,
                 mapSize = mapBounds.size.toDpSize(),
                 center = center,
@@ -363,7 +375,7 @@ internal fun MapScreen(
                 MapControls(mapState) { logoHeight = it }
                 selected?.takeIf { it.id != selectedOnMap }?.let {
                     val o = it.type.pinOffset()
-                    Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it) }
+                    Box(Modifier.placedAt(Position(longitude = it.lon, latitude = it.lat)).offset(o.x, o.y)) { SelectedPin(it, selectedClosed) }
                 }
             },
             interactions = MapInteractions {
@@ -439,6 +451,6 @@ internal fun MapScreen(
             bottomInset = pickerBottom,
         )
         AttributionBar(generated, { attributionBarHeight = it }, Modifier.align(Alignment.BottomCenter))
-        PoiSheet(selected, onBounds = { b -> sheetBounds = b }) { selected = null }
+        PoiSheet(selected, now, onBounds = { b -> sheetBounds = b }) { selected = null }
     }
 }

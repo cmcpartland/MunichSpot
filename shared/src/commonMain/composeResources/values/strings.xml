@@ -46,12 +46,15 @@
     <string name="filter_accessible">Accessible only</string>
     <string name="filter_free">Free only</string>
     <string name="filter_changing">With changing table</string>
+    <string name="filter_open_now">Open now</string>
     <string name="no_container_data">No container data available</string>
     <string name="clothes_hint">Clean clothes and shoes, packed in bags.</string>
     <string name="note">Note: %1$s</string>
     <string name="fountain_winter_hint">Many drinking fountains are switched off or covered in winter.</string>
     <string name="directions">Directions</string>
     <string name="opening_hours">Opening hours</string>
+    <string name="open_now">Open now</string>
+    <string name="closed_now">Closed now</string>
     <string name="data_language" translatable="false">en</string>
     <string name="auto_translated">Automatically translated</string>
     <string name="free">Free</string>

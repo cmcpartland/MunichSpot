@@ -3,13 +3,15 @@ package de.munichspot.map
 import de.munichspot.data.Material
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
+import de.munichspot.data.isOpen
+import kotlinx.datetime.LocalDateTime
 
 internal enum class RecyclingFilter(val materials: Set<Material>) {
     GLASS(setOf(Material.GLASS_BROWN, Material.GLASS_GREEN, Material.GLASS_WHITE)),
     PACKAGING(setOf(Material.PACKAGING)),
 }
 
-internal enum class ToiletFilter { ACCESSIBLE, FREE, CHANGING }
+internal enum class ToiletFilter { ACCESSIBLE, FREE, CHANGING, OPEN_NOW }
 
 internal data class PoiFilters(
     val recyclingMaterials: Set<RecyclingFilter> = RecyclingFilter.entries.toSet(),
@@ -23,7 +25,7 @@ internal data class PoiFilters(
         else -> this
     }
 
-    fun matches(poi: Poi): Boolean = when (poi.type) {
+    fun matches(poi: Poi, now: LocalDateTime): Boolean = when (poi.type) {
         PoiType.RECYCLING -> recyclingMaterials.isNotEmpty() && (
             recyclingMaterials.size == RecyclingFilter.entries.size ||
                 recyclingMaterials.any { f -> poi.materials.any { it in f.materials } }
@@ -35,7 +37,11 @@ internal data class PoiFilters(
                 ToiletFilter.ACCESSIBLE -> toilet?.accessible == true
                 ToiletFilter.FREE -> toilet?.price == 0.0
                 ToiletFilter.CHANGING -> toilet?.changing == true
+                ToiletFilter.OPEN_NOW -> !poi.knownClosed(now)
             }
         }
     }
 }
+
+/** True only when the toilet has a schedule and it says closed; unknown hours never count as closed. */
+internal fun Poi.knownClosed(now: LocalDateTime): Boolean = toilet?.schedule?.isOpen(now) == false

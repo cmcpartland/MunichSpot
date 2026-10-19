@@ -33,4 +33,5 @@ data class ToiletInfo(
     val euroKey: Boolean,
     val rooms: List<String>,
     val status: ToiletStatus?,
+    val schedule: List<ScheduleRule>? = null,
 )

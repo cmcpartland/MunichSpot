@@ -93,6 +93,7 @@ private fun parseFeatures(root: JsonObject): List<Poi> =
                     euroKey = flag("euroKey"),
                     rooms = properties["rooms"]?.jsonArray.orEmpty().map { it.jsonPrimitive.content },
                     status = ToiletStatus.entries.firstOrNull { it.name == text("status") },
+                    schedule = parseSchedule(properties["schedule"]),
                 )
             } else {
                 null

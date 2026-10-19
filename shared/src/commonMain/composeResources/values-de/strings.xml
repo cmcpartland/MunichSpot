@@ -46,12 +46,15 @@
     <string name="filter_accessible">Nur barrierefrei</string>
     <string name="filter_free">Nur kostenlos</string>
     <string name="filter_changing">Mit Wickeltisch</string>
+    <string name="filter_open_now">Jetzt geöffnet</string>
     <string name="no_container_data">Keine Containerdaten verfügbar</string>
     <string name="clothes_hint">Saubere Kleidung und Schuhe, in Säcken verpackt.</string>
     <string name="note">Bemerkung: %1$s</string>
     <string name="fountain_winter_hint">Viele Trinkbrunnen sind im Winter abgeschaltet oder abgedeckt.</string>
     <string name="directions">Route</string>
     <string name="opening_hours">Öffnungszeiten</string>
+    <string name="open_now">Jetzt geöffnet</string>
+    <string name="closed_now">Jetzt geschlossen</string>
     <string name="data_language" translatable="false">de</string>
     <string name="auto_translated">Automatisch übersetzt</string>
     <string name="free">Kostenlos</string>
