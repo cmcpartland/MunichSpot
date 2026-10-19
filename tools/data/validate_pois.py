@@ -96,6 +96,21 @@ def check_structure(features, errors):
             errors.append(f"{id_} outside Munich: {c[1]}, {c[0]}")
 
 
+def check_schedule(schedule, id_, errors):
+    def ints(v, lo, hi):
+        return isinstance(v, list) and bool(v) and all(isinstance(x, int) and not isinstance(x, bool) and lo <= x <= hi for x in v)
+
+    if not isinstance(schedule, list) or not schedule:
+        errors.append(f"{id_}: schedule must be a non-empty list")
+        return
+    for r in schedule:
+        a, b = (r.get("from"), r.get("to")) if isinstance(r, dict) else (None, None)
+        if not (ints([a], 0, 2880) and ints([b], 0, 2880) and a < b):
+            errors.append(f"{id_}: bad schedule rule {r!r}")
+        elif ("days" in r and not ints(r["days"], 1, 7)) or ("months" in r and not ints(r["months"], 1, 12)):
+            errors.append(f"{id_}: bad schedule days/months {r!r}")
+
+
 def check_content(features, c, errors, warnings):
     if len(features) < MIN_TOTAL:
         errors.append(f"only {len(features)} features in total (min {MIN_TOTAL})")
@@ -123,6 +138,9 @@ def check_content(features, c, errors, warnings):
     translated = sum(bool(props(f).get("hoursEn")) for f in with_hours)
     if with_hours and translated < MIN_HOURS_TRANSLATED * len(with_hours):
         warnings.append(f"TOILET: only {translated} of {len(with_hours)} ({pct(translated, len(with_hours))}) hours have hoursEn (min {pct(MIN_HOURS_TRANSLATED, 1)})")
+    for f in toilets:
+        if "schedule" in props(f):
+            check_schedule(props(f)["schedule"], f.get("id"), errors)
     bad = sum(props(f).get("status") in ("DEFECT", "IMPAIRED") for f in toilets)
     if toilets and bad > MAX_TOILET_BAD_STATUS * len(toilets):
         errors.append(f"TOILET: {bad} of {len(toilets)} ({pct(bad, len(toilets))}) are DEFECT/IMPAIRED (max {pct(MAX_TOILET_BAD_STATUS, 1)})")

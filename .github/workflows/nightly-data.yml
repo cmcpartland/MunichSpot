@@ -60,6 +60,8 @@ jobs:
           cache: pip
           cache-dependency-path: tools/data/requirements.txt
       - run: pip install -r tools/data/requirements.txt
+      - name: Test hours parser
+        run: python tools/data/test_hours.py
       - name: Build pois
         id: pois
         run: python tools/data/build_pois.py site/pois.geojson

@@ -14,6 +14,7 @@ from pathlib import Path
 import requests
 from pyproj import Transformer
 from ci import warn
+from hours import parse_schedule
 from translate import translate_features
 from validate_pois import validate
 
@@ -196,6 +197,8 @@ def toilet_features():
                 break
         if hours := list(dict.fromkeys(TIME_DOT.sub(r"\1:\2", h) for h in distinct("oeffnungszeiten"))):
             extra["hours"] = " / ".join(hours)
+            if schedule := parse_schedule(extra["hours"]):
+                extra["schedule"] = schedule
         if floors := distinct("etage"):
             extra["floor"] = " / ".join(floors)
         if prices := [p["preis"] for p in props if isinstance(p.get("preis"), (int, float))]:
@@ -247,10 +250,15 @@ def main():
     print(f"toilet locations: {counts['TOILET']}")
     toilet = {
         key: sum(key in f["properties"] for f in features if f["properties"]["type"] == "TOILET")
-        for key in ("address", "hours", "floor", "price", "accessible", "changing", "euroKey", "rooms", "status")
+        for key in ("address", "hours", "floor", "price", "accessible", "changing", "euroKey", "rooms", "status", "schedule")
     }
     for key, n in toilet.items():
         print(f"  {key}: {n}")
+    toilets = [f["properties"] for f in features if f["properties"]["type"] == "TOILET"]
+    unparsed = sorted({p["hours"] for p in toilets if "hours" in p and "schedule" not in p})
+    print(f"hours without schedule: {unparsed}")
+    if toilet["schedule"] < 0.5 * toilet["hours"]:
+        warn(f"only {toilet['schedule']} of {toilet['hours']} toilets with hours got a schedule")
     size = out.stat().st_size
     print(f"wrote {out} ({size} bytes)")
     if record_dir := os.environ.get("RUN_RECORD_DIR"):

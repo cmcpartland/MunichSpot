@@ -21,6 +21,8 @@ import org.maplibre.compose.camera.CameraUpdate
 import org.maplibre.compose.expressions.dsl.and
 import org.maplibre.compose.expressions.dsl.asBoolean
 import org.maplibre.compose.expressions.dsl.asString
+import org.maplibre.compose.expressions.dsl.condition
+import org.maplibre.compose.expressions.dsl.switch
 import org.maplibre.compose.expressions.dsl.const
 import org.maplibre.compose.expressions.dsl.eq
 import org.maplibre.compose.expressions.dsl.feature
@@ -46,14 +48,17 @@ import org.maplibre.spatialk.geojson.Geometry
 import org.maplibre.spatialk.geojson.Point
 
 private val PoiIconSize = 28.dp
+private const val ClosedPinOpacity = 0.5f
 private val ClusterIconSize = 34.dp
 internal val SelectedPoiIconSize = 42.dp
 internal val SelectedGlowRadius = 36.dp
 private val WarningMarkSize = 14.dp
 internal val SelectedWarningMarkSize = 20.dp
 private val BadgeOffset = DpOffset(13.dp, (-13).dp)
+private val ClockMarkOffset = DpOffset(9.dp, 9.dp)
 private val WarningMarkOffset = DpOffset(9.dp, (-9).dp)
 internal val SelectedWarningMarkOffset = DpOffset(14.dp, (-14).dp)
+internal val SelectedClockMarkOffset = DpOffset(14.dp, 14.dp)
 private val ClothesOffset = DpOffset(16.dp, (-10).dp)
 
 internal fun PoiType.pinOffset(): DpOffset = if (this == PoiType.CLOTHES) ClothesOffset else DpOffset.Zero
@@ -127,6 +132,7 @@ internal fun PoiIconLayers(
         source = source,
         filter = !IsCluster,
         iconImage = image(painter, size = DpSize(PoiIconSize, PoiIconSize)),
+        iconOpacity = switch(condition(feature["closed"].asBoolean() eq const(true), const(ClosedPinOpacity)), fallback = const(1f)),
         iconTranslate = const(type.pinOffset()),
         iconTranslateAnchor = const(TranslateAnchor.Viewport),
         iconAllowOverlap = const(true),
@@ -178,6 +184,17 @@ internal fun SelectedPinLayers(source: GeoJsonSource) {
         iconAllowOverlap = const(true),
         iconIgnorePlacement = const(true),
     )
+    val clock = remember { ClockMarkPainter() }
+    SymbolLayer(
+        id = "selected-closed",
+        source = source,
+        filter = feature["closed"].asBoolean() eq const(true),
+        iconImage = image(clock, size = DpSize(SelectedWarningMarkSize, SelectedWarningMarkSize)),
+        iconTranslate = const(SelectedClockMarkOffset),
+        iconTranslateAnchor = const(TranslateAnchor.Viewport),
+        iconAllowOverlap = const(true),
+        iconIgnorePlacement = const(true),
+    )
 }
 
 /** Count badge at the cluster icon's top-right corner: a white disc with a type-coloured border. */
@@ -209,6 +226,23 @@ internal fun PoiWarningLayer(type: PoiType, source: GeoJsonSource) {
         filter = !IsCluster and (feature["warn"].asBoolean() eq const(true)),
         iconImage = image(painter, size = DpSize(WarningMarkSize, WarningMarkSize)),
         iconTranslate = const(WarningMarkOffset + type.pinOffset()),
+        iconTranslateAnchor = const(TranslateAnchor.Viewport),
+        iconAllowOverlap = const(true),
+        iconIgnorePlacement = const(true),
+    )
+}
+
+/** Small clock mark at the pin's bottom-right corner for pois that are closed right now; the pin itself is dimmed. */
+@Composable
+@MaplibreComposable
+internal fun PoiClosedLayer(type: PoiType, source: GeoJsonSource) {
+    val painter = remember { ClockMarkPainter() }
+    SymbolLayer(
+        id = "${type.name.lowercase()}-closed",
+        source = source,
+        filter = !IsCluster and (feature["closed"].asBoolean() eq const(true)),
+        iconImage = image(painter, size = DpSize(WarningMarkSize, WarningMarkSize)),
+        iconTranslate = const(ClockMarkOffset + type.pinOffset()),
         iconTranslateAnchor = const(TranslateAnchor.Viewport),
         iconAllowOverlap = const(true),
         iconIgnorePlacement = const(true),

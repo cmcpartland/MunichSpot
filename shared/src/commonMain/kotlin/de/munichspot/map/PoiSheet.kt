@@ -1,5 +1,6 @@
 package de.munichspot.map
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.Alignment
@@ -39,7 +41,9 @@ import de.munichspot.data.PoiType
 import de.munichspot.data.PostBoxInfo
 import de.munichspot.data.ToiletInfo
 import de.munichspot.data.ToiletStatus
+import de.munichspot.data.isOpen
 import kotlin.math.roundToInt
+import kotlinx.datetime.LocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import de.munichspot.shared.resources.*
 
@@ -47,7 +51,7 @@ private val DragHandleHeight = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PoiSheet(poi: Poi?, onBounds: (Rect) -> Unit, onDismiss: () -> Unit) {
+internal fun PoiSheet(poi: Poi?, now: LocalDateTime, onBounds: (Rect) -> Unit, onDismiss: () -> Unit) {
     val state = rememberBottomSheetState(initialValue = SheetValue.Hidden)
     var kept by remember { mutableStateOf(poi) }
     if (poi != null) kept = poi
@@ -71,12 +75,12 @@ internal fun PoiSheet(poi: Poi?, onBounds: (Rect) -> Unit, onDismiss: () -> Unit
             )
         },
     ) {
-        kept?.let { PoiSheetContent(it, handleTop) { b -> if (poi != null) onBounds(b) } }
+        kept?.let { PoiSheetContent(it, now, handleTop) { b -> if (poi != null) onBounds(b) } }
     }
 }
 
 @Composable
-private fun PoiSheetContent(poi: Poi, handleTop: Float, onBounds: (Rect) -> Unit) {
+private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBounds: (Rect) -> Unit) {
     val density = LocalDensity.current
     val uriHandler = LocalUriHandler.current
     val (titleRes, sourceRes) = when (poi.type) {
@@ -138,7 +142,7 @@ private fun PoiSheetContent(poi: Poi, handleTop: Float, onBounds: (Rect) -> Unit
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        poi.toilet?.let { ToiletDetails(it) }
+        poi.toilet?.let { ToiletDetails(it, now) }
         poi.postBox?.let { PostBoxDetails(it) }
         Button(onClick = { openDirections(poi, uriHandler) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(Res.string.directions)) }
         Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -172,7 +176,7 @@ private fun AutoTranslatedLabel() =
 private val FLOOR_LEVEL = Regex("^(\\d+)\\.\\s*(UG|OG)$")
 
 @Composable
-private fun ToiletDetails(toilet: ToiletInfo) {
+private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
     val body = MaterialTheme.typography.bodyMedium
     toilet.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -190,6 +194,13 @@ private fun ToiletDetails(toilet: ToiletInfo) {
     val hours = toilet.hours?.shown()?.split(" / ", " | ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
     if (hours.isNotEmpty()) {
         Text(stringResource(Res.string.opening_hours), style = MaterialTheme.typography.titleSmall)
+        toilet.schedule?.isOpen(now)?.let { open ->
+            Text(
+                stringResource(if (open) Res.string.open_now else Res.string.closed_now),
+                style = body,
+                color = if (open) openColor() else MaterialTheme.colorScheme.error,
+            )
+        }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { hours.forEach { Text(it, style = body) } }
         if (toilet.hours?.translated() == true) AutoTranslatedLabel()
     }
@@ -217,6 +228,9 @@ private fun ToiletDetails(toilet: ToiletInfo) {
     }
     warning?.let { Text(it, style = body, color = MaterialTheme.colorScheme.error) }
 }
+
+@Composable
+private fun openColor() = if (isSystemInDarkTheme()) Color(0xFF81C784) else Color(0xFF2E7D32)
 
 @Composable
 private fun PostBoxDetails(info: PostBoxInfo) {

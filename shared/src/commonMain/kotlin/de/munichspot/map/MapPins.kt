@@ -37,7 +37,7 @@ internal class AnchorPinPainter : Painter() {
 }
 
 @Composable
-internal fun SelectedPin(poi: Poi) {
+internal fun SelectedPin(poi: Poi, closed: Boolean) {
     Canvas(Modifier.size(SelectedGlowRadius * 2)) {
         drawSelectedPin(poi.type)
         if (poi.possiblyDefect) {
@@ -45,6 +45,12 @@ internal fun SelectedPin(poi: Poi) {
             val l = center.x + SelectedWarningMarkOffset.x.toPx() - s / 2
             val t = center.y + SelectedWarningMarkOffset.y.toPx() - s / 2
             inset(l, t, size.width - l - s, size.height - t - s) { drawWarningMark() }
+        }
+        if (closed) {
+            val s = SelectedWarningMarkSize.toPx()
+            val l = center.x + SelectedClockMarkOffset.x.toPx() - s / 2
+            val t = center.y + SelectedClockMarkOffset.y.toPx() - s / 2
+            inset(l, t, size.width - l - s, size.height - t - s) { drawClockMark() }
         }
     }
 }

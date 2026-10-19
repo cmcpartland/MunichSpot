@@ -55,6 +55,7 @@ internal fun FilterSheet(type: PoiType, filters: PoiFilters, onChange: (PoiFilte
                         ToiletFilter.ACCESSIBLE to stringResource(Res.string.filter_accessible),
                         ToiletFilter.FREE to stringResource(Res.string.filter_free),
                         ToiletFilter.CHANGING to stringResource(Res.string.filter_changing),
+                        ToiletFilter.OPEN_NOW to stringResource(Res.string.filter_open_now),
                     )) {
                         CheckRow(label, entry in selected) {
                             onChange(filters.copy(toiletRequirements = if (it) selected + entry else selected - entry))

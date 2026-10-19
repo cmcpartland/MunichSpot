@@ -23,6 +23,7 @@ import de.munichspot.data.fetchLatestPois
 import de.munichspot.data.fetchLatestPlaces
 import de.munichspot.data.loadStartupPlaces
 import de.munichspot.data.loadStartupPois
+import de.munichspot.data.rememberBerlinNow
 import de.munichspot.map.DataStatus
 import de.munichspot.map.MapScreen
 import de.munichspot.map.PoiFilters
@@ -70,6 +71,7 @@ fun App() {
     var anchor by rememberSaveable(stateSaver = PlaceSaver) { mutableStateOf<Place?>(null) }
     var type by rememberSaveable { mutableStateOf<PoiType?>(null) }
     var filters by remember { mutableStateOf(PoiFilters()) }
+    val now = rememberBerlinNow()
     val status = when {
         data != null || !loaded -> DataStatus.Ready
         failed -> DataStatus.Failed
@@ -82,7 +84,7 @@ fun App() {
                 failed = false
                 refresh()
             },
-            type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places?.index, anchor, onAnchorChange = { anchor = it },
+            type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places?.index, anchor, onAnchorChange = { anchor = it }, now,
         )
     }
 }
