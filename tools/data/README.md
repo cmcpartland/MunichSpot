@@ -51,6 +51,18 @@ The DeepL key is the repository secret `DEEPL_AUTH_KEY` (a key ending in `:fx` u
 
 `build_places.py [output-path]` writes `places.json` (compact `{"generated": <UTC timestamp>, "places": [[name, kind, lat, lon], ...]}`), the index behind the app's place search ("Wo?"): streets, parks, squares, stations, landmarks and districts in Munich. One Overpass query; streets with the same name become one entry at the mean of their ways, other features with the same name merge within 500 m. Ways and areas are returned if they touch the city, so each final point is tested against `munich_boundary.geojson` (point in polygon) and dropped if it lies outside. Without an argument it writes the bundled copy in the app (the base the app starts with); `validate_places.py <file>` checks it (parseable `generated`, at least 5000 entries, every kind present, coordinates in the Munich bounding box) and exits non-zero on problems. Places rarely change, so the nightly workflow rebuilds and validates them only weekly (Monday's scheduled run, a manual dispatch with `rebuild_places`, or when https://cmcpartland.github.io/MunichSpot/places.json isn't live yet) and publishes them next to `pois.geojson`. Any other run, and any places failure, re-publishes the live file (or the bundled one on the first deploy) because every deploy replaces the whole site; a places problem never fails the job. The app only takes a downloaded file whose `generated` is newer than the one it has. Source: OSM via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 
+## Run history
+
+Every run of the nightly workflow, failed ones included, appends one compact JSON line to `history.jsonl` on the orphan branch `data-history` (created by the first run; the `record` job needs `contents: write` and never turns the workflow red). Keys, in order: `run` (`id`, `number`, `attempt`, `event`, `sha`, `recorded` UTC, `url`), `result` (`build`, `deploy` job results), `steps` (outcomes of `pois`, `validate`, `places`), `pois` (`generated`, `bytes`, `counts` per type, `materials` counts with `none`, `toilet` field counts, `translations` stats), `places` (`result`: `rebuilt`, `not_due`, `failed` or `bundled`, plus `count` and `generated`) and `warnings` (at most 50 lines, 300 characters each). Parts that were never produced, such as `pois` after a failed build, are `null`.
+
+The build job writes its inputs to `$RUN_RECORD_DIR` (`pois.json`, `places.json`, `warnings.log`, uploaded as the `run-record` artifact); `record_run.py <record-dir> <history-file>` assembles the line. Locally `RUN_RECORD_DIR` is unset and nothing is written.
+
+```sh
+git fetch origin data-history && git show origin/data-history:history.jsonl | jq -c '{n: .run.number, counts: .pois.counts}'
+```
+
+Raw file: https://raw.githubusercontent.com/cmcpartland/MunichSpot/data-history/history.jsonl
+
 ## Sources
 
 - Recycling islands: Landeshauptstadt München, AWM, WFS `gsm_wfs:awm_container` (EPSG:25832, reprojected to WGS84). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
