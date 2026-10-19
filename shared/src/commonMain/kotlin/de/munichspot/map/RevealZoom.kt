@@ -1,5 +1,6 @@
 package de.munichspot.map
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
@@ -14,6 +15,8 @@ import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.tan
 import org.maplibre.compose.camera.CameraPosition
+import org.maplibre.spatialk.geojson.BoundingBox
+import org.maplibre.spatialk.geojson.Position
 
 private const val WorldSizeDp = 512.0
 private const val MinRevealZoom = 10.0
@@ -55,4 +58,16 @@ internal fun revealZoom(
     }.sortedDescending()
     if (fits.first() >= camera.zoom) return null
     return fits[min(count, fits.size) - 1].coerceAtLeast(MinRevealZoom).takeIf { it < camera.zoom }
+}
+
+internal val Marienplatz = Position(latitude = 48.1374, longitude = 11.5755)
+
+/** Box of +-[radiusKm] around [center], so the map frames a circle of that radius. */
+internal fun boundsAround(center: Position, radiusKm: Double = 0.7): BoundingBox {
+    val dLat = radiusKm / 111.32
+    val dLon = radiusKm / (111.32 * cos(center.latitude * PI / 180))
+    return BoundingBox(
+        southwest = Position(latitude = center.latitude - dLat, longitude = center.longitude - dLon),
+        northeast = Position(latitude = center.latitude + dLat, longitude = center.longitude + dLon),
+    )
 }
