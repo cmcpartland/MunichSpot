@@ -97,9 +97,13 @@ private fun PoiSheetContent(poi: Poi, handleTop: Float, onBounds: (Rect) -> Unit
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CategoryIcon(poi.type, size = 32.dp)
-            Text(title, style = MaterialTheme.typography.titleLarge)
+            Column {
+                Text(title, style = MaterialTheme.typography.titleLarge)
+                if (poi.name.isNotEmpty() && poi.name != title) {
+                    Text(poi.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
-        if (poi.name.isNotEmpty() && poi.name != title) Text(poi.name, style = MaterialTheme.typography.bodyLarge)
         if (poi.type == PoiType.RECYCLING) {
             val lines = poi.materials.accepted()
             if (lines.isEmpty()) {
@@ -131,8 +135,8 @@ private fun PoiSheetContent(poi: Poi, handleTop: Float, onBounds: (Rect) -> Unit
         }
         poi.toilet?.let { ToiletDetails(it) }
         poi.postBox?.let { PostBoxDetails(it) }
-        Button(onClick = { openDirections(poi, uriHandler) }) { Text(stringResource(Res.string.directions)) }
-        Text(source, style = MaterialTheme.typography.labelSmall)
+        Button(onClick = { openDirections(poi, uriHandler) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(Res.string.directions)) }
+        Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -147,14 +151,14 @@ private fun List<Material>.accepted(): List<String> = buildList {
     if (Material.PACKAGING in this@accepted) add(stringResource(Res.string.packaging))
 }
 
+private val FLOOR_LEVEL = Regex("^(\\d+)\\.\\s*(UG|OG)$")
+
 @Composable
 private fun ToiletDetails(toilet: ToiletInfo) {
     val body = MaterialTheme.typography.bodyMedium
     toilet.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        toilet.hours?.let { Text(stringResource(Res.string.opening_hours, it), style = body) }
         toilet.price?.let { Text(if (it == 0.0) stringResource(Res.string.free) else formatEuro(it), style = body) }
-        toilet.floor?.let { Text(stringResource(Res.string.floor, it), style = body) }
         listOfNotNull(
             stringResource(Res.string.accessible).takeIf { toilet.accessible },
             stringResource(Res.string.changing_table).takeIf { toilet.changing },
@@ -164,6 +168,28 @@ private fun ToiletDetails(toilet: ToiletInfo) {
             .filter { it.first in toilet.rooms }
             .takeIf { it.isNotEmpty() }
             ?.let { Text(it.joinToString(" · ") { r -> r.second }, style = body) }
+    }
+    val hours = toilet.hours?.split(" / ", " | ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
+    if (hours.isNotEmpty()) {
+        Text(stringResource(Res.string.opening_hours), style = MaterialTheme.typography.titleSmall)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { hours.forEach { Text(it, style = body) } }
+    }
+    val floors = toilet.floor?.split(" / ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
+    if (floors.isNotEmpty()) {
+        Text(stringResource(Res.string.floor), style = MaterialTheme.typography.titleSmall)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            floors.forEach { f ->
+                val level = FLOOR_LEVEL.matchEntire(f)
+                val n = level?.groupValues?.get(1)?.toInt() ?: 0
+                val text = when {
+                    f == "EG" -> stringResource(Res.string.floor_ground)
+                    level?.groupValues?.get(2) == "UG" -> stringResource(Res.string.floor_basement, n)
+                    level != null -> stringResource(Res.string.floor_upper, n)
+                    else -> f
+                }
+                Text(text, style = body)
+            }
+        }
     }
     val warning = when (toilet.status) {
         ToiletStatus.DEFECT -> stringResource(Res.string.toilet_defect)
@@ -185,8 +211,15 @@ private fun PostBoxDetails(info: PostBoxInfo) {
     info.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
     if (info.collectionTimes != null) {
         Text(stringResource(Res.string.collection_times), style = MaterialTheme.typography.titleSmall)
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            formatCollectionTimes(info.collectionTimes, days).forEach { Text(it, style = body) }
+        val rows = formatCollectionTimes(info.collectionTimes, days)
+        val times = body.copy(fontFeatureSettings = "tnum")
+        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                rows.forEach { Text(it.first, style = body, color = muted, maxLines = 1, softWrap = false) }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                rows.forEach { Text(it.second, style = times, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false) }
+            }
         }
     } else {
         Text(stringResource(Res.string.no_collection_times), style = body, color = muted)
@@ -195,16 +228,21 @@ private fun PostBoxDetails(info: PostBoxInfo) {
 }
 
 private val RULE_SPLIT = Regex("(\\d),\\s+(?=(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)\\b)")
-private val DAY_TOKEN = Regex("\\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\\b")
+private val DAY_PART = Regex("^((?:Mo|Tu|We|Th|Fr|Sa|Su|PH)(?:\\s*[-,]\\s*(?:Mo|Tu|We|Th|Fr|Sa|Su|PH))*)\\s*(.*)$")
+private val DAY_TOKEN = Regex("\\b(Mo|Tu|We|Th|Fr|Sa|Su|PH)\\b")
 private val DAY_RANGE = Regex("([A-Za-z])-([A-Za-z])")
 private val TIME_LIST = Regex("(\\d),(\\d)")
 private val DAY_LIST = Regex("([A-Za-z]),\\s*([A-Za-z])")
 private val SPACES = Regex("\\s+")
 
-internal fun formatCollectionTimes(raw: String, days: Map<String, String>): List<String> =
+internal fun formatCollectionTimes(raw: String, days: Map<String, String>): List<Pair<String, String>> =
     raw.replace(RULE_SPLIT, "$1;").split(';').map { it.trim().replace(SPACES, " ") }.filter { it.isNotEmpty() }.map { rule ->
-        rule.replace(DAY_TOKEN) { days.getValue(it.value) }.replace(DAY_RANGE, "$1–$2")
-            .replace(TIME_LIST, "$1, $2").replace(DAY_LIST, "$1, $2")
+        val m = DAY_PART.find(rule)
+        val dayPart = m?.groupValues?.get(1).orEmpty()
+        val rest = m?.groupValues?.get(2) ?: rule
+        val dayText = dayPart.replace(DAY_TOKEN) { days.getValue(it.value) }.replace(DAY_RANGE, "$1–$2").replace(DAY_LIST, "$1, $2")
+        val timeText = if (rest == "off") days.getValue("off") else rest.replace(TIME_LIST, "$1, $2")
+        dayText to timeText
     }
 
 private fun formatEuro(price: Double): String {

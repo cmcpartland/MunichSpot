@@ -114,6 +114,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -407,7 +408,14 @@ internal fun MapScreen(
 
     LaunchedEffect(Unit) {
         snapshotFlow { mapState.isCameraMoving && mapState.cameraMoveReason == CameraMoveReason.Gesture }
-            .collect { if (it) panned = true }
+            .filter { it }
+            .collect {
+                panned = true
+                if (selected != null) {
+                    panBack = null
+                    selected = null
+                }
+            }
     }
 
     LaunchedEffect(centerRequested) {
