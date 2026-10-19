@@ -81,7 +81,6 @@ jobs:
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             echo "rebuild=$rebuild, keeping the live places.json"
-            if [ "$rebuild" = true ]; then echo "::warning::places.json rebuild failed, re-publishing the live file"; fi
           fi
       - name: Reuse the live or bundled places.json
         id: reuse

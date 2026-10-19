@@ -16,6 +16,8 @@ The `Nightly data` workflow (`.github/workflows/nightly-data.yml`) runs daily at
 
 One-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions.
 
+In the nightly workflow, warnings from these scripts (`ci.warn`) show up as annotations on the run (plain `WARNING:` lines locally). The job summary also has a `### places.json` section saying whether places.json was rebuilt, re-published from the live file or replaced by the bundled copy; the last two after a failure also raise an annotation.
+
 ## Validation
 
 `validate_pois.py` is called by `build_pois.py` before it writes, and runs as its own workflow step against the built file:
@@ -55,5 +57,3 @@ The DeepL key is the repository secret `DEEPL_AUTH_KEY` (a key ending in `:fx` u
 - Mailboxes: OpenStreetMap `amenity=post_box` in Munich via the Overpass API. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 - Drinking fountains: Landeshauptstadt München, WFS `baug_wfs:trinkwasserbrunnen`, dataset `opendata_trinkwasserbrunnen` (EPSG:25832, reprojected to WGS84). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
 - Public toilets: Landeshauptstadt München, WFS `gsm_wfs:wc_finder_opendata`, dataset `wc_finder` (EPSG:25832, reprojected to WGS84). The dataset has one feature per room; rooms within 15 m are merged into one location. [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
-
-In the nightly workflow, warnings from these scripts (`ci.warn`) show up as annotations on the run (plain `WARNING:` lines locally). The job summary also has a `### places.json` section saying whether places.json was rebuilt, re-published from the live file or replaced by the bundled copy; the last two after a failure also raise an annotation.
