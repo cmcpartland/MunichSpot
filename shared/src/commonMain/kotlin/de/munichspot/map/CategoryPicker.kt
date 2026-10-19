@@ -84,8 +84,6 @@ internal fun CategoryPicker(
     bottomInset: Dp,
 ) {
     BackHandler(enabled = expanded) { onExpandedChange(false) }
-    BackHandler(enabled = type != null && !expanded) { onTypeChange(null) }
-    BackHandler(enabled = type == null && anchor != null && !expanded) { onAnchorChange(null) }
     var query by remember { mutableStateOf("") }
     var focusSearch by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
