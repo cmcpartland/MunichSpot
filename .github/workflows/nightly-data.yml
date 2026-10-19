@@ -73,6 +73,7 @@ jobs:
           [ "$EVENT" = workflow_dispatch ] && [ "$REBUILD" = true ] && rebuild=true
           code=$(curl -s -o /dev/null -w '%{http_code}' -L "$LIVE_PLACES_URL" || true)
           [ "$code" = 404 ] && rebuild=true
+          echo "rebuild=$rebuild" >> "$GITHUB_OUTPUT"
           if [ "$rebuild" = true ] \
             && python tools/data/build_places.py site/places.new.json \
             && python tools/data/validate_places.py site/places.new.json; then
@@ -80,17 +81,42 @@ jobs:
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             echo "rebuild=$rebuild, keeping the live places.json"
+            if [ "$rebuild" = true ]; then echo "::warning::places.json rebuild failed, re-publishing the live file"; fi
           fi
       - name: Reuse the live or bundled places.json
+        id: reuse
         if: steps.places.outputs.ok != 'true'
         run: |
           rm -f site/places.new.json
           if curl -fsSL --retry 3 -o site/places.live.json "$LIVE_PLACES_URL" && python tools/data/validate_places.py site/places.live.json; then
             mv site/places.live.json site/places.json
+            echo "live=true" >> "$GITHUB_OUTPUT"
           else
             rm -f site/places.live.json
             cp shared/src/commonMain/composeResources/files/places.json site/places.json
           fi
+      - name: Places summary
+        if: always()
+        env:
+          OUTCOME: ${{ steps.places.outcome }}
+          OK: ${{ steps.places.outputs.ok }}
+          REBUILD: ${{ steps.places.outputs.rebuild }}
+          LIVE: ${{ steps.reuse.outputs.live }}
+        run: |
+          [ -f site/places.json ] || exit 0
+          echo "### places.json" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$OK" = true ]; then
+            msg="rebuilt: $(jq '.places | length' site/places.json) places"
+          elif [ "$LIVE" != true ]; then
+            msg="live file unusable, published the bundled copy"
+            echo "::warning::places.json: $msg"
+          elif [ "$REBUILD" = true ] || [ "$OUTCOME" != success ]; then
+            msg="rebuild failed or timed out, re-published the live file (generated $(jq -r .generated site/places.json))"
+            echo "::warning::places.json: $msg"
+          else
+            msg="not due for a rebuild, re-published the live file (generated $(jq -r .generated site/places.json))"
+          fi
+          echo "- $msg" >> "$GITHUB_STEP_SUMMARY"
       - name: Write index page
         run: |
           cat > site/index.html <<'HTML'

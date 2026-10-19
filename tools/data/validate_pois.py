@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+from ci import warn
 
 USER_AGENT = "MunichSpot-data/0.1 (+https://github.com/cmcpartland/MunichSpot)"
 
@@ -192,7 +193,7 @@ def load_previous(source):
             raise ValueError("features is not a list")
         return features
     except Exception as e:
-        print(f"WARNING: previous file {source} unusable, skipping comparison: {e}")
+        warn(f"previous file {source} unusable, skipping comparison: {e}")
         return None
 
 
@@ -213,7 +214,7 @@ def main():
     errors, warnings = validate(features, previous)
     errors.extend(check_generated(data.get("generated")))
     for w in warnings:
-        print(f"WARNING: {w}")
+        warn(w)
     if isinstance(features, list):
         print_summary(summary_rows(features, previous))
     if errors:
