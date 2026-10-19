@@ -12,6 +12,7 @@ from pathlib import Path
 
 import requests
 from pyproj import Transformer
+from ci import warn
 from translate import translate_features
 from validate_pois import validate
 
@@ -170,7 +171,7 @@ def toilet_features():
     known = {"voll funktionsfähig", "defekt oder nicht zugänglich", "teilweise Beeinträchtigung"}
     unknown = Counter(r["properties"].get("zustand") for r in rooms if r["properties"].get("zustand") not in known)
     if unknown:
-        print(f"WARNING: unknown toilet zustand values: {dict(unknown)}")
+        warn(f"unknown toilet zustand values: {dict(unknown)}")
     for group in groups:
         props = [r["properties"] for r in group]
         x = sum(r["geometry"]["coordinates"][0] for r in group) / len(group)

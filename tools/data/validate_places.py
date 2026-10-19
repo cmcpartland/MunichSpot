@@ -6,6 +6,8 @@ import sys
 from collections import Counter
 from datetime import datetime
 
+from ci import warn
+
 KINDS = {"street", "park", "square", "station", "landmark", "district"}
 MIN_PLACES = 5000
 LAT_RANGE = (47.9, 48.4)
@@ -56,7 +58,7 @@ def main():
         sys.exit("usage: validate_places.py places.json")
     errors = check(sys.argv[1])
     for e in errors:
-        print(f"ERROR: {e}", file=sys.stderr)
+        warn(f"places validation: {e}")
     sys.exit(1 if errors else 0)
 
 

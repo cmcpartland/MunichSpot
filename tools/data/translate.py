@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+from ci import warn
 
 OVERRIDES_PATH = Path(__file__).resolve().parent / "translation_overrides.json"
 LIVE_TRANSLATIONS_URL = "https://cmcpartland.github.io/MunichSpot/translations.json"
@@ -30,7 +31,7 @@ def load_entries(source):
         entries = data["entries"]
         return {k: v for k, v in entries.items() if isinstance(k, str) and isinstance(v, str) and v.strip()}
     except Exception as e:
-        print(f"WARNING: no translation cache from {source}: {e}")
+        warn(f"no translation cache from {source}: {e}")
         return {}
 
 
@@ -53,7 +54,7 @@ def deepl_translate(texts, key):
                 raise ValueError("unexpected number of translations")
             result.update({de: en for de, en in zip(chunk, translations) if en})
     except Exception as e:
-        print(f"WARNING: DeepL failed, continuing without it: {e}")
+        warn(f"DeepL failed, continuing without it: {e}")
     return result
 
 
@@ -88,7 +89,7 @@ def translate_features(features, out_path, cache_source=None, key=None):
         new = deepl_translate(misses, key)
         table.update(new)
     elif misses:
-        print("WARNING: DEEPL_AUTH_KEY not set, not translating new strings")
+        warn("DEEPL_AUTH_KEY not set, not translating new strings")
 
     for p in props:
         if p.get("note") and norm(p["note"]) in table:
@@ -105,6 +106,9 @@ def translate_features(features, out_path, cache_source=None, key=None):
         json.dumps({"generated": generated, "entries": dict(sorted(table.items()))}, separators=(",", ":"), ensure_ascii=False),
         encoding="utf-8",
     )
+    unused = sorted(overrides.keys() - strings)
+    for s in unused:
+        warn(f"unused override (German text changed or gone?): {s!r}")
     summarize(
         [
             f"distinct strings: {len(strings)}",
@@ -112,5 +116,6 @@ def translate_features(features, out_path, cache_source=None, key=None):
             f"cached: {len(cached)}",
             f"newly translated: {len(new)}",
             f"untranslated: {len(strings) - len(table)}",
+            *(f"unused override: {s!r}" for s in unused),
         ]
     )

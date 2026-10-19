@@ -16,6 +16,8 @@ The `Nightly data` workflow (`.github/workflows/nightly-data.yml`) runs daily at
 
 One-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions.
 
+In the nightly workflow, warnings from these scripts (`ci.warn`) show up as annotations on the run (plain `WARNING:` lines locally). The job summary also has a `### places.json` section saying whether places.json was rebuilt, re-published from the live file or replaced by the bundled copy; the last two after a failure also raise an annotation.
+
 ## Validation
 
 `validate_pois.py` is called by `build_pois.py` before it writes, and runs as its own workflow step against the built file:
@@ -37,7 +39,7 @@ If the city really removes many features, dispatch the workflow manually with `s
 
 ## Translations
 
-`translate.py` (called by `build_pois.py`) adds `hoursEn` (toilet opening hours, translated per segment between " / " and " | ") and `noteEn` (fountain notes) to the features; the app shows them on English devices with an "Automatically translated" label. For each distinct German text it looks in `translation_overrides.json` (committed `{german: english}`, wins over everything), then in the cache, then asks DeepL (EN-GB) for the rest. The cache is the live https://cmcpartland.github.io/MunichSpot/translations.json (`{"generated", "entries": {german: english}}`, keyed by the exact whitespace-normalised German text), so only new or changed text goes to DeepL. For local runs, `TRANSLATIONS_CACHE` can point to another URL or file. The file is written next to the pois output and pruned to the texts currently in use; counts are printed and added to the job summary.
+`translate.py` (called by `build_pois.py`) adds `hoursEn` (toilet opening hours, translated per segment between " / " and " | ") and `noteEn` (fountain notes) to the features; the app shows them on English devices with an "Automatically translated" label. For each distinct German text it looks in `translation_overrides.json` (committed `{german: english}`, wins over everything), then in the cache, then asks DeepL (EN-GB) for the rest. Overrides match the exact German text too, so an override whose text no longer appears (the city edited or removed it) is reported as a warning and in the job summary; update or delete its key. The cache is the live https://cmcpartland.github.io/MunichSpot/translations.json (`{"generated", "entries": {german: english}}`, keyed by the exact whitespace-normalised German text), so only new or changed text goes to DeepL. For local runs, `TRANSLATIONS_CACHE` can point to another URL or file. The file is written next to the pois output and pruned to the texts currently in use; counts are printed and added to the job summary.
 
 The DeepL key is the repository secret `DEEPL_AUTH_KEY` (a key ending in `:fx` uses the free API). Without a key, or if DeepL fails, the build continues with cache and overrides only; texts without a translation simply have no `…En` field and show in German. `validate_pois.py` warns if fewer than 90 % of toilets with hours have `hoursEn`.
 
