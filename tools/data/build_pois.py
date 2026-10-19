@@ -41,6 +41,7 @@ TOILET_MERGE_METERS = 15
 ROOM_CODES = (("männlich", "M"), ("weiblich", "F"), ("unisex", "U"), ("barrierefrei", "A"))
 RETRY_STATUSES = (404, 429, 502, 503, 504)
 RETRY_SECONDS = 300
+TIME_DOT = re.compile(r"\b(\d{1,2})\.(\d{2})\b")
 
 
 def fetch(url, data=None):
@@ -193,7 +194,7 @@ def toilet_features():
                 plz = clean(p.get("plz"))
                 extra["address"] = f"{street}, {plz}" if plz else street
                 break
-        if hours := distinct("oeffnungszeiten"):
+        if hours := list(dict.fromkeys(TIME_DOT.sub(r"\1:\2", h) for h in distinct("oeffnungszeiten"))):
             extra["hours"] = " / ".join(hours)
         if floors := distinct("etage"):
             extra["floor"] = " / ".join(floors)
