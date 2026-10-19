@@ -9,6 +9,7 @@
 # translations.json (DeepL machine translations of German hours and notes, cached by exact German text)
 # is published next to pois.geojson; DeepL problems never fail the build.
 # Every run, failed or not, appends one line to history.jsonl on the data-history branch (record job).
+# Successful deploys on main ping the HEALTHCHECK_URL check (Healthchecks.io), failures ping /fail; no ping for ~36 h means the job stopped (e.g. GitHub disabled the schedule after 60 days without repo activity).
 name: Nightly data
 
 on:
@@ -224,3 +225,24 @@ jobs:
             [ "$attempt" = 2 ] && exit 1
           done
           echo "Recorded run $RUN_NUMBER in data-history/history.jsonl" >> "$GITHUB_STEP_SUMMARY"
+
+  healthcheck:
+    needs: [build, deploy]
+    if: always() && github.ref == 'refs/heads/main'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    permissions: {}
+    env:
+      HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+      DEPLOY_RESULT: ${{ needs.deploy.result }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Ping Healthchecks.io
+        run: |
+          if [ -z "$HEALTHCHECK_URL" ]; then
+            echo "HEALTHCHECK_URL not set, skipping"
+            exit 0
+          fi
+          url="$HEALTHCHECK_URL"
+          [ "$DEPLOY_RESULT" = success ] || url="$HEALTHCHECK_URL/fail"
+          curl -fsS -m 10 --retry 5 -o /dev/null --data-raw "deploy: $DEPLOY_RESULT, $RUN_URL" "$url"
