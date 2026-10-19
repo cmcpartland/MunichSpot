@@ -18,6 +18,8 @@ One-time setup: Settings → Pages → Build and deployment → Source: GitHub A
 
 In the nightly workflow, warnings from these scripts (`ci.warn`) show up as annotations on the run (plain `WARNING:` lines locally). The job summary also has a `### places.json` section saying whether places.json was rebuilt, re-published from the live file or replaced by the bundled copy; the last two after a failure also raise an annotation.
 
+Alerts: a Healthchecks.io check (period 1 day, grace 12 h) is pinged by the `healthcheck` job after every run on `main`; its URL is the `HEALTHCHECK_URL` repo secret, and without the secret the job is skipped. A failed run pings `/fail` and alerts immediately; no successful deploy for ~36 h (e.g. the run never started) alerts by email. If GitHub disabled the schedule after 60 days without repo activity, re-enable it under Actions → Nightly data.
+
 ## Validation
 
 `validate_pois.py` is called by `build_pois.py` before it writes, and runs as its own workflow step against the built file:
