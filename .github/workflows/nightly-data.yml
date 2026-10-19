@@ -6,6 +6,8 @@
 # Every other run, and any failure of the places build or validation, re-publishes the live file
 # (or the bundled one on the first deploy), because each deploy replaces the whole site.
 # Places problems never fail the job.
+# translations.json (DeepL machine translations of German hours and notes, cached by exact German text)
+# is published next to pois.geojson; DeepL problems never fail the build.
 name: Nightly data
 
 on:
@@ -51,6 +53,8 @@ jobs:
           cache-dependency-path: tools/data/requirements.txt
       - run: pip install -r tools/data/requirements.txt
       - run: python tools/data/build_pois.py site/pois.geojson
+        env:
+          DEEPL_AUTH_KEY: ${{ secrets.DEEPL_AUTH_KEY }}
       - name: Validate
         run: >
           python tools/data/validate_pois.py site/pois.geojson
@@ -94,7 +98,7 @@ jobs:
           <meta charset="utf-8">
           <title>MunichSpot data</title>
           <h1>MunichSpot data</h1>
-          <p>Nightly <a href="pois.geojson">pois.geojson</a> and weekly <a href="places.json">places.json</a> (place search index), used by the MunichSpot app.</p>
+          <p>Nightly <a href="pois.geojson">pois.geojson</a> and weekly <a href="places.json">places.json</a> (place search index) and <a href="translations.json">translations.json</a> (English translations of opening hours and notes, machine-translated with DeepL), used by the MunichSpot app.</p>
           <ul>
             <li>Recycling islands: Landeshauptstadt München, AWM, <a href="https://www.govdata.de/dl-de/by-2-0">dl-by-de/2.0</a></li>
             <li>Mailboxes: © OpenStreetMap contributors, <a href="https://www.openstreetmap.org/copyright">ODbL 1.0</a></li>

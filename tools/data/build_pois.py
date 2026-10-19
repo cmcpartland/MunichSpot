@@ -12,6 +12,7 @@ from pathlib import Path
 
 import requests
 from pyproj import Transformer
+from translate import translate_features
 from validate_pois import validate
 
 AWM_URL = (
@@ -215,6 +216,8 @@ def toilet_features():
 def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT
     features = sorted([*recycling_features(), *mailbox_features(), *fountain_features(), *toilet_features()], key=lambda f: f["id"])
+
+    translate_features([f for f in features if f["properties"]["type"] in ("TOILET", "DRINKING_WATER")], out)
 
     errors, warnings = validate(features)
     for w in warnings:

@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import de.munichspot.data.LocalText
 import de.munichspot.data.Material
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
@@ -126,7 +127,11 @@ private fun PoiSheetContent(poi: Poi, handleTop: Float, onBounds: (Rect) -> Unit
             )
         }
         if (poi.type == PoiType.DRINKING_WATER) {
-            poi.note?.let { Text(stringResource(Res.string.note, it), style = MaterialTheme.typography.bodyMedium) }
+            poi.note?.let {
+                val shown = it.shown()
+                Text(stringResource(Res.string.note, shown), style = MaterialTheme.typography.bodyMedium)
+                if (it.translated()) AutoTranslatedLabel()
+            }
             Text(
                 stringResource(Res.string.fountain_winter_hint),
                 style = MaterialTheme.typography.bodyMedium,
@@ -151,6 +156,19 @@ private fun List<Material>.accepted(): List<String> = buildList {
     if (Material.PACKAGING in this@accepted) add(stringResource(Res.string.packaging))
 }
 
+@Composable
+private fun isEnglish() = stringResource(Res.string.data_language) == "en"
+
+@Composable
+private fun LocalText.shown() = if (isEnglish()) en ?: de else de
+
+@Composable
+private fun LocalText.translated() = isEnglish() && en != null
+
+@Composable
+private fun AutoTranslatedLabel() =
+    Text(stringResource(Res.string.auto_translated), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
 private val FLOOR_LEVEL = Regex("^(\\d+)\\.\\s*(UG|OG)$")
 
 @Composable
@@ -169,10 +187,11 @@ private fun ToiletDetails(toilet: ToiletInfo) {
             .takeIf { it.isNotEmpty() }
             ?.let { Text(it.joinToString(" · ") { r -> r.second }, style = body) }
     }
-    val hours = toilet.hours?.split(" / ", " | ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
+    val hours = toilet.hours?.shown()?.split(" / ", " | ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
     if (hours.isNotEmpty()) {
         Text(stringResource(Res.string.opening_hours), style = MaterialTheme.typography.titleSmall)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { hours.forEach { Text(it, style = body) } }
+        if (toilet.hours?.translated() == true) AutoTranslatedLabel()
     }
     val floors = toilet.floor?.split(" / ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
     if (floors.isNotEmpty()) {

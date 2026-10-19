@@ -35,6 +35,12 @@ It prints a previous/new/delta table and appends it to `$GITHUB_STEP_SUMMARY` wh
 
 If the city really removes many features, dispatch the workflow manually with `skip_previous_check` enabled. That skips only the comparison; the new file then becomes the baseline.
 
+## Translations
+
+`translate.py` (called by `build_pois.py`) adds `hoursEn` (toilet opening hours, translated per segment between " / " and " | ") and `noteEn` (fountain notes) to the features; the app shows them on English devices with an "Automatically translated" label. For each distinct German text it looks in `translation_overrides.json` (committed `{german: english}`, wins over everything), then in the cache, then asks DeepL (EN-GB) for the rest. The cache is the live https://cmcpartland.github.io/MunichSpot/translations.json (`{"generated", "entries": {german: english}}`, keyed by the exact whitespace-normalised German text), so only new or changed text goes to DeepL. For local runs, `TRANSLATIONS_CACHE` can point to another URL or file. The file is written next to the pois output and pruned to the texts currently in use; counts are printed and added to the job summary.
+
+The DeepL key is the repository secret `DEEPL_AUTH_KEY` (a key ending in `:fx` uses the free API). Without a key, or if DeepL fails, the build continues with cache and overrides only; texts without a translation simply have no `…En` field and show in German. `validate_pois.py` warns if fewer than 90 % of toilets with hours have `hoursEn`.
+
 ## City boundary
 
 `build_boundary.py` writes `munich_boundary.geojson` (a world polygon with Munich's city boundary as a hole), which the app draws as a light veil outside the city. Run it manually with `python tools/data/build_boundary.py`; city boundaries basically never change, so it isn't part of the nightly workflow. Source: OSM relation 62428 via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).

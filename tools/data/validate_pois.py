@@ -25,6 +25,7 @@ MIN_RECYCLING_WITH_MATERIALS = 0.9
 MIN_CLOTHING = 100
 MIN_POST_BOX_WITH_TIMES = 0.8
 MIN_TOILET_WITH_HOURS = 0.5
+MIN_HOURS_TRANSLATED = 0.9
 MAX_TOILET_BAD_STATUS = 0.5
 
 MIN_PREVIOUS_RATIO = 0.8
@@ -94,7 +95,7 @@ def check_structure(features, errors):
             errors.append(f"{id_} outside Munich: {c[1]}, {c[0]}")
 
 
-def check_content(features, c, errors):
+def check_content(features, c, errors, warnings):
     if len(features) < MIN_TOTAL:
         errors.append(f"only {len(features)} features in total (min {MIN_TOTAL})")
     for t, minimum in MIN_PER_TYPE.items():
@@ -117,6 +118,10 @@ def check_content(features, c, errors):
     share("POST_BOX", lambda p: bool(p.get("collectionTimes")), MIN_POST_BOX_WITH_TIMES, "have collectionTimes")
     share("TOILET", lambda p: bool(p.get("hours")), MIN_TOILET_WITH_HOURS, "have hours")
     toilets = by_type["TOILET"]
+    with_hours = [f for f in toilets if props(f).get("hours")]
+    translated = sum(bool(props(f).get("hoursEn")) for f in with_hours)
+    if with_hours and translated < MIN_HOURS_TRANSLATED * len(with_hours):
+        warnings.append(f"TOILET: only {translated} of {len(with_hours)} ({pct(translated, len(with_hours))}) hours have hoursEn (min {pct(MIN_HOURS_TRANSLATED, 1)})")
     bad = sum(props(f).get("status") in ("DEFECT", "IMPAIRED") for f in toilets)
     if toilets and bad > MAX_TOILET_BAD_STATUS * len(toilets):
         errors.append(f"TOILET: {bad} of {len(toilets)} ({pct(bad, len(toilets))}) are DEFECT/IMPAIRED (max {pct(MAX_TOILET_BAD_STATUS, 1)})")
@@ -145,7 +150,7 @@ def validate(features, previous=None):
         return ["features is not a list"], warnings
     check_structure(features, errors)
     c = counts([f for f in features if isinstance(f, dict)])
-    check_content([f for f in features if isinstance(f, dict)], c, errors)
+    check_content([f for f in features if isinstance(f, dict)], c, errors, warnings)
     if previous is not None:
         check_previous(features, previous, c, counts([f for f in previous if isinstance(f, dict)]), errors, warnings)
     return errors, warnings

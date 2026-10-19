@@ -11,10 +11,13 @@ data class Poi(
     val lat: Double,
     val lon: Double,
     val materials: List<Material> = emptyList(),
-    val note: String? = null,
+    val note: LocalText? = null,
     val toilet: ToiletInfo? = null,
     val postBox: PostBoxInfo? = null,
 )
+
+/** German source text with an optional machine translation. */
+data class LocalText(val de: String, val en: String?)
 
 data class PostBoxInfo(val address: String?, val collectionTimes: String?, val indoor: Boolean)
 
@@ -22,7 +25,7 @@ enum class ToiletStatus { IMPAIRED, DEFECT }
 
 data class ToiletInfo(
     val address: String?,
-    val hours: String?,
+    val hours: LocalText?,
     val floor: String?,
     val price: Double?,
     val accessible: Boolean,
