@@ -105,6 +105,9 @@ def translate_features(features, out_path, cache_source=None, key=None):
         json.dumps({"generated": generated, "entries": dict(sorted(table.items()))}, separators=(",", ":"), ensure_ascii=False),
         encoding="utf-8",
     )
+    unused = sorted(overrides.keys() - strings)
+    for s in unused:
+        print(f"WARNING: unused override (German text changed or gone?): {s!r}")
     summarize(
         [
             f"distinct strings: {len(strings)}",
@@ -112,5 +115,6 @@ def translate_features(features, out_path, cache_source=None, key=None):
             f"cached: {len(cached)}",
             f"newly translated: {len(new)}",
             f"untranslated: {len(strings) - len(table)}",
+            *(f"unused override: {s!r}" for s in unused),
         ]
     )
