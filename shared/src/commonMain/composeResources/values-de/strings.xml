@@ -52,6 +52,8 @@
     <string name="fountain_winter_hint">Viele Trinkbrunnen sind im Winter abgeschaltet oder abgedeckt.</string>
     <string name="directions">Route</string>
     <string name="opening_hours">Öffnungszeiten</string>
+    <string name="data_language" translatable="false">de</string>
+    <string name="auto_translated">Automatisch übersetzt</string>
     <string name="free">Kostenlos</string>
     <string name="floor">Etage</string>
     <string name="floor_ground">Erdgeschoss</string>

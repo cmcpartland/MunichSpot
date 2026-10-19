@@ -68,6 +68,8 @@ private fun parseFeatures(root: JsonObject): List<Poi> =
         val coordinates = feature.getValue("geometry").jsonObject.getValue("coordinates").jsonArray
         val rawName = properties["name"]?.jsonPrimitive?.contentOrNull.orEmpty().trim()
         val legacyTimes = if (type == PoiType.POST_BOX) LEGACY_POST_BOX_NAME.matchEntire(rawName)?.groupValues?.get(1) else null
+        fun localText(key: String): LocalText? =
+            properties[key]?.jsonPrimitive?.contentOrNull?.let { LocalText(it, properties[key + "En"]?.jsonPrimitive?.contentOrNull) }
         Poi(
             id = feature.getValue("id").jsonPrimitive.content,
             type = type,
@@ -77,13 +79,13 @@ private fun parseFeatures(root: JsonObject): List<Poi> =
             materials = properties["materials"]?.jsonArray.orEmpty().mapNotNull { m ->
                 Material.entries.firstOrNull { it.name == m.jsonPrimitive.content }
             },
-            note = properties["note"]?.jsonPrimitive?.content,
+            note = localText("note"),
             toilet = if (type == PoiType.TOILET) {
                 fun text(key: String) = properties[key]?.jsonPrimitive?.contentOrNull
                 fun flag(key: String) = properties[key]?.jsonPrimitive?.booleanOrNull == true
                 ToiletInfo(
                     address = text("address"),
-                    hours = text("hours"),
+                    hours = localText("hours"),
                     floor = text("floor"),
                     price = properties["price"]?.jsonPrimitive?.doubleOrNull,
                     accessible = flag("accessible"),

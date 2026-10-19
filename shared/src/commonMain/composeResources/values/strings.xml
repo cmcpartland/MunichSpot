@@ -52,6 +52,8 @@
     <string name="fountain_winter_hint">Many drinking fountains are switched off or covered in winter.</string>
     <string name="directions">Directions</string>
     <string name="opening_hours">Opening hours</string>
+    <string name="data_language" translatable="false">en</string>
+    <string name="auto_translated">Automatically translated</string>
     <string name="free">Free</string>
     <string name="floor">Floor</string>
     <string name="floor_ground">Ground floor</string>
