@@ -24,7 +24,7 @@
     <string name="all_categories">All categories</string>
     <string name="all">All</string>
     <string name="choose_category">Choose a category</string>
-    <string name="search_places">Search places</string>
+    <string name="search_places">Search location</string>
     <string name="clear_category">Clear category</string>
     <string name="clear_place">Clear place</string>
     <string name="no_results">No results</string>
