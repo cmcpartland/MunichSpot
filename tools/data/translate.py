@@ -71,7 +71,7 @@ def summarize(lines):
 
 
 def translate_features(features, out_path, cache_source=None, key=None):
-    """Sets hoursEn/noteEn on the features and writes translations.json next to out_path."""
+    """Sets hoursEn/noteEn on the features, writes translations.json next to out_path and returns the stats."""
     props = [f["properties"] for f in features]
     hours = {p["hours"]: split_hours(p["hours"]) for p in props if p.get("hours")}
     strings = {s for parts in hours.values() for s in parts[::2] if s}
@@ -109,13 +109,22 @@ def translate_features(features, out_path, cache_source=None, key=None):
     unused = sorted(overrides.keys() - strings)
     for s in unused:
         warn(f"unused override (German text changed or gone?): {s!r}")
+    stats = {
+        "distinct": len(strings),
+        "overrides": sum(s in overrides for s in table),
+        "cached": len(cached),
+        "new": len(new),
+        "untranslated": len(strings) - len(table),
+        "unused_overrides": len(unused),
+    }
     summarize(
         [
-            f"distinct strings: {len(strings)}",
-            f"from overrides: {sum(s in overrides for s in table)}",
-            f"cached: {len(cached)}",
-            f"newly translated: {len(new)}",
-            f"untranslated: {len(strings) - len(table)}",
+            f"distinct strings: {stats['distinct']}",
+            f"from overrides: {stats['overrides']}",
+            f"cached: {stats['cached']}",
+            f"newly translated: {stats['new']}",
+            f"untranslated: {stats['untranslated']}",
             *(f"unused override: {s!r}" for s in unused),
         ]
     )
+    return stats

@@ -3,6 +3,7 @@
 import itertools
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -218,7 +219,7 @@ def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT
     features = sorted([*recycling_features(), *mailbox_features(), *fountain_features(), *toilet_features()], key=lambda f: f["id"])
 
-    translate_features([f for f in features if f["properties"]["type"] in ("TOILET", "DRINKING_WATER")], out)
+    translations = translate_features([f for f in features if f["properties"]["type"] in ("TOILET", "DRINKING_WATER")], out)
 
     errors, warnings = validate(features)
     for w in warnings:
@@ -238,13 +239,35 @@ def main():
         encoding="utf-8",
     )
     print(", ".join(f"{t}: {n}" for t, n in counts.items()))
-    for m in MATERIAL_COLUMNS.values():
-        print(f"  {m}: {sum(m in f['properties'].get('materials', ()) for f in features)}")
-    print(f"  none: {sum(f['properties'].get('materials') == [] for f in features)}")
+    materials = {m: sum(m in f["properties"].get("materials", ()) for f in features) for m in MATERIAL_COLUMNS.values()}
+    materials["none"] = sum(f["properties"].get("materials") == [] for f in features)
+    for m, n in materials.items():
+        print(f"  {m}: {n}")
     print(f"toilet locations: {counts['TOILET']}")
-    for key in ("address", "hours", "floor", "price", "accessible", "changing", "euroKey", "rooms", "status"):
-        print(f"  {key}: {sum(key in f['properties'] for f in features if f['properties']['type'] == 'TOILET')}")
-    print(f"wrote {out} ({out.stat().st_size} bytes)")
+    toilet = {
+        key: sum(key in f["properties"] for f in features if f["properties"]["type"] == "TOILET")
+        for key in ("address", "hours", "floor", "price", "accessible", "changing", "euroKey", "rooms", "status")
+    }
+    for key, n in toilet.items():
+        print(f"  {key}: {n}")
+    size = out.stat().st_size
+    print(f"wrote {out} ({size} bytes)")
+    if record_dir := os.environ.get("RUN_RECORD_DIR"):
+        Path(record_dir).mkdir(parents=True, exist_ok=True)
+        (Path(record_dir) / "pois.json").write_text(
+            json.dumps(
+                {
+                    "generated": generated,
+                    "bytes": size,
+                    "counts": dict(counts),
+                    "materials": materials,
+                    "toilet": toilet,
+                    "translations": translations,
+                },
+                separators=(",", ":"),
+            ),
+            encoding="utf-8",
+        )
 
 
 if __name__ == "__main__":

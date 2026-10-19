@@ -8,6 +8,7 @@
 # Places problems never fail the job.
 # translations.json (DeepL machine translations of German hours and notes, cached by exact German text)
 # is published next to pois.geojson; DeepL problems never fail the build.
+# Every run, failed or not, appends one line to history.jsonl on the data-history branch (record job).
 name: Nightly data
 
 on:
@@ -44,6 +45,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      RUN_RECORD_DIR: /tmp/run
+    outputs:
+      pois: ${{ steps.pois.outcome }}
+      validate: ${{ steps.validate.outcome }}
+      places: ${{ steps.places.outcome }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -52,10 +59,13 @@ jobs:
           cache: pip
           cache-dependency-path: tools/data/requirements.txt
       - run: pip install -r tools/data/requirements.txt
-      - run: python tools/data/build_pois.py site/pois.geojson
+      - name: Build pois
+        id: pois
+        run: python tools/data/build_pois.py site/pois.geojson
         env:
           DEEPL_AUTH_KEY: ${{ secrets.DEEPL_AUTH_KEY }}
       - name: Validate
+        id: validate
         run: >
           python tools/data/validate_pois.py site/pois.geojson
           --previous https://cmcpartland.github.io/MunichSpot/pois.geojson
@@ -103,19 +113,27 @@ jobs:
           LIVE: ${{ steps.reuse.outputs.live }}
         run: |
           [ -f site/places.json ] || exit 0
+          mkdir -p "$RUN_RECORD_DIR"
+          result=not_due
           echo "### places.json" >> "$GITHUB_STEP_SUMMARY"
           if [ "$OK" = true ]; then
             msg="rebuilt: $(jq '.places | length' site/places.json) places"
+            result=rebuilt
           elif [ "$LIVE" != true ]; then
             msg="live file unusable, published the bundled copy"
             echo "::warning::places.json: $msg"
+            echo "places.json: $msg" >> "$RUN_RECORD_DIR/warnings.log"
+            result=bundled
           elif [ "$REBUILD" = true ] || [ "$OUTCOME" != success ]; then
             msg="rebuild failed or timed out, re-published the live file (generated $(jq -r .generated site/places.json))"
             echo "::warning::places.json: $msg"
+            echo "places.json: $msg" >> "$RUN_RECORD_DIR/warnings.log"
+            result=failed
           else
             msg="not due for a rebuild, re-published the live file (generated $(jq -r .generated site/places.json))"
           fi
           echo "- $msg" >> "$GITHUB_STEP_SUMMARY"
+          jq -c --arg result "$result" '{result: $result, count: (.places | length), generated}' site/places.json > "$RUN_RECORD_DIR/places.json"
       - name: Write index page
         run: |
           cat > site/index.html <<'HTML'
@@ -133,6 +151,13 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: run-record
+          path: ${{ env.RUN_RECORD_DIR }}
+          if-no-files-found: ignore
+          retention-days: 7
 
   deploy:
     needs: build
@@ -143,3 +168,59 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  record:
+    needs: [build, deploy]
+    if: always()
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPOSITORY: ${{ github.repository }}
+      SERVER_URL: ${{ github.server_url }}
+      RUN_ID: ${{ github.run_id }}
+      RUN_NUMBER: ${{ github.run_number }}
+      RUN_ATTEMPT: ${{ github.run_attempt }}
+      EVENT: ${{ github.event_name }}
+      SHA: ${{ github.sha }}
+      BUILD_RESULT: ${{ needs.build.result }}
+      DEPLOY_RESULT: ${{ needs.deploy.result }}
+      POIS_OUTCOME: ${{ needs.build.outputs.pois }}
+      VALIDATE_OUTCOME: ${{ needs.build.outputs.validate }}
+      PLACES_OUTCOME: ${{ needs.build.outputs.places }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: run-record
+          path: /tmp/run
+      - name: Append to history.jsonl on data-history
+        run: |
+          mkdir -p /tmp/run history
+          cd history
+          git init -q
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPOSITORY}.git"
+          git config user.name github-actions[bot]
+          git config user.email 41898799+github-actions[bot]@users.noreply.github.com
+          for attempt in 1 2; do
+            if git ls-remote --exit-code --heads origin data-history > /dev/null; then
+              git fetch -q --depth 1 origin data-history
+              git checkout -q -B data-history FETCH_HEAD
+            else
+              git checkout -q --orphan data-history
+              cat > README.md <<'MD'
+          # Run history
+
+          One JSON line per run of the Nightly data workflow, appended to `history.jsonl` by `.github/workflows/nightly-data.yml`. Schema: see "Run history" in `tools/data/README.md` on main.
+          MD
+            fi
+            python ../tools/data/record_run.py /tmp/run history.jsonl
+            git add -A
+            git commit -q -m "Record run $RUN_NUMBER"
+            git push -q origin data-history && break
+            [ "$attempt" = 2 ] && exit 1
+          done
+          echo "Recorded run $RUN_NUMBER in data-history/history.jsonl" >> "$GITHUB_STEP_SUMMARY"
