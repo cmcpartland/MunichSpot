@@ -60,13 +60,14 @@ internal fun PoiType.pinOffset(): DpOffset = if (this == PoiType.CLOTHES) Clothe
 private operator fun DpOffset.plus(o: DpOffset) = DpOffset(x + o.x, y + o.y)
 private val IsCluster = feature.has("point_count")
 
-private fun zoomToCluster(source: GeoJsonSource, mapState: MapState, scope: CoroutineScope): FeaturesClickHandler =
+private fun zoomToCluster(source: GeoJsonSource, mapState: MapState, scope: CoroutineScope, onCluster: () -> Unit): FeaturesClickHandler =
     { features ->
         val cluster = features.firstOrNull()
         val center = (cluster?.geometry as? Point)?.coordinates
         if (cluster == null || center == null) {
             ClickResult.Pass
         } else {
+            onCluster()
             scope.launch {
                 val zoom = mapState.style.sources[source]?.getClusterExpansionZoom(cluster)
                     ?: (mapState.cameraPosition.zoom + 2)
@@ -104,6 +105,7 @@ internal fun PoiIconLayers(
     mapState: MapState,
     scope: CoroutineScope,
     islandVisible: Boolean,
+    onCluster: () -> Unit,
     onPoi: (String?) -> Boolean,
 ) {
     val name = type.name.lowercase()
@@ -118,7 +120,7 @@ internal fun PoiIconLayers(
         iconAllowOverlap = const(true),
         iconIgnorePlacement = const(true),
         hitPadding = 6.dp,
-        onClick = zoomToCluster(source, mapState, scope),
+        onClick = zoomToCluster(source, mapState, scope, onCluster),
     )
     SymbolLayer(
         id = "$name-pois",
@@ -181,7 +183,7 @@ internal fun SelectedPinLayers(source: GeoJsonSource) {
 /** Count badge at the cluster icon's top-right corner: a white disc with a type-coloured border. */
 @Composable
 @MaplibreComposable
-internal fun PoiBadgeLayers(type: PoiType, source: GeoJsonSource, mapState: MapState, scope: CoroutineScope) {
+internal fun PoiBadgeLayers(type: PoiType, source: GeoJsonSource, mapState: MapState, scope: CoroutineScope, onCluster: () -> Unit) {
     CircleLayer(
         id = "${type.name.lowercase()}-cluster-badge",
         source = source,
@@ -192,7 +194,7 @@ internal fun PoiBadgeLayers(type: PoiType, source: GeoJsonSource, mapState: MapS
         strokeWidth = const(2.dp),
         translate = const(BadgeOffset + type.pinOffset()),
         translateAnchor = const(TranslateAnchor.Viewport),
-        onClick = zoomToCluster(source, mapState, scope),
+        onClick = zoomToCluster(source, mapState, scope, onCluster),
     )
 }
 
@@ -215,7 +217,7 @@ internal fun PoiWarningLayer(type: PoiType, source: GeoJsonSource) {
 
 @Composable
 @MaplibreComposable
-internal fun PoiCountLayers(type: PoiType, source: GeoJsonSource, mapState: MapState, scope: CoroutineScope) {
+internal fun PoiCountLayers(type: PoiType, source: GeoJsonSource, mapState: MapState, scope: CoroutineScope, onCluster: () -> Unit) {
     SymbolLayer(
         id = "${type.name.lowercase()}-cluster-count",
         source = source,
@@ -228,6 +230,6 @@ internal fun PoiCountLayers(type: PoiType, source: GeoJsonSource, mapState: MapS
         textTranslateAnchor = const(TranslateAnchor.Viewport),
         textAllowOverlap = const(true),
         textIgnorePlacement = const(true),
-        onClick = zoomToCluster(source, mapState, scope),
+        onClick = zoomToCluster(source, mapState, scope, onCluster),
     )
 }

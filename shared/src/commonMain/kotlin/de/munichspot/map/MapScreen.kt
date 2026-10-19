@@ -155,6 +155,7 @@ internal fun MapScreen(
             }
         }
         val visible = PoiType.entries.filter { type == null || type == it }
+        val clearSelection = { selected = null }
         // Each type's badges and counts sit right above its own icons, so they stack with the pin they belong to.
         for (t in visible) {
             PoiIconLayers(
@@ -163,6 +164,7 @@ internal fun MapScreen(
                 mapState = mapState,
                 scope = scope,
                 islandVisible = type == null,
+                onCluster = clearSelection,
                 onPoi = { id ->
                     poisById[id]?.let {
                         selected = it
@@ -171,8 +173,8 @@ internal fun MapScreen(
                 },
             )
             if (t == PoiType.TOILET) PoiWarningLayer(t, sources.getValue(t))
-            PoiBadgeLayers(t, sources.getValue(t), mapState, scope)
-            PoiCountLayers(t, sources.getValue(t), mapState, scope)
+            PoiBadgeLayers(t, sources.getValue(t), mapState, scope, clearSelection)
+            PoiCountLayers(t, sources.getValue(t), mapState, scope, clearSelection)
         }
         SelectedPinLayers(rememberGeoJsonSource(GeoJsonData.JsonString(selectedGeoJson)))
         LocationIndicatorLayer(
