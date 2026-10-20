@@ -213,6 +213,7 @@ private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
                 val n = level?.groupValues?.get(1)?.toInt() ?: 0
                 val text = when {
                     f == "EG" -> stringResource(Res.string.floor_ground)
+                    level?.groupValues?.get(2) == "UG" && n == 1 -> stringResource(Res.string.floor_basement_first)
                     level?.groupValues?.get(2) == "UG" -> stringResource(Res.string.floor_basement, n)
                     level != null -> stringResource(Res.string.floor_upper, n)
                     else -> f
