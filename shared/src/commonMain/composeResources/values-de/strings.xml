@@ -60,6 +60,7 @@
     <string name="free">Kostenlos</string>
     <string name="floor">Etage</string>
     <string name="floor_ground">Erdgeschoss</string>
+    <string name="floor_basement_first">1. Untergeschoss</string>
     <string name="floor_basement">%1$d. Untergeschoss</string>
     <string name="floor_upper">%1$d. Obergeschoss</string>
     <string name="accessible">Barrierefrei</string>
