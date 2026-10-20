@@ -7,6 +7,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -132,7 +135,7 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
                 Material.GLASS_WHITE to stringResource(Res.string.glass_white),
                 Material.PACKAGING to stringResource(Res.string.packaging),
             ).filter { it.first in poi.materials }
-            DetailRow({ RecycleIcon(muted, it) }) {
+            DetailRow(null) {
                 if (chips.isEmpty()) {
                     Text(stringResource(Res.string.no_container_data), style = hint, color = muted)
                 } else {
@@ -266,9 +269,9 @@ private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
 }
 
 @Composable
-private fun DetailRow(icon: @Composable (Modifier) -> Unit, content: @Composable ColumnScope.() -> Unit) {
+private fun DetailRow(icon: (@Composable (Modifier) -> Unit)?, content: @Composable ColumnScope.() -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        icon(Modifier.padding(top = 2.dp))
+        if (icon != null) icon(Modifier.padding(top = 2.dp)) else Spacer(Modifier.width(20.dp))
         Column(Modifier.weight(1f), content = content)
     }
 }
@@ -297,6 +300,8 @@ private fun PostBoxDetails(info: PostBoxInfo) {
         if (info.collectionTimes != null) {
             val rows = formatCollectionTimes(info.collectionTimes, days)
             val times = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum")
+            Text(stringResource(Res.string.collection_times), style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     rows.forEach { Text(it.first, style = MaterialTheme.typography.bodyLarge, color = muted, maxLines = 1, softWrap = false) }

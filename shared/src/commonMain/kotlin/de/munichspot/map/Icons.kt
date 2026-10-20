@@ -233,30 +233,6 @@ internal fun InfoIcon(color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
-internal fun RecycleIcon(color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier.size(20.dp)) {
-        val w = 1.8.dp.toPx()
-        val c = Offset(size.width / 2, size.height * 0.54f)
-        val r = size.width * 0.36f
-        for (i in 0..2) {
-            val start = -90f + i * 120f + 22f
-            drawArc(color, start, 70f, false, c - Offset(r, r), Size(2 * r, 2 * r), style = Stroke(w, cap = StrokeCap.Round))
-            val a = (start + 70f) * PI.toFloat() / 180f
-            val tip = c + Offset(cos(a) * r, sin(a) * r)
-            val t = a + PI.toFloat() / 2
-            val back = Offset(cos(t), sin(t))
-            val out = Offset(cos(a), sin(a))
-            val head = Path().apply {
-                moveTo(tip.x + (out.x * 0.9f + back.x * 0.5f) * 3.2.dp.toPx(), tip.y + (out.y * 0.9f + back.y * 0.5f) * 3.2.dp.toPx())
-                lineTo(tip.x, tip.y)
-                lineTo(tip.x + (-out.x * 0.9f + back.x * 0.5f) * 3.2.dp.toPx(), tip.y + (-out.y * 0.9f + back.y * 0.5f) * 3.2.dp.toPx())
-            }
-            drawPath(head, color, style = Stroke(w, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        }
-    }
-}
-
-@Composable
 internal fun SnowflakeIcon(color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier.size(20.dp)) {
         val w = 1.8.dp.toPx()

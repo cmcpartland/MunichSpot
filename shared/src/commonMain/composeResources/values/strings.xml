@@ -70,6 +70,7 @@
     <string name="room_unisex">Unisex</string>
     <string name="toilet_defect">According to the city: out of order or not accessible</string>
     <string name="toilet_impaired">According to the city: partly impaired</string>
+    <string name="collection_times">Collection times</string>
     <string name="no_collection_times">No collection times known</string>
     <string name="indoor_note">Indoors – only accessible during opening hours</string>
     <string name="day_mo">Mon</string>

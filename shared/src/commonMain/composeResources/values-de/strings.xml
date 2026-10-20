@@ -70,6 +70,7 @@
     <string name="room_unisex">Unisex</string>
     <string name="toilet_defect">Laut Stadt defekt oder nicht zugänglich</string>
     <string name="toilet_impaired">Laut Stadt teilweise beeinträchtigt</string>
+    <string name="collection_times">Leerungszeiten</string>
     <string name="no_collection_times">Keine Leerungszeiten bekannt</string>
     <string name="indoor_note">Im Gebäude – nur während dessen Öffnungszeiten zugänglich</string>
     <string name="day_mo">Mo</string>
