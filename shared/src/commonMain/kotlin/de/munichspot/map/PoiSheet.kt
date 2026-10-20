@@ -119,55 +119,43 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
                 }
             }
         }
+        val muted = MaterialTheme.colorScheme.onSurfaceVariant
+        val hint = MaterialTheme.typography.bodyMedium
         if (poi.type == PoiType.RECYCLING) {
-            val lines = poi.materials.accepted()
-            if (lines.isEmpty()) {
-                Text(
-                    stringResource(Res.string.no_container_data),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    lines.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            val chips = listOf(
+                Material.GLASS_BROWN to stringResource(Res.string.glass_brown),
+                Material.GLASS_GREEN to stringResource(Res.string.glass_green),
+                Material.GLASS_WHITE to stringResource(Res.string.glass_white),
+                Material.PACKAGING to stringResource(Res.string.packaging),
+            ).filter { it.first in poi.materials }
+            DetailRow({ RecycleIcon(muted, it) }) {
+                if (chips.isEmpty()) {
+                    Text(stringResource(Res.string.no_container_data), style = hint, color = muted)
+                } else {
+                    @OptIn(ExperimentalLayoutApi::class)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        chips.forEach { FactChip(it.second) }
+                    }
                 }
             }
         }
         if (poi.type == PoiType.CLOTHES) {
-            Text(
-                stringResource(Res.string.clothes_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            DetailRow({ InfoIcon(muted, it) }) { Text(stringResource(Res.string.clothes_hint), style = hint, color = muted) }
         }
         if (poi.type == PoiType.DRINKING_WATER) {
             poi.note?.let {
-                val shown = it.shown()
-                Text(stringResource(Res.string.note, shown), style = MaterialTheme.typography.bodyMedium)
-                if (it.translated()) AutoTranslatedLabel()
+                DetailRow({ InfoIcon(muted, it) }) {
+                    Text(stringResource(Res.string.note, it.shown()), style = MaterialTheme.typography.bodyLarge)
+                    if (it.translated()) AutoTranslatedLabel()
+                }
             }
-            Text(
-                stringResource(Res.string.fountain_winter_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            DetailRow({ SnowflakeIcon(muted, it) }) { Text(stringResource(Res.string.fountain_winter_hint), style = hint, color = muted) }
         }
         poi.toilet?.let { ToiletDetails(it, now) }
         poi.postBox?.let { PostBoxDetails(it) }
         Button(onClick = { openDirections(poi, uriHandler) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(Res.string.directions)) }
         Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-}
-
-@Composable
-private fun List<Material>.accepted(): List<String> = buildList {
-    val glass = listOf(
-        Material.GLASS_BROWN to stringResource(Res.string.glass_brown),
-        Material.GLASS_GREEN to stringResource(Res.string.glass_green),
-        Material.GLASS_WHITE to stringResource(Res.string.glass_white),
-    ).filter { it.first in this@accepted }
-    if (glass.isNotEmpty()) add(stringResource(Res.string.glass_colors, glass.joinToString(" · ") { it.second }))
-    if (Material.PACKAGING in this@accepted) add(stringResource(Res.string.packaging))
 }
 
 @Composable
@@ -301,22 +289,23 @@ private fun PostBoxDetails(info: PostBoxInfo) {
         "Su" to stringResource(Res.string.day_su), "PH" to stringResource(Res.string.day_ph), "off" to stringResource(Res.string.day_off),
     )
     info.address?.let { DetailRow({ PlaceIcon(muted, it) }) { Text(it, style = MaterialTheme.typography.bodyLarge) } }
-    if (info.collectionTimes != null) {
-        Text(stringResource(Res.string.collection_times), style = MaterialTheme.typography.titleSmall)
-        val rows = formatCollectionTimes(info.collectionTimes, days)
-        val times = body.copy(fontFeatureSettings = "tnum")
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                rows.forEach { Text(it.first, style = body, color = muted, maxLines = 1, softWrap = false) }
+    DetailRow({ ClockIcon(muted, it) }) {
+        if (info.collectionTimes != null) {
+            val rows = formatCollectionTimes(info.collectionTimes, days)
+            val times = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum")
+            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    rows.forEach { Text(it.first, style = MaterialTheme.typography.bodyLarge, color = muted, maxLines = 1, softWrap = false) }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    rows.forEach { Text(it.second, style = times, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false) }
+                }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                rows.forEach { Text(it.second, style = times, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false) }
-            }
+        } else {
+            Text(stringResource(Res.string.no_collection_times), style = body, color = muted)
         }
-    } else {
-        Text(stringResource(Res.string.no_collection_times), style = body, color = muted)
     }
-    if (info.indoor) Text(stringResource(Res.string.indoor_note), style = body, color = muted)
+    if (info.indoor) DetailRow({ InfoIcon(muted, it) }) { Text(stringResource(Res.string.indoor_note), style = body, color = muted) }
 }
 
 private val RULE_SPLIT = Regex("(\\d),\\s+(?=(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)\\b)")

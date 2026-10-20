@@ -220,3 +220,60 @@ internal fun DrawScope.drawPin(color: Color, w: Float, h: Float, dot: Color?) {
 }
 
 internal val AnchorRed = Color(0xFFE6194B)
+
+@Composable
+internal fun InfoIcon(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(20.dp)) {
+        val w = 1.8.dp.toPx()
+        val cx = size.width / 2
+        drawCircle(color, radius = size.width * 0.42f, style = Stroke(w))
+        drawLine(color, Offset(cx, size.height * 0.46f), Offset(cx, size.height * 0.72f), w, StrokeCap.Round)
+        drawCircle(color, radius = w * 0.65f, center = Offset(cx, size.height * 0.31f))
+    }
+}
+
+@Composable
+internal fun RecycleIcon(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(20.dp)) {
+        val w = 1.8.dp.toPx()
+        val c = Offset(size.width / 2, size.height * 0.54f)
+        val r = size.width * 0.36f
+        for (i in 0..2) {
+            val start = -90f + i * 120f + 22f
+            drawArc(color, start, 70f, false, c - Offset(r, r), Size(2 * r, 2 * r), style = Stroke(w, cap = StrokeCap.Round))
+            val a = (start + 70f) * PI.toFloat() / 180f
+            val tip = c + Offset(cos(a) * r, sin(a) * r)
+            val t = a + PI.toFloat() / 2
+            val back = Offset(cos(t), sin(t))
+            val out = Offset(cos(a), sin(a))
+            val head = Path().apply {
+                moveTo(tip.x + (out.x * 0.9f + back.x * 0.5f) * 3.2.dp.toPx(), tip.y + (out.y * 0.9f + back.y * 0.5f) * 3.2.dp.toPx())
+                lineTo(tip.x, tip.y)
+                lineTo(tip.x + (-out.x * 0.9f + back.x * 0.5f) * 3.2.dp.toPx(), tip.y + (-out.y * 0.9f + back.y * 0.5f) * 3.2.dp.toPx())
+            }
+            drawPath(head, color, style = Stroke(w, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+    }
+}
+
+@Composable
+internal fun SnowflakeIcon(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(20.dp)) {
+        val w = 1.8.dp.toPx()
+        val c = Offset(size.width / 2, size.height / 2)
+        val r = size.width * 0.42f
+        for (i in 0..2) {
+            val a = (i * 60f + 90f) * PI.toFloat() / 180f
+            val d = Offset(cos(a), sin(a))
+            drawLine(color, c - d * r, c + d * r, w, StrokeCap.Round)
+            for (s in listOf(-1f, 1f)) {
+                val e = d * (s * r * 0.62f)
+                val base = c + e
+                for (k in listOf(-1f, 1f)) {
+                    val b = a + k * PI.toFloat() / 4 + if (s < 0) PI.toFloat() else 0f
+                    drawLine(color, base, base + Offset(cos(b), sin(b)) * (r * 0.3f), w, StrokeCap.Round)
+                }
+            }
+        }
+    }
+}
