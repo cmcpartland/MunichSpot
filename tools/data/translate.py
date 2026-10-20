@@ -7,6 +7,7 @@ from pathlib import Path
 
 import requests
 from ci import warn
+from hours import colon_times
 
 OVERRIDES_PATH = Path(__file__).resolve().parent / "translation_overrides.json"
 LIVE_TRANSLATIONS_URL = "https://cmcpartland.github.io/MunichSpot/translations.json"
@@ -97,7 +98,7 @@ def translate_features(features, out_path, cache_source=None, key=None):
         if p.get("hours"):
             parts = hours[p["hours"]]
             if all(s in table for s in parts[::2] if s):
-                p["hoursEn"] = "".join(table[s] if i % 2 == 0 and s else s for i, s in enumerate(parts))
+                p["hoursEn"] = colon_times("".join(table[s] if i % 2 == 0 and s else s for i, s in enumerate(parts)))
 
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     target = Path(out_path).parent / "translations.json"
