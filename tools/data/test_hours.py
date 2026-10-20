@@ -1,10 +1,13 @@
 """Run: python3 tools/data/test_hours.py"""
+import json
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from hours import is_open, parse_schedule
+from hours import colon_times, is_open, parse_schedule
+from translate import translate_features
 
 
 def R(a, b, days=None, months=None):
@@ -107,4 +110,16 @@ assert is_open(months, at(2026, 7, 10, 19, 59)) and not is_open(months, at(2026,
 # Month rules at the month boundary use the previous day's month for spill past midnight.
 spill = [{"from": 1200, "to": 1560, "months": [10]}]
 assert is_open(spill, at(2026, 11, 1, 0, 30)) and not is_open(spill, at(2026, 11, 1, 2, 30))
+assert colon_times("11.00 am to 11.00 pm") == "11:00 am to 11:00 pm"
+assert colon_times("8.00-20.00") == "8:00-20:00"
+assert colon_times("1.5 km, 24/7, Nr. 12, 123.45, 8:00") == "1.5 km, 24/7, Nr. 12, 123.45, 8:00"
+
+with tempfile.TemporaryDirectory() as tmp:
+    cache = Path(tmp) / "cache.json"
+    cache.write_text(json.dumps({"entries": {"täglich 11 bis 23 Uhr": "Daily, 11.00 am to 11.00 pm"}}), encoding="utf-8")
+    feats = [{"properties": {"hours": "täglich 11 bis 23 Uhr", "note": "Hinweis 8.00"}}]
+    translate_features(feats, Path(tmp) / "pois.json", cache_source=str(cache), key="")
+    assert feats[0]["properties"]["hoursEn"] == "Daily, 11:00 am to 11:00 pm", feats
+    assert "noteEn" not in feats[0]["properties"]
+
 print(f"ok: {len(CASES)} strings")

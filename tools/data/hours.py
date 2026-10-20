@@ -14,6 +14,13 @@ MONTHS = {"jan": 1, "feb": 2, "mrz": 3, "mär": 3, "märz": 3, "mar": 3, "apr": 
           "juni": 6, "juli": 7, "august": 8, "september": 9, "oktober": 10, "november": 11, "dezember": 12}
 ALWAYS = {"durchgehend", "24 stunden", "ganzjährig, ganztägig", "nicht bei hochwasser"}
 
+TIME_DOT = re.compile(r"\b(\d{1,2})\.(\d{2})\b")
+
+
+def colon_times(text):
+    return TIME_DOT.sub(r"\1:\2", text)
+
+
 TIME = r"(\d{1,2})(?::(\d{2}))?"
 RANGE = re.compile(rf"{TIME}\s*(?:uhr)?\s*(?:-|bis)\s*{TIME}\s*(?:uhr)?")
 PREFIX = re.compile(r"^(?:(?:ganzjährig|täglich)\s*,?\s*)+")

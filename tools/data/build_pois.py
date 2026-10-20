@@ -14,7 +14,7 @@ from pathlib import Path
 import requests
 from pyproj import Transformer
 from ci import warn
-from hours import parse_schedule
+from hours import colon_times, parse_schedule
 from translate import translate_features
 from validate_pois import validate
 
@@ -42,7 +42,6 @@ TOILET_MERGE_METERS = 15
 ROOM_CODES = (("männlich", "M"), ("weiblich", "F"), ("unisex", "U"), ("barrierefrei", "A"))
 RETRY_STATUSES = (404, 429, 502, 503, 504)
 RETRY_SECONDS = 300
-TIME_DOT = re.compile(r"\b(\d{1,2})\.(\d{2})\b")
 
 
 def fetch(url, data=None):
@@ -195,7 +194,7 @@ def toilet_features():
                 plz = clean(p.get("plz"))
                 extra["address"] = f"{street}, {plz}" if plz else street
                 break
-        if hours := list(dict.fromkeys(TIME_DOT.sub(r"\1:\2", h) for h in distinct("oeffnungszeiten"))):
+        if hours := list(dict.fromkeys(colon_times(h) for h in distinct("oeffnungszeiten"))):
             extra["hours"] = " / ".join(hours)
             if schedule := parse_schedule(extra["hours"]):
                 extra["schedule"] = schedule
