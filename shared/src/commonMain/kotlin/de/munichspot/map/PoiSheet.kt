@@ -2,6 +2,8 @@ package de.munichspot.map
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
@@ -17,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.BottomSheet
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -175,17 +179,24 @@ private fun AutoTranslatedLabel() =
 
 private val FLOOR_LEVEL = Regex("^(\\d+)\\.\\s*(UG|OG)$")
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
     val body = MaterialTheme.typography.bodyMedium
     toilet.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+    val free = toilet.price == 0.0
+    val chips = listOfNotNull(
+        toilet.price?.let { if (free) stringResource(Res.string.free) else formatEuro(it, isEnglish()) },
+        stringResource(Res.string.accessible).takeIf { toilet.accessible },
+        stringResource(Res.string.changing_table).takeIf { toilet.changing },
+        stringResource(Res.string.euro_key).takeIf { toilet.euroKey },
+    )
+    if (chips.isNotEmpty()) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            chips.forEachIndexed { i, text -> FactChip(text, tinted = free && i == 0) }
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        toilet.price?.let { Text(if (it == 0.0) stringResource(Res.string.free) else formatEuro(it), style = body) }
-        listOfNotNull(
-            stringResource(Res.string.accessible).takeIf { toilet.accessible },
-            stringResource(Res.string.changing_table).takeIf { toilet.changing },
-            stringResource(Res.string.euro_key).takeIf { toilet.euroKey },
-        ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString(" · "), style = body) }
         listOf("F" to stringResource(Res.string.room_women), "M" to stringResource(Res.string.room_men), "U" to stringResource(Res.string.room_unisex))
             .filter { it.first in toilet.rooms }
             .takeIf { it.isNotEmpty() }
@@ -228,6 +239,18 @@ private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
         null -> null
     }
     warning?.let { Text(it, style = body, color = MaterialTheme.colorScheme.error) }
+}
+
+@Composable
+private fun FactChip(text: String, tinted: Boolean = false) {
+    val green = openColor()
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = if (tinted) green.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (tinted) green else MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+    }
 }
 
 @Composable
@@ -279,7 +302,8 @@ internal fun formatCollectionTimes(raw: String, days: Map<String, String>): List
         dayText to timeText
     }
 
-private fun formatEuro(price: Double): String {
+private fun formatEuro(price: Double, english: Boolean): String {
     val cents = (price * 100).roundToInt()
-    return "${cents / 100},${(cents % 100).toString().padStart(2, '0')} €"
+    val amount = "${cents / 100}${if (english) "." else ","}${(cents % 100).toString().padStart(2, '0')}"
+    return if (english) "€$amount" else "$amount €"
 }
