@@ -300,7 +300,7 @@ private fun PostBoxDetails(info: PostBoxInfo) {
         "Th" to stringResource(Res.string.day_th), "Fr" to stringResource(Res.string.day_fr), "Sa" to stringResource(Res.string.day_sa),
         "Su" to stringResource(Res.string.day_su), "PH" to stringResource(Res.string.day_ph), "off" to stringResource(Res.string.day_off),
     )
-    info.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+    info.address?.let { DetailRow({ PlaceIcon(muted, it) }) { Text(it, style = MaterialTheme.typography.bodyLarge) } }
     if (info.collectionTimes != null) {
         Text(stringResource(Res.string.collection_times), style = MaterialTheme.typography.titleSmall)
         val rows = formatCollectionTimes(info.collectionTimes, days)
