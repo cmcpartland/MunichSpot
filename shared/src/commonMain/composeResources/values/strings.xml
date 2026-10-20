@@ -39,10 +39,9 @@
     <string name="reset">Reset</string>
     <string name="glass">Glass</string>
     <string name="packaging">Light packaging</string>
-    <string name="glass_colors">Glass (%1$s)</string>
-    <string name="glass_brown">brown</string>
-    <string name="glass_green">green</string>
-    <string name="glass_white">clear</string>
+    <string name="glass_brown">Brown glass</string>
+    <string name="glass_green">Green glass</string>
+    <string name="glass_white">White glass</string>
     <string name="filter_accessible">Accessible only</string>
     <string name="filter_free">Free only</string>
     <string name="filter_changing">With changing table</string>

@@ -39,10 +39,9 @@
     <string name="reset">Zurücksetzen</string>
     <string name="glass">Glas</string>
     <string name="packaging">Leichtverpackungen</string>
-    <string name="glass_colors">Glas (%1$s)</string>
-    <string name="glass_brown">braun</string>
-    <string name="glass_green">grün</string>
-    <string name="glass_white">weiß</string>
+    <string name="glass_brown">Braunglas</string>
+    <string name="glass_green">Grünglas</string>
+    <string name="glass_white">Weißglas</string>
     <string name="filter_accessible">Nur barrierefrei</string>
     <string name="filter_free">Nur kostenlos</string>
     <string name="filter_changing">Mit Wickeltisch</string>
