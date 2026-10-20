@@ -7,7 +7,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +26,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.BottomSheet
@@ -116,11 +119,20 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CategoryIcon(poi.type, size = 32.dp)
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleLarge)
                 if (!nameIsAddress && poi.name.isNotEmpty() && poi.name != title) {
                     Text(poi.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+            FilledTonalButton(
+                onClick = { openDirections(poi, uriHandler) },
+                modifier = Modifier.heightIn(min = 36.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                DirectionsIcon(LocalContentColor.current)
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(Res.string.directions), style = MaterialTheme.typography.labelLarge)
             }
         }
         val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -160,7 +172,6 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
         }
         poi.toilet?.let { ToiletDetails(it, now) }
         poi.postBox?.let { PostBoxDetails(it) }
-        Button(onClick = { openDirections(poi, uriHandler) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(Res.string.directions)) }
         Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
