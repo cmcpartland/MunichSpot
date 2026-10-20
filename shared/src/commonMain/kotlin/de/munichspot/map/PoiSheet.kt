@@ -1,6 +1,12 @@
 package de.munichspot.map
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -183,53 +189,79 @@ private val FLOOR_LEVEL = Regex("^(\\d+)\\.\\s*(UG|OG)$")
 @Composable
 private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
     val body = MaterialTheme.typography.bodyMedium
-    toilet.address?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
-    val free = toilet.price == 0.0
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val error = MaterialTheme.colorScheme.error
+    toilet.address?.let { DetailRow({ PlaceIcon(muted, it) }) { Text(it, style = MaterialTheme.typography.bodyLarge) } }
+    val hours = toilet.hours?.shown()?.split(" / ", " | ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
+    if (hours.isNotEmpty()) {
+        var expanded by remember(toilet) { mutableStateOf(false) }
+        val open = toilet.schedule?.isOpen(now)
+        val rotation by animateFloatAsState(if (expanded) 180f else 0f)
+        Column(Modifier.fillMaxWidth().clickable(role = Role.Button) { expanded = !expanded }) {
+            DetailRow({ ClockIcon(muted, it) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(
+                            when (open) {
+                                true -> Res.string.open_now
+                                false -> Res.string.closed_now
+                                null -> Res.string.opening_hours
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = when (open) {
+                            true -> openColor()
+                            false -> error
+                            null -> MaterialTheme.colorScheme.onSurface
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ChevronIcon(muted, Modifier.rotate(rotation))
+                }
+                AnimatedVisibility(expanded) {
+                    Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        hours.forEach { Text(it, style = body) }
+                        if (toilet.hours?.translated() == true) AutoTranslatedLabel()
+                    }
+                }
+            }
+        }
+    }
+    toilet.price?.let { price ->
+        DetailRow({ EuroIcon(muted, it) }) {
+            Text(if (price == 0.0) stringResource(Res.string.free) else formatEuro(price, isEnglish()), style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+    val floors = toilet.floor?.split(" / ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
+    if (floors.isNotEmpty()) {
+        val text = floors.map { f ->
+            val level = FLOOR_LEVEL.matchEntire(f)
+            val n = level?.groupValues?.get(1)?.toInt() ?: 0
+            when {
+                f == "EG" -> stringResource(Res.string.floor_ground)
+                level?.groupValues?.get(2) == "UG" && n == 1 -> stringResource(Res.string.floor_basement_first)
+                level?.groupValues?.get(2) == "UG" -> stringResource(Res.string.floor_basement, n)
+                level != null -> stringResource(Res.string.floor_upper, n)
+                else -> f
+            }
+        }.joinToString(" · ")
+        DetailRow({ StairsIcon(muted, it) }) { Text(text, style = MaterialTheme.typography.bodyLarge) }
+    }
+    listOf("F" to stringResource(Res.string.room_women), "M" to stringResource(Res.string.room_men), "U" to stringResource(Res.string.room_unisex))
+        .filter { it.first in toilet.rooms }
+        .takeIf { it.isNotEmpty() }
+        ?.let { rooms ->
+            DetailRow({ PeopleIcon(muted, it) }) { Text(rooms.joinToString(" · ") { it.second }, style = MaterialTheme.typography.bodyLarge) }
+        }
     val chips = listOfNotNull(
-        toilet.price?.let { if (free) stringResource(Res.string.free) else formatEuro(it, isEnglish()) },
         stringResource(Res.string.accessible).takeIf { toilet.accessible },
         stringResource(Res.string.changing_table).takeIf { toilet.changing },
         stringResource(Res.string.euro_key).takeIf { toilet.euroKey },
     )
     if (chips.isNotEmpty()) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            chips.forEachIndexed { i, text -> FactChip(text, tinted = free && i == 0) }
-        }
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        listOf("F" to stringResource(Res.string.room_women), "M" to stringResource(Res.string.room_men), "U" to stringResource(Res.string.room_unisex))
-            .filter { it.first in toilet.rooms }
-            .takeIf { it.isNotEmpty() }
-            ?.let { Text(it.joinToString(" · ") { r -> r.second }, style = body) }
-    }
-    val hours = toilet.hours?.shown()?.split(" / ", " | ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
-    if (hours.isNotEmpty()) {
-        Text(stringResource(Res.string.opening_hours), style = MaterialTheme.typography.titleSmall)
-        toilet.schedule?.isOpen(now)?.let { open ->
-            Text(
-                stringResource(if (open) Res.string.open_now else Res.string.closed_now),
-                style = body,
-                color = if (open) openColor() else MaterialTheme.colorScheme.error,
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { hours.forEach { Text(it, style = body) } }
-        if (toilet.hours?.translated() == true) AutoTranslatedLabel()
-    }
-    val floors = toilet.floor?.split(" / ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
-    if (floors.isNotEmpty()) {
-        Text(stringResource(Res.string.floor), style = MaterialTheme.typography.titleSmall)
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            floors.forEach { f ->
-                val level = FLOOR_LEVEL.matchEntire(f)
-                val n = level?.groupValues?.get(1)?.toInt() ?: 0
-                val text = when {
-                    f == "EG" -> stringResource(Res.string.floor_ground)
-                    level?.groupValues?.get(2) == "UG" && n == 1 -> stringResource(Res.string.floor_basement_first)
-                    level?.groupValues?.get(2) == "UG" -> stringResource(Res.string.floor_basement, n)
-                    level != null -> stringResource(Res.string.floor_upper, n)
-                    else -> f
-                }
-                Text(text, style = body)
+        DetailRow({ CheckCircleIcon(muted, it) }) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                chips.forEach { FactChip(it) }
             }
         }
     }
@@ -238,17 +270,20 @@ private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
         ToiletStatus.IMPAIRED -> stringResource(Res.string.toilet_impaired)
         null -> null
     }
-    warning?.let { Text(it, style = body, color = MaterialTheme.colorScheme.error) }
+    warning?.let { DetailRow({ WarningIcon(error, it) }) { Text(it, style = body, color = error) } }
 }
 
 @Composable
-private fun FactChip(text: String, tinted: Boolean = false) {
-    val green = openColor()
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = if (tinted) green.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (tinted) green else MaterialTheme.colorScheme.onSurfaceVariant,
-    ) {
+private fun DetailRow(icon: @Composable (Modifier) -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        icon(Modifier.padding(top = 2.dp))
+        Column(Modifier.weight(1f), content = content)
+    }
+}
+
+@Composable
+private fun FactChip(text: String) {
+    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant) {
         Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
     }
 }
