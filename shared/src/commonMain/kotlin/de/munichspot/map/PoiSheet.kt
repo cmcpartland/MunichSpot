@@ -102,6 +102,7 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
     }
     val title = stringResource(titleRes)
     val source = stringResource(sourceRes)
+    val nameIsAddress = poi.type == PoiType.RECYCLING || poi.type == PoiType.CLOTHES
     Column(
         Modifier.fillMaxWidth().onGloballyPositioned {
             val p = it.positionOnScreen()
@@ -114,13 +115,16 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
             CategoryIcon(poi.type, size = 32.dp)
             Column {
                 Text(title, style = MaterialTheme.typography.titleLarge)
-                if (poi.name.isNotEmpty() && poi.name != title) {
+                if (!nameIsAddress && poi.name.isNotEmpty() && poi.name != title) {
                     Text(poi.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
         val muted = MaterialTheme.colorScheme.onSurfaceVariant
         val hint = MaterialTheme.typography.bodyMedium
+        if (nameIsAddress && poi.name.isNotEmpty()) {
+            DetailRow({ PlaceIcon(muted, it) }) { Text(poi.name, style = MaterialTheme.typography.bodyLarge) }
+        }
         if (poi.type == PoiType.RECYCLING) {
             val chips = listOf(
                 Material.GLASS_BROWN to stringResource(Res.string.glass_brown),
