@@ -96,6 +96,20 @@ internal fun ChevronIcon(color: Color, modifier: Modifier = Modifier) {
 }
 
 @Composable
+internal fun DirectionsIcon(color: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier.size(18.dp)) {
+        val path = Path().apply {
+            moveTo(size.width * 0.85f, size.height * 0.15f)
+            lineTo(size.width * 0.58f, size.height * 0.88f)
+            lineTo(size.width * 0.46f, size.height * 0.54f)
+            lineTo(size.width * 0.12f, size.height * 0.42f)
+            close()
+        }
+        drawPath(path, color)
+    }
+}
+
+@Composable
 internal fun ClockIcon(color: Color, modifier: Modifier = Modifier) {
     Canvas(modifier.size(20.dp)) {
         val w = 1.8.dp.toPx()
