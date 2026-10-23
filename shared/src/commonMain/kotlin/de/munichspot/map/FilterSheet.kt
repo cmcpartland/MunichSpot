@@ -49,6 +49,12 @@ internal fun FilterSheet(type: PoiType, filters: PoiFilters, onChange: (PoiFilte
                         }
                     }
                 }
+                PoiType.RECYCLING_CENTRE -> {
+                    val selected = filters.centreRequirements
+                    CheckRow(stringResource(Res.string.filter_open_now), CentreFilter.OPEN_NOW in selected) {
+                        onChange(filters.copy(centreRequirements = if (it) selected + CentreFilter.OPEN_NOW else selected - CentreFilter.OPEN_NOW))
+                    }
+                }
                 PoiType.TOILET -> {
                     val selected = filters.toiletRequirements
                     for ((entry, label) in listOf(

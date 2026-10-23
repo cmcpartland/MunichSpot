@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetches Munich recycling islands (AWM), mailboxes (OSM) drinking fountains and public toilets and writes pois.geojson."""
+"""Fetches Munich recycling islands (AWM), mailboxes (OSM) drinking fountains, public toilets and recycling centres and writes pois.geojson."""
 import itertools
 import json
 import math
@@ -15,6 +15,7 @@ import requests
 from pyproj import Transformer
 from ci import warn
 from hours import colon_times, parse_schedule
+from osm_hours import parse_opening_hours
 from translate import translate_features
 from validate_pois import validate
 
@@ -30,15 +31,23 @@ TOILET_URL = (
     "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.1.0"
     "&request=GetFeature&typeName=gsm_wfs:wc_finder_opendata&outputFormat=application/json"
 )
+WSH_URL = (
+    "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0"
+    "&request=GetFeature&typeName=gsm_wfs:awm_wertstoffhoefe&outputFormat=application/json"
+)
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 OVERPASS_QUERY = """[out:json][timeout:120];
 area["boundary"="administrative"]["admin_level"="6"]["name"="München"]["de:amtlicher_gemeindeschluessel"="09162000"]->.a;
-nwr["amenity"="post_box"](area.a);
+(
+  nwr["amenity"="post_box"](area.a);
+  nwr["amenity"="recycling"]["recycling_type"="centre"](area.a);
+);
 out center tags;"""
 USER_AGENT = "MunichSpot-data/0.1 (+https://github.com/cmcpartland/MunichSpot)"
 DEFAULT_OUT = Path(__file__).resolve().parent / "out/pois.geojson"
 
 TOILET_MERGE_METERS = 15
+WSH_MATCH_METERS = 150
 ROOM_CODES = (("männlich", "M"), ("weiblich", "F"), ("unisex", "U"), ("barrierefrei", "A"))
 RETRY_STATUSES = (404, 429, 502, 503, 504)
 RETRY_SECONDS = 300
@@ -96,10 +105,10 @@ def recycling_features():
         yield feature("awm-" + f["id"], "RECYCLING", name, lon, lat, materials)
 
 
-def mailbox_features():
-    for e in fetch(OVERPASS_URL, {"data": OVERPASS_QUERY})["elements"]:
+def mailbox_features(elements):
+    for e in elements:
         point = e if "lat" in e else e.get("center")
-        if point is None:
+        if point is None or e.get("tags", {}).get("amenity") != "post_box":
             continue
         tags = e.get("tags", {})
         extra = {}
@@ -111,6 +120,38 @@ def mailbox_features():
             extra["indoor"] = True
         name = (tags.get("name") or "").strip()
         yield feature(f"osm-{e['id']}", "POST_BOX", name, point["lon"], point["lat"], **extra)
+
+
+to_utm = Transformer.from_crs("EPSG:4326", "EPSG:25832", always_xy=True)
+
+
+def is_awm_centre(tags):
+    return "Abfallwirtschaftsbetrieb" in (tags.get("operator") or "") or (tags.get("name") or "").startswith("Wertstoffhof")
+
+
+def wsh_features(elements):
+    centres = []
+    for e in elements:
+        point = e if "lat" in e else e.get("center")
+        tags = e.get("tags", {})
+        if point and tags.get("amenity") == "recycling" and tags.get("recycling_type") == "centre" and is_awm_centre(tags):
+            centres.append((to_utm.transform(point["lon"], point["lat"]), tags))
+    for f in fetch(WSH_URL)["features"]:
+        x, y = f["geometry"]["coordinates"][:2]
+        lon, lat = to_wgs84.transform(x, y)
+        address = clean(f["properties"].get("adresse"))
+        dist, tags = min(((math.dist((x, y), xy), t) for xy, t in centres), key=lambda c: c[0], default=(math.inf, {}))
+        extra = {}
+        if address:
+            extra["address"] = address
+        if dist > WSH_MATCH_METERS:
+            warn(f"Wertstoffhof {address!r} has no OSM match within {WSH_MATCH_METERS} m")
+            tags = {}
+        elif schedule := parse_opening_hours(tags.get("opening_hours")):
+            extra["schedule"] = schedule
+        if "schedule" not in extra:
+            warn(f"Wertstoffhof {address!r} has no schedule (opening_hours: {tags.get('opening_hours')!r})")
+        yield feature("wsh-" + f["id"], "RECYCLING_CENTRE", clean(tags.get("name")), lon, lat, **extra)
 
 
 GENERIC_FOUNTAIN_TEXT = {"trinkbrunnen", "trinkwasserbrunnen", "trinkwasserspender", "kein name"}
@@ -220,7 +261,11 @@ def toilet_features():
 
 def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT
-    features = sorted([*recycling_features(), *mailbox_features(), *fountain_features(), *toilet_features()], key=lambda f: f["id"])
+    elements = fetch(OVERPASS_URL, {"data": OVERPASS_QUERY})["elements"]
+    features = sorted(
+        [*recycling_features(), *mailbox_features(elements), *fountain_features(), *toilet_features(), *wsh_features(elements)],
+        key=lambda f: f["id"],
+    )
 
     translations = translate_features([f for f in features if f["properties"]["type"] in ("TOILET", "DRINKING_WATER")], out)
 

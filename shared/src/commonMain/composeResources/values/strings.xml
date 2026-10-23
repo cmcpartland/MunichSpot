@@ -5,12 +5,15 @@
     <string name="type_post_box">Mailboxes</string>
     <string name="type_drinking_water">Drinking fountains</string>
     <string name="type_toilet">Toilets</string>
+    <string name="type_recycling_centre">Recycling centres</string>
     <string name="title_recycling">Recycling point</string>
     <string name="title_clothes">Clothes bank</string>
     <string name="title_post_box">Mailbox</string>
     <string name="title_drinking_water">Drinking fountain</string>
     <string name="title_toilet">Public toilet</string>
+    <string name="title_recycling_centre">Recycling centre</string>
     <string name="source_city">Source: City of Munich (dl-by-de/2.0)</string>
+    <string name="source_recycling_centre">Source: City of Munich, AWM (dl-by-de/2.0); opening hours: © OpenStreetMap contributors</string>
     <string name="source_osm">Source: © OpenStreetMap contributors</string>
     <string name="attribution">© OpenStreetMap contributors · OpenFreeMap · Data: City of Munich (dl-by-de/2.0)</string>
     <string name="data_as_of">Data as of: %1$s</string>
@@ -80,6 +83,8 @@
     <string name="day_fr">Fri</string>
     <string name="day_sa">Sat</string>
     <string name="day_su">Sun</string>
+    <string name="holidays_not_considered">Public holidays not considered</string>
+    <string name="whats_accepted">What's accepted</string>
     <string name="day_ph">Public holiday</string>
     <string name="day_off">no collection</string>
 </resources>

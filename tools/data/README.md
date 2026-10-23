@@ -32,9 +32,9 @@ python tools/data/validate_pois.py site/pois.geojson --previous https://cmcpartl
 
 It collects all problems and exits non-zero if there are any. Thresholds are constants at the top of the script.
 
-- Structure: a FeatureCollection of Point features with finite coordinates, unique string ids with the prefix of their type (`awm-`, `osm-`, `tb-`, `wc-`), a known type, a string name (empty when the source has none), known materials.
-- Minimums: 500 recycling islands, 500 mailboxes, 50 drinking fountains, 100 toilet locations, 1000 in total, all points inside the Munich bounding box.
-- Content: at least 90 % distinct coordinates per type; recycling: 90 % with materials and at least 100 with CLOTHING; mailboxes: 80 % with `collectionTimes`; toilets: 50 % with `hours` and at most 50 % DEFECT/IMPAIRED.
+- Structure: a FeatureCollection of Point features with finite coordinates, unique string ids with the prefix of their type (`awm-`, `osm-`, `tb-`, `wc-`, `wsh-`), a known type, a string name (empty when the source has none), known materials.
+- Minimums: 500 recycling islands, 500 mailboxes, 50 drinking fountains, 100 toilet locations, 10 recycling centres, 1000 in total, all points inside the Munich bounding box.
+- Content: at least 90 % distinct coordinates per type; recycling: 90 % with materials and at least 100 with CLOTHING; mailboxes: 80 % with `collectionTimes`; toilets: 50 % with `hours` and at most 50 % DEFECT/IMPAIRED; recycling centres: a warning if fewer than 80 % have a `schedule`.
 - Compared with `--previous` (URL or local path): each type's count must be 80 % to 150 % of the previous count, and CLOTHING at least 80 %. Fewer than 70 % of the previous ids kept is only a warning, as is a previous file that can't be fetched or parsed (the comparison is then skipped).
 
 It prints a previous/new/delta table and appends it to `$GITHUB_STEP_SUMMARY` when set.
@@ -50,6 +50,10 @@ The DeepL key is the repository secret `DEEPL_AUTH_KEY` (a key ending in `:fx` u
 ## Toilet opening hours (`schedule`)
 
 `hours.py` (`parse_schedule`) turns the free-text `hours` of a toilet into the structured property `schedule`, a list of rules `{"from": min, "to": min}` with optional `"days"` (ISO weekdays 1 = Monday .. 7, absent = every day) and optional `"months"` (1..12, absent = all year). Minutes count from local midnight; `to` may exceed 1440 for hours past midnight (06:00-02:00 is 360..1560), 24:00 is 1440. The toilet is open at a local time if any rule matches (a rule spills into the next day's early hours with the days/months of its own day) and closed otherwise, so a schedule is only written when it describes all opening times. The parser is a strict whitelist: daily ranges, always open ("Durchgehend", "24 Stunden", flood-only notes), weekday ranges and lists (Mo-Sa, wochentags, samstags, "So/Feiertag" counts as Sunday; holidays aren't modelled), month-dependent hours and "ganztägig, Mai bis Oktober". Everything else (cemetery, kiosk or café dependent, events, months without times) gives no `schedule` and the app treats it as unknown. Texts merged with " / " are parsed per part; the schedule is the union, or none if any part fails. `build_pois.py` prints the hours strings without a schedule ("hours without schedule: ...") so new formats show up in the logs, and warns if fewer than half of the toilets with hours get one. `validate_pois.py` checks the shape. Test with `python3 tools/data/test_hours.py` (also run by the nightly workflow before the build).
+
+## Recycling centre opening hours
+
+Recycling centres (Wertstoffhöfe, type `RECYCLING_CENTRE`, ids `wsh-<wfs id>`) take their location and `address` from the city WFS layer. Its names are useless ("WSH"), so `build_pois.py` matches each site to the nearest AWM recycling centre in OSM within 150 m (distance in EPSG:25832 metres; AWM = operator contains "Abfallwirtschaftsbetrieb" or name starts with "Wertstoffhof") and takes `name` and `opening_hours` from it. The Overpass query returns mailboxes and recycling centres in one request. `osm_hours.py` (`parse_opening_hours`) turns the OSM text into `schedule` (same rule format as above, no months) with a strict whitelist: `24/7` or rules joined by `;`, each `<days> <HH:MM-HH:MM[,HH:MM-HH:MM]>` with days as `Mo`, `Mo-Fr` or `Mo,We,Fr`. Anything else (`PH`, `off`, comments, months, `+`, sunrise) or a day in more than one rule gives no `schedule` and the app treats the centre as unknown. Sites without an OSM match or schedule produce a warning. Test with `python3 tools/data/test_osm_hours.py` (also run by the nightly workflow).
 
 ## City boundary
 
@@ -74,6 +78,7 @@ Raw file: https://raw.githubusercontent.com/cmcpartland/MunichSpot/data-history/
 ## Sources
 
 - Recycling islands: Landeshauptstadt München, AWM, WFS `gsm_wfs:awm_container` (EPSG:25832, reprojected to WGS84). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
+- Recycling centres: Landeshauptstadt München, AWM, WFS `gsm_wfs:awm_wertstoffhoefe` (EPSG:25832, reprojected to WGS84; locations and addresses). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0). Names and opening hours: OpenStreetMap `amenity=recycling` + `recycling_type=centre` via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 - Mailboxes: OpenStreetMap `amenity=post_box` in Munich via the Overpass API. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 - Drinking fountains: Landeshauptstadt München, WFS `baug_wfs:trinkwasserbrunnen`, dataset `opendata_trinkwasserbrunnen` (EPSG:25832, reprojected to WGS84). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
 - Public toilets: Landeshauptstadt München, WFS `gsm_wfs:wc_finder_opendata`, dataset `wc_finder` (EPSG:25832, reprojected to WGS84). The dataset has one feature per room; rooms within 15 m are merged into one location. Opening times are normalised from dot format (e.g. "06.00") to HH:MM (e.g. "06:00"). [dl-de/by-2.0](https://www.govdata.de/dl-de/by-2-0).
