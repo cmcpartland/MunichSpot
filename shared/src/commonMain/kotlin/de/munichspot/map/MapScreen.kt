@@ -120,7 +120,7 @@ internal fun MapScreen(
     LaunchedEffect(selected, showFilters) { if (selected != null || showFilters) pickerOpen = false }
     LaunchedEffect(showFilters) { if (showFilters) selected = null }
     val currentNow by rememberUpdatedState(now)
-    // Only changes when a toilet or recycling centre opens or closes, so their sources aren't rebuilt every minute.
+    // Only changes when a toilet, recycling centre or bookcase opens or closes, so their sources aren't rebuilt every minute.
     val closedIds by remember(pois) {
         derivedStateOf { pois.filter { it.knownClosed(currentNow) }.mapTo(mutableSetOf()) { it.id } as Set<String> }
     }
@@ -130,6 +130,7 @@ internal fun MapScreen(
             PoiType.RECYCLING -> f.recyclingMaterials
             PoiType.TOILET -> f.toiletRequirements to closedIds
             PoiType.RECYCLING_CENTRE -> f.centreRequirements to closedIds
+            PoiType.PUBLIC_BOOKCASE -> closedIds
             else -> null
         }
         remember(pois, key) { pois.filter { it.type == t && f.matches(it, currentNow) }.toGeoJson(closedIds) }
@@ -183,7 +184,7 @@ internal fun MapScreen(
                 },
             )
             if (t == PoiType.TOILET) PoiWarningLayer(t, sources.getValue(t))
-            if (t == PoiType.TOILET || t == PoiType.RECYCLING_CENTRE) PoiClosedLayer(t, sources.getValue(t))
+            if (t.hasSchedule()) PoiClosedLayer(t, sources.getValue(t))
             PoiBadgeLayers(t, sources.getValue(t), mapState, scope, clearSelection)
             PoiCountLayers(t, sources.getValue(t), mapState, scope, clearSelection)
         }

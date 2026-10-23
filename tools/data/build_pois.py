@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetches Munich recycling islands (AWM), mailboxes (OSM) drinking fountains, public toilets and recycling centres and writes pois.geojson."""
+"""Fetches Munich recycling islands (AWM), mailboxes (OSM) drinking fountains, public toilets, recycling centres and public bookcases and writes pois.geojson."""
 import itertools
 import json
 import math
@@ -41,6 +41,7 @@ area["boundary"="administrative"]["admin_level"="6"]["name"="München"]["de:amtl
 (
   nwr["amenity"="post_box"](area.a);
   nwr["amenity"="recycling"]["recycling_type"="centre"](area.a);
+  nwr["amenity"="public_bookcase"](area.a);
 );
 out center tags;"""
 USER_AGENT = "MunichSpot-data/0.1 (+https://github.com/cmcpartland/MunichSpot)"
@@ -120,6 +121,28 @@ def mailbox_features(elements):
             extra["indoor"] = True
         name = (tags.get("name") or "").strip()
         yield feature(f"osm-{e['id']}", "POST_BOX", name, point["lon"], point["lat"], **extra)
+
+
+BOOKCASE_PRIVATE_ACCESS = {"private", "no", "customers"}
+
+
+def bookcase_features(elements):
+    for e in elements:
+        point = e if "lat" in e else e.get("center")
+        tags = e.get("tags", {})
+        if point is None or tags.get("amenity") != "public_bookcase" or tags.get("access") in BOOKCASE_PRIVATE_ACCESS:
+            continue
+        kind = tags.get("public_bookcase:type")
+        extra = {}
+        if note := clean(tags.get("description")):
+            extra["note"] = note
+        if kind == "phone_box":
+            extra["phoneBox"] = True
+        if tags.get("indoor") == "yes" or kind == "building":
+            extra["indoor"] = True
+        if schedule := parse_opening_hours(tags.get("opening_hours")):
+            extra["schedule"] = schedule
+        yield feature(f"osm-{e['type'][0]}{e['id']}", "PUBLIC_BOOKCASE", clean(tags.get("name")), point["lon"], point["lat"], **extra)
 
 
 to_utm = Transformer.from_crs("EPSG:4326", "EPSG:25832", always_xy=True)
@@ -263,11 +286,11 @@ def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT
     elements = fetch(OVERPASS_URL, {"data": OVERPASS_QUERY})["elements"]
     features = sorted(
-        [*recycling_features(), *mailbox_features(elements), *fountain_features(), *toilet_features(), *wsh_features(elements)],
+        [*recycling_features(), *mailbox_features(elements), *fountain_features(), *toilet_features(), *wsh_features(elements), *bookcase_features(elements)],
         key=lambda f: f["id"],
     )
 
-    translations = translate_features([f for f in features if f["properties"]["type"] in ("TOILET", "DRINKING_WATER")], out)
+    translations = translate_features([f for f in features if f["properties"]["type"] in ("TOILET", "DRINKING_WATER", "PUBLIC_BOOKCASE")], out)
 
     errors, warnings = validate(features)
     for w in warnings:

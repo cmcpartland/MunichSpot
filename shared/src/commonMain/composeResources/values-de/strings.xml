@@ -6,11 +6,13 @@
     <string name="type_drinking_water">Trinkbrunnen</string>
     <string name="type_toilet">Toiletten</string>
     <string name="type_recycling_centre">Wertstoffhöfe</string>
+    <string name="type_public_bookcase">Bücherschränke</string>
     <string name="title_recycling">Wertstoffinsel</string>
     <string name="title_clothes">Altkleidercontainer</string>
     <string name="title_post_box">Briefkasten</string>
     <string name="title_drinking_water">Trinkbrunnen</string>
     <string name="title_toilet">Öffentliche Toilette</string>
+    <string name="title_public_bookcase">Öffentlicher Bücherschrank</string>
     <string name="title_recycling_centre">Wertstoffhof</string>
     <string name="source_city">Quelle: Landeshauptstadt München (dl-by-de/2.0)</string>
     <string name="source_recycling_centre">Quelle: Landeshauptstadt München, AWM (dl-by-de/2.0); Öffnungszeiten: © OpenStreetMap contributors</string>
@@ -75,6 +77,7 @@
     <string name="toilet_impaired">Laut Stadt teilweise beeinträchtigt</string>
     <string name="collection_times">Leerungszeiten</string>
     <string name="no_collection_times">Keine Leerungszeiten bekannt</string>
+    <string name="phone_box_hint">In einer ehemaligen Telefonzelle</string>
     <string name="indoor_note">Im Gebäude – nur während dessen Öffnungszeiten zugänglich</string>
     <string name="day_mo">Mo</string>
     <string name="day_tu">Di</string>
@@ -87,4 +90,5 @@
     <string name="whats_accepted">Was wird angenommen?</string>
     <string name="day_ph">Feiertag</string>
     <string name="day_off">keine Leerung</string>
+    <string name="open_24_hours">Rund um die Uhr geöffnet</string>
 </resources>

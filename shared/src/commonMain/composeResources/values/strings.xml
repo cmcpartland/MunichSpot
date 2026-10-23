@@ -6,11 +6,13 @@
     <string name="type_drinking_water">Drinking fountains</string>
     <string name="type_toilet">Toilets</string>
     <string name="type_recycling_centre">Recycling centres</string>
+    <string name="type_public_bookcase">Bookcases</string>
     <string name="title_recycling">Recycling point</string>
     <string name="title_clothes">Clothes bank</string>
     <string name="title_post_box">Mailbox</string>
     <string name="title_drinking_water">Drinking fountain</string>
     <string name="title_toilet">Public toilet</string>
+    <string name="title_public_bookcase">Public bookcase</string>
     <string name="title_recycling_centre">Recycling centre</string>
     <string name="source_city">Source: City of Munich (dl-by-de/2.0)</string>
     <string name="source_recycling_centre">Source: City of Munich, AWM (dl-by-de/2.0); opening hours: © OpenStreetMap contributors</string>
@@ -75,6 +77,7 @@
     <string name="toilet_impaired">According to the city: partly impaired</string>
     <string name="collection_times">Collection times</string>
     <string name="no_collection_times">No collection times known</string>
+    <string name="phone_box_hint">In a former phone box</string>
     <string name="indoor_note">Indoors – only accessible during opening hours</string>
     <string name="day_mo">Mon</string>
     <string name="day_tu">Tue</string>
@@ -87,4 +90,5 @@
     <string name="whats_accepted">What's accepted</string>
     <string name="day_ph">Public holiday</string>
     <string name="day_off">no collection</string>
+    <string name="open_24_hours">Open 24 hours</string>
 </resources>
