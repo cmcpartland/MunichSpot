@@ -14,9 +14,9 @@ from ci import warn
 
 USER_AGENT = "MunichSpot-data/0.1 (+https://github.com/cmcpartland/MunichSpot)"
 
-ID_PREFIX = {"RECYCLING": "awm-", "POST_BOX": "osm-", "DRINKING_WATER": "tb-", "TOILET": "wc-"}
+ID_PREFIX = {"RECYCLING": "awm-", "POST_BOX": "osm-", "DRINKING_WATER": "tb-", "TOILET": "wc-", "RECYCLING_CENTRE": "wsh-"}
 MATERIALS = {"GLASS_BROWN", "GLASS_GREEN", "GLASS_WHITE", "PACKAGING", "CLOTHING"}
-MIN_PER_TYPE = {"RECYCLING": 500, "POST_BOX": 500, "DRINKING_WATER": 50, "TOILET": 100}
+MIN_PER_TYPE = {"RECYCLING": 500, "POST_BOX": 500, "DRINKING_WATER": 50, "TOILET": 100, "RECYCLING_CENTRE": 10}
 MIN_TOTAL = 1000
 LAT_RANGE = (47.9, 48.4)
 LON_RANGE = (11.2, 11.9)
@@ -26,6 +26,7 @@ MIN_RECYCLING_WITH_MATERIALS = 0.9
 MIN_CLOTHING = 100
 MIN_POST_BOX_WITH_TIMES = 0.8
 MIN_TOILET_WITH_HOURS = 0.5
+MIN_CENTRE_WITH_SCHEDULE = 0.8
 MIN_HOURS_TRANSLATED = 0.9
 MAX_TOILET_BAD_STATUS = 0.5
 
@@ -138,9 +139,13 @@ def check_content(features, c, errors, warnings):
     translated = sum(bool(props(f).get("hoursEn")) for f in with_hours)
     if with_hours and translated < MIN_HOURS_TRANSLATED * len(with_hours):
         warnings.append(f"TOILET: only {translated} of {len(with_hours)} ({pct(translated, len(with_hours))}) hours have hoursEn (min {pct(MIN_HOURS_TRANSLATED, 1)})")
-    for f in toilets:
+    for f in features:
         if "schedule" in props(f):
             check_schedule(props(f)["schedule"], f.get("id"), errors)
+    centres = by_type["RECYCLING_CENTRE"]
+    with_schedule = sum("schedule" in props(f) for f in centres)
+    if centres and with_schedule < MIN_CENTRE_WITH_SCHEDULE * len(centres):
+        warnings.append(f"RECYCLING_CENTRE: only {with_schedule} of {len(centres)} ({pct(with_schedule, len(centres))}) have a schedule (min {pct(MIN_CENTRE_WITH_SCHEDULE, 1)})")
     bad = sum(props(f).get("status") in ("DEFECT", "IMPAIRED") for f in toilets)
     if toilets and bad > MAX_TOILET_BAD_STATUS * len(toilets):
         errors.append(f"TOILET: {bad} of {len(toilets)} ({pct(bad, len(toilets))}) are DEFECT/IMPAIRED (max {pct(MAX_TOILET_BAD_STATUS, 1)})")
