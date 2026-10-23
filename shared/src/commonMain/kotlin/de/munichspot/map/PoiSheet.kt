@@ -372,16 +372,12 @@ private fun BookcaseDetails(info: BookcaseInfo, note: LocalText?, schedule: List
 
 @Composable
 private fun ScheduleDetails(schedule: List<ScheduleRule>?, now: LocalDateTime) {
-    if (schedule == null) return
+    if (schedule == null || schedule.isAlwaysOpen()) return
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val days = listOf(
         stringResource(Res.string.day_mo), stringResource(Res.string.day_tu), stringResource(Res.string.day_we), stringResource(Res.string.day_th),
         stringResource(Res.string.day_fr), stringResource(Res.string.day_sa), stringResource(Res.string.day_su),
     )
-    if (schedule.isAlwaysOpen()) {
-        DetailRow({ ClockIcon(muted, it) }) { Text(stringResource(Res.string.open_24_hours), style = MaterialTheme.typography.bodyLarge) }
-        return
-    }
     val open = schedule.isOpen(now)
     DetailRow({ ClockIcon(muted, it) }) {
         Text(
