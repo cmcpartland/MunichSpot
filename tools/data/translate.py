@@ -11,7 +11,7 @@ from hours import colon_times
 
 OVERRIDES_PATH = Path(__file__).resolve().parent / "translation_overrides.json"
 LIVE_TRANSLATIONS_URL = "https://cmcpartland.github.io/MunichSpot/translations.json"
-DEEPL_CONTEXT = "Opening hours and notes of public toilets and drinking fountains in Munich, Germany."
+DEEPL_CONTEXT = "Opening hours and notes of public toilets, drinking fountains and public bookcases in Munich, Germany."
 DEEPL_BATCH = 50
 SEPARATORS = re.compile(r"( / | \| )")
 
