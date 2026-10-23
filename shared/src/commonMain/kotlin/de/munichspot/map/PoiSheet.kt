@@ -378,6 +378,10 @@ private fun ScheduleDetails(schedule: List<ScheduleRule>?, now: LocalDateTime) {
         stringResource(Res.string.day_mo), stringResource(Res.string.day_tu), stringResource(Res.string.day_we), stringResource(Res.string.day_th),
         stringResource(Res.string.day_fr), stringResource(Res.string.day_sa), stringResource(Res.string.day_su),
     )
+    if (schedule.isAlwaysOpen()) {
+        DetailRow({ ClockIcon(muted, it) }) { Text(stringResource(Res.string.open_24_hours), style = MaterialTheme.typography.bodyLarge) }
+        return
+    }
     val open = schedule.isOpen(now)
     DetailRow({ ClockIcon(muted, it) }) {
         Text(
@@ -391,6 +395,9 @@ private fun ScheduleDetails(schedule: List<ScheduleRule>?, now: LocalDateTime) {
         Text(stringResource(Res.string.holidays_not_considered), style = MaterialTheme.typography.bodyMedium, color = muted)
     }
 }
+
+private fun List<ScheduleRule>.isAlwaysOpen() =
+    all { it.from == 0 && it.to >= 1440 } && (1..7).all { d -> any { it.days == null || d in it.days } }
 
 private const val WERTSTOFFHOF_URL = "https://www.awm-muenchen.de/wertstoffhof"
 

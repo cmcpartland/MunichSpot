@@ -90,4 +90,5 @@
     <string name="whats_accepted">What's accepted</string>
     <string name="day_ph">Public holiday</string>
     <string name="day_off">no collection</string>
+    <string name="open_24_hours">Open 24 hours</string>
 </resources>

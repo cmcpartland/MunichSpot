@@ -142,7 +142,7 @@ def bookcase_features(elements):
             extra["indoor"] = True
         if schedule := parse_opening_hours(tags.get("opening_hours")):
             extra["schedule"] = schedule
-        yield feature(f"osm-{e['id']}", "PUBLIC_BOOKCASE", clean(tags.get("name")), point["lon"], point["lat"], **extra)
+        yield feature(f"osm-{e['type'][0]}{e['id']}", "PUBLIC_BOOKCASE", clean(tags.get("name")), point["lon"], point["lat"], **extra)
 
 
 to_utm = Transformer.from_crs("EPSG:4326", "EPSG:25832", always_xy=True)

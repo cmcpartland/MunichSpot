@@ -57,7 +57,7 @@ Recycling centres (Wertstoffhöfe, type `RECYCLING_CENTRE`, ids `wsh-<wfs id>`) 
 
 ## Public bookcases
 
-Public bookcases (Bücherschränke, type `PUBLIC_BOOKCASE`, ids `osm-<osm id>`) come from the same Overpass request (`amenity=public_bookcase`). Those with `access` private, no or customers are skipped. `name` is the OSM name (often empty), `note` the OSM `description` (translated to `noteEn`), `phoneBox` is set for `public_bookcase:type=phone_box`, `indoor` for `indoor=yes` or `public_bookcase:type=building`, and `schedule` comes from `opening_hours` via `osm_hours.py` when it parses (the app treats the others as always accessible).
+Public bookcases (Bücherschränke, type `PUBLIC_BOOKCASE`, ids `osm-<n|w|r><osm id>`, so they never clash with mailbox ids) come from the same Overpass request (`amenity=public_bookcase`). Those with `access` private, no or customers are skipped. `name` is the OSM name (often empty), `note` the OSM `description` (translated to `noteEn`), `phoneBox` is set for `public_bookcase:type=phone_box`, `indoor` for `indoor=yes` or `public_bookcase:type=building`, and `schedule` comes from `opening_hours` via `osm_hours.py` when it parses (the app treats the others as always accessible).
 
 ## City boundary
 
