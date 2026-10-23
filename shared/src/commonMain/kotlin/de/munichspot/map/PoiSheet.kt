@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import de.munichspot.data.BookcaseInfo
 import de.munichspot.data.LocalText
 import de.munichspot.data.Material
 import de.munichspot.data.Poi
@@ -108,6 +109,7 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
         PoiType.POST_BOX -> Res.string.title_post_box to Res.string.source_osm
         PoiType.DRINKING_WATER -> Res.string.title_drinking_water to Res.string.source_city
         PoiType.TOILET -> Res.string.title_toilet to Res.string.source_city
+        PoiType.PUBLIC_BOOKCASE -> Res.string.title_public_bookcase to Res.string.source_osm
     }
     val title = stringResource(titleRes)
     val source = stringResource(sourceRes)
@@ -176,6 +178,7 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
         poi.toilet?.let { ToiletDetails(it, poi.schedule, now) }
         poi.recyclingCentre?.let { RecyclingCentreDetails(it, poi.schedule, now) }
         poi.postBox?.let { PostBoxDetails(it) }
+        poi.bookcase?.let { BookcaseDetails(it, poi.note, poi.schedule, now) }
         Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -342,24 +345,7 @@ private fun RecyclingCentreDetails(info: RecyclingCentreInfo, schedule: List<Sch
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val uriHandler = LocalUriHandler.current
     info.address?.let { DetailRow({ PlaceIcon(muted, it) }) { Text(it, style = MaterialTheme.typography.bodyLarge) } }
-    if (schedule != null) {
-        val days = listOf(
-            stringResource(Res.string.day_mo), stringResource(Res.string.day_tu), stringResource(Res.string.day_we), stringResource(Res.string.day_th),
-            stringResource(Res.string.day_fr), stringResource(Res.string.day_sa), stringResource(Res.string.day_su),
-        )
-        val open = schedule.isOpen(now)
-        DetailRow({ ClockIcon(muted, it) }) {
-            Text(
-                stringResource(if (open) Res.string.open_now else Res.string.closed_now),
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (open) openColor() else MaterialTheme.colorScheme.error,
-            )
-            Spacer(Modifier.height(6.dp))
-            TimeTable(formatSchedule(schedule, days))
-            Spacer(Modifier.height(6.dp))
-            Text(stringResource(Res.string.holidays_not_considered), style = MaterialTheme.typography.bodyMedium, color = muted)
-        }
-    }
+    ScheduleDetails(schedule, now)
     DetailRow({ InfoIcon(muted, it) }) {
         Text(
             stringResource(Res.string.whats_accepted),
@@ -367,6 +353,42 @@ private fun RecyclingCentreDetails(info: RecyclingCentreInfo, schedule: List<Sch
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable(role = Role.Button) { uriHandler.openUri(WERTSTOFFHOF_URL) },
         )
+    }
+}
+
+@Composable
+private fun BookcaseDetails(info: BookcaseInfo, note: LocalText?, schedule: List<ScheduleRule>?, now: LocalDateTime) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    note?.let {
+        DetailRow({ InfoIcon(muted, it) }) {
+            Text(stringResource(Res.string.note, it.shown()), style = MaterialTheme.typography.bodyLarge)
+            if (it.translated()) AutoTranslatedLabel()
+        }
+    }
+    if (info.phoneBox) DetailRow({ InfoIcon(muted, it) }) { Text(stringResource(Res.string.phone_box_hint), style = MaterialTheme.typography.bodyMedium, color = muted) }
+    if (info.indoor) DetailRow({ InfoIcon(muted, it) }) { Text(stringResource(Res.string.indoor_note), style = MaterialTheme.typography.bodyMedium, color = muted) }
+    ScheduleDetails(schedule, now)
+}
+
+@Composable
+private fun ScheduleDetails(schedule: List<ScheduleRule>?, now: LocalDateTime) {
+    if (schedule == null) return
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val days = listOf(
+        stringResource(Res.string.day_mo), stringResource(Res.string.day_tu), stringResource(Res.string.day_we), stringResource(Res.string.day_th),
+        stringResource(Res.string.day_fr), stringResource(Res.string.day_sa), stringResource(Res.string.day_su),
+    )
+    val open = schedule.isOpen(now)
+    DetailRow({ ClockIcon(muted, it) }) {
+        Text(
+            stringResource(if (open) Res.string.open_now else Res.string.closed_now),
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (open) openColor() else MaterialTheme.colorScheme.error,
+        )
+        Spacer(Modifier.height(6.dp))
+        TimeTable(formatSchedule(schedule, days))
+        Spacer(Modifier.height(6.dp))
+        Text(stringResource(Res.string.holidays_not_considered), style = MaterialTheme.typography.bodyMedium, color = muted)
     }
 }
 

@@ -35,7 +35,7 @@ internal data class PoiFilters(
                 recyclingMaterials.any { f -> poi.materials.any { it in f.materials } }
             )
         PoiType.RECYCLING_CENTRE -> CentreFilter.OPEN_NOW !in centreRequirements || !poi.knownClosed(now)
-        PoiType.CLOTHES, PoiType.POST_BOX, PoiType.DRINKING_WATER -> true
+        PoiType.CLOTHES, PoiType.POST_BOX, PoiType.DRINKING_WATER, PoiType.PUBLIC_BOOKCASE -> true
         PoiType.TOILET -> toiletRequirements.all {
             val toilet = poi.toilet
             when (it) {

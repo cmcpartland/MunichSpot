@@ -1,6 +1,6 @@
 package de.munichspot.data
 
-enum class PoiType { RECYCLING, CLOTHES, RECYCLING_CENTRE, POST_BOX, DRINKING_WATER, TOILET }
+enum class PoiType { RECYCLING, CLOTHES, RECYCLING_CENTRE, POST_BOX, DRINKING_WATER, TOILET, PUBLIC_BOOKCASE }
 
 enum class Material { GLASS_BROWN, GLASS_GREEN, GLASS_WHITE, PACKAGING, CLOTHING }
 
@@ -16,6 +16,7 @@ data class Poi(
     val toilet: ToiletInfo? = null,
     val recyclingCentre: RecyclingCentreInfo? = null,
     val postBox: PostBoxInfo? = null,
+    val bookcase: BookcaseInfo? = null,
 )
 
 /** German source text with an optional machine translation. */
@@ -24,6 +25,8 @@ data class LocalText(val de: String, val en: String?)
 data class PostBoxInfo(val address: String?, val collectionTimes: String?, val indoor: Boolean)
 
 data class RecyclingCentreInfo(val address: String?)
+
+data class BookcaseInfo(val phoneBox: Boolean, val indoor: Boolean)
 
 enum class ToiletStatus { IMPAIRED, DEFECT }
 

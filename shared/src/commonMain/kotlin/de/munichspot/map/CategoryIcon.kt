@@ -129,6 +129,14 @@ private fun DrawScope.drawGlyph(type: PoiType, c: Color) {
             drawLine(c, p(0.34f, 0.64f), p(0.66f, 0.64f), w * 0.7f)
             drawLine(c, p(0.34f, 0.77f), p(0.66f, 0.77f), w * 0.7f)
         }
+        PoiType.PUBLIC_BOOKCASE -> {
+            for ((i, top) in listOf(0.3f, 0.12f, 0.24f, 0.16f).withIndex()) {
+                val x = 0.1f + i * 0.2f
+                drawRoundRect(c, p(x, top), Size(0.16f * s, (0.84f - top) * s), CornerRadius(0.02f * s))
+                drawLine(type.pinColor(), p(x, top + 0.12f), p(x + 0.16f, top + 0.12f), w * 0.7f)
+            }
+            drawLine(c, p(0.04f, 0.9f), p(0.96f, 0.9f), w * 1.5f, StrokeCap.Round)
+        }
         PoiType.CLOTHES -> drawPath(
             Path().apply {
                 moveTo(0.34f * s, 0.12f * s)

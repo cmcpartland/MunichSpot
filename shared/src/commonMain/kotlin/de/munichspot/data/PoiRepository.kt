@@ -24,6 +24,7 @@ private val LEGACY_POST_BOX_NAME = Regex("^Briefkasten \\((.+)\\)$")
 // Mailboxes: © OpenStreetMap contributors (ODbL)
 // Clothes containers: derived from the recycling islands
 // Recycling centres: Landeshauptstadt München, AWM (locations); © OpenStreetMap contributors (names, opening hours)
+// Public bookcases: © OpenStreetMap contributors (ODbL)
 // Drinking fountains, public toilets: Landeshauptstadt München, opendata.muenchen.de (dl-by-de/2.0)
 data class PoiData(val pois: List<Poi>, val generated: Instant?)
 
@@ -108,6 +109,14 @@ private fun parseFeatures(root: JsonObject): List<Poi> =
                 PostBoxInfo(
                     address = properties["address"]?.jsonPrimitive?.contentOrNull,
                     collectionTimes = properties["collectionTimes"]?.jsonPrimitive?.contentOrNull ?: legacyTimes,
+                    indoor = properties["indoor"]?.jsonPrimitive?.booleanOrNull == true,
+                )
+            } else {
+                null
+            },
+            bookcase = if (type == PoiType.PUBLIC_BOOKCASE) {
+                BookcaseInfo(
+                    phoneBox = properties["phoneBox"]?.jsonPrimitive?.booleanOrNull == true,
                     indoor = properties["indoor"]?.jsonPrimitive?.booleanOrNull == true,
                 )
             } else {
