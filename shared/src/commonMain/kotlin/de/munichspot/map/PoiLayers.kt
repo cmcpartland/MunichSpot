@@ -232,7 +232,7 @@ internal fun PoiWarningLayer(type: PoiType, source: GeoJsonSource) {
     )
 }
 
-/** Small clock mark at the pin's bottom-right corner for pois that are closed right now; the pin itself is dimmed. */
+/** Small clock mark at the pin's bottom-right corner for pois with a schedule that are closed right now; the pin itself is dimmed. */
 @Composable
 @MaplibreComposable
 internal fun PoiClosedLayer(type: PoiType, source: GeoJsonSource) {

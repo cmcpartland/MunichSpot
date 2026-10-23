@@ -13,15 +13,19 @@ internal enum class RecyclingFilter(val materials: Set<Material>) {
 
 internal enum class ToiletFilter { ACCESSIBLE, FREE, CHANGING, OPEN_NOW }
 
+internal enum class CentreFilter { OPEN_NOW }
+
 internal data class PoiFilters(
     val recyclingMaterials: Set<RecyclingFilter> = RecyclingFilter.entries.toSet(),
     val toiletRequirements: Set<ToiletFilter> = emptySet(),
+    val centreRequirements: Set<CentreFilter> = emptySet(),
 ) {
     fun isDefault(type: PoiType): Boolean = reset(type) == this
 
     fun reset(type: PoiType): PoiFilters = when (type) {
         PoiType.RECYCLING -> copy(recyclingMaterials = PoiFilters().recyclingMaterials)
         PoiType.TOILET -> copy(toiletRequirements = emptySet())
+        PoiType.RECYCLING_CENTRE -> copy(centreRequirements = emptySet())
         else -> this
     }
 
@@ -30,6 +34,7 @@ internal data class PoiFilters(
             recyclingMaterials.size == RecyclingFilter.entries.size ||
                 recyclingMaterials.any { f -> poi.materials.any { it in f.materials } }
             )
+        PoiType.RECYCLING_CENTRE -> CentreFilter.OPEN_NOW !in centreRequirements || !poi.knownClosed(now)
         PoiType.CLOTHES, PoiType.POST_BOX, PoiType.DRINKING_WATER -> true
         PoiType.TOILET -> toiletRequirements.all {
             val toilet = poi.toilet
@@ -43,5 +48,5 @@ internal data class PoiFilters(
     }
 }
 
-/** True only when the toilet has a schedule and it says closed; unknown hours never count as closed. */
-internal fun Poi.knownClosed(now: LocalDateTime): Boolean = toilet?.schedule?.isOpen(now) == false
+/** True only when the poi has a schedule and it says closed; unknown hours never count as closed. */
+internal fun Poi.knownClosed(now: LocalDateTime): Boolean = schedule?.isOpen(now) == false

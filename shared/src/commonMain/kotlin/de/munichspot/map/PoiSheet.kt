@@ -55,6 +55,8 @@ import de.munichspot.data.Material
 import de.munichspot.data.Poi
 import de.munichspot.data.PoiType
 import de.munichspot.data.PostBoxInfo
+import de.munichspot.data.RecyclingCentreInfo
+import de.munichspot.data.ScheduleRule
 import de.munichspot.data.ToiletInfo
 import de.munichspot.data.ToiletStatus
 import de.munichspot.data.isOpen
@@ -102,6 +104,7 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
     val (titleRes, sourceRes) = when (poi.type) {
         PoiType.RECYCLING -> Res.string.title_recycling to Res.string.source_city
         PoiType.CLOTHES -> Res.string.title_clothes to Res.string.source_city
+        PoiType.RECYCLING_CENTRE -> Res.string.title_recycling_centre to Res.string.source_recycling_centre
         PoiType.POST_BOX -> Res.string.title_post_box to Res.string.source_osm
         PoiType.DRINKING_WATER -> Res.string.title_drinking_water to Res.string.source_city
         PoiType.TOILET -> Res.string.title_toilet to Res.string.source_city
@@ -170,7 +173,8 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
             }
             DetailRow({ SnowflakeIcon(muted, it) }) { Text(stringResource(Res.string.fountain_winter_hint), style = hint, color = muted) }
         }
-        poi.toilet?.let { ToiletDetails(it, now) }
+        poi.toilet?.let { ToiletDetails(it, poi.schedule, now) }
+        poi.recyclingCentre?.let { RecyclingCentreDetails(it, poi.schedule, now) }
         poi.postBox?.let { PostBoxDetails(it) }
         Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -193,7 +197,7 @@ private val FLOOR_LEVEL = Regex("^(\\d+)\\.\\s*(UG|OG)$")
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
+private fun ToiletDetails(toilet: ToiletInfo, schedule: List<ScheduleRule>?, now: LocalDateTime) {
     val body = MaterialTheme.typography.bodyMedium
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val error = MaterialTheme.colorScheme.error
@@ -201,7 +205,7 @@ private fun ToiletDetails(toilet: ToiletInfo, now: LocalDateTime) {
     val hours = toilet.hours?.shown()?.split(" / ", " | ")?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
     if (hours.isNotEmpty()) {
         var expanded by remember(toilet) { mutableStateOf(false) }
-        val open = toilet.schedule?.isOpen(now)
+        val open = schedule?.isOpen(now)
         val rotation by animateFloatAsState(if (expanded) 180f else 0f)
         Column(Modifier.fillMaxWidth().clickable(role = Role.Button) { expanded = !expanded }) {
             DetailRow({ ClockIcon(muted, it) }) {
@@ -310,22 +314,79 @@ private fun PostBoxDetails(info: PostBoxInfo) {
     DetailRow({ ClockIcon(muted, it) }) {
         if (info.collectionTimes != null) {
             val rows = formatCollectionTimes(info.collectionTimes, days)
-            val times = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum")
             Text(stringResource(Res.string.collection_times), style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    rows.forEach { Text(it.first, style = MaterialTheme.typography.bodyLarge, color = muted, maxLines = 1, softWrap = false) }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    rows.forEach { Text(it.second, style = times, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false) }
-                }
-            }
+            TimeTable(rows)
         } else {
             Text(stringResource(Res.string.no_collection_times), style = body, color = muted)
         }
     }
     if (info.indoor) DetailRow({ InfoIcon(muted, it) }) { Text(stringResource(Res.string.indoor_note), style = body, color = muted) }
+}
+
+@Composable
+private fun TimeTable(rows: List<Pair<String, String>>) {
+    val times = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum")
+    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            rows.forEach { Text(it.first, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false) }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            rows.forEach { Text(it.second, style = times, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, softWrap = false) }
+        }
+    }
+}
+
+@Composable
+private fun RecyclingCentreDetails(info: RecyclingCentreInfo, schedule: List<ScheduleRule>?, now: LocalDateTime) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val uriHandler = LocalUriHandler.current
+    info.address?.let { DetailRow({ PlaceIcon(muted, it) }) { Text(it, style = MaterialTheme.typography.bodyLarge) } }
+    if (schedule != null) {
+        val days = listOf(
+            stringResource(Res.string.day_mo), stringResource(Res.string.day_tu), stringResource(Res.string.day_we), stringResource(Res.string.day_th),
+            stringResource(Res.string.day_fr), stringResource(Res.string.day_sa), stringResource(Res.string.day_su),
+        )
+        val open = schedule.isOpen(now)
+        DetailRow({ ClockIcon(muted, it) }) {
+            Text(
+                stringResource(if (open) Res.string.open_now else Res.string.closed_now),
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (open) openColor() else MaterialTheme.colorScheme.error,
+            )
+            Spacer(Modifier.height(6.dp))
+            TimeTable(formatSchedule(schedule, days))
+            Spacer(Modifier.height(6.dp))
+            Text(stringResource(Res.string.holidays_not_considered), style = MaterialTheme.typography.bodyMedium, color = muted)
+        }
+    }
+    DetailRow({ InfoIcon(muted, it) }) {
+        Text(
+            stringResource(Res.string.whats_accepted),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable(role = Role.Button) { uriHandler.openUri(WERTSTOFFHOF_URL) },
+        )
+    }
+}
+
+private const val WERTSTOFFHOF_URL = "https://www.awm-muenchen.de/wertstoffhof"
+
+/** Opening rules as (day label, times) rows; consecutive days with the same times share a row. [days] are the labels for Monday to Sunday. */
+internal fun formatSchedule(schedule: List<ScheduleRule>, days: List<String>): List<Pair<String, String>> {
+    fun time(m: Int) = "${(m / 60 % 24).toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}".let { if (m == 1440) "24:00" else it }
+    val byDay = (1..7).map { d ->
+        schedule.filter { it.days == null || d in it.days }.sortedBy { it.from }.joinToString(", ") { "${time(it.from)}–${time(it.to)}" }
+    }
+    val rows = mutableListOf<Pair<String, String>>()
+    var start = 0
+    while (start < 7) {
+        var end = start
+        while (end + 1 < 7 && byDay[end + 1] == byDay[start]) end++
+        if (byDay[start].isNotEmpty()) rows += (if (end > start) "${days[start]}–${days[end]}" else days[start]) to byDay[start]
+        start = end + 1
+    }
+    return rows
 }
 
 private val RULE_SPLIT = Regex("(\\d),\\s+(?=(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)\\b)")

@@ -116,6 +116,19 @@ private fun DrawScope.drawGlyph(type: PoiType, c: Color) {
                 }
             }
         }
+        PoiType.RECYCLING_CENTRE -> {
+            drawPath(
+                Path().apply {
+                    moveTo(0.06f * s, 0.46f * s); lineTo(0.5f * s, 0.1f * s); lineTo(0.94f * s, 0.46f * s)
+                    lineTo(0.84f * s, 0.46f * s); lineTo(0.84f * s, 0.9f * s); lineTo(0.16f * s, 0.9f * s)
+                    lineTo(0.16f * s, 0.46f * s); close()
+                },
+                c,
+            )
+            drawRoundRect(type.pinColor(), p(0.34f, 0.52f), Size(0.32f * s, 0.38f * s), CornerRadius(0.03f * s))
+            drawLine(c, p(0.34f, 0.64f), p(0.66f, 0.64f), w * 0.7f)
+            drawLine(c, p(0.34f, 0.77f), p(0.66f, 0.77f), w * 0.7f)
+        }
         PoiType.CLOTHES -> drawPath(
             Path().apply {
                 moveTo(0.34f * s, 0.12f * s)

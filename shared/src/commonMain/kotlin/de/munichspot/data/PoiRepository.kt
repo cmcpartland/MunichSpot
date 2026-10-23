@@ -23,6 +23,7 @@ private val LEGACY_POST_BOX_NAME = Regex("^Briefkasten \\((.+)\\)$")
 // Recycling islands: Landeshauptstadt München, AWM, opendata.muenchen.de (dl-by-de/2.0)
 // Mailboxes: © OpenStreetMap contributors (ODbL)
 // Clothes containers: derived from the recycling islands
+// Recycling centres: Landeshauptstadt München, AWM (locations); © OpenStreetMap contributors (names, opening hours)
 // Drinking fountains, public toilets: Landeshauptstadt München, opendata.muenchen.de (dl-by-de/2.0)
 data class PoiData(val pois: List<Poi>, val generated: Instant?)
 
@@ -80,6 +81,7 @@ private fun parseFeatures(root: JsonObject): List<Poi> =
                 Material.entries.firstOrNull { it.name == m.jsonPrimitive.content }
             },
             note = localText("note"),
+            schedule = parseSchedule(properties["schedule"]),
             toilet = if (type == PoiType.TOILET) {
                 fun text(key: String) = properties[key]?.jsonPrimitive?.contentOrNull
                 fun flag(key: String) = properties[key]?.jsonPrimitive?.booleanOrNull == true
@@ -93,8 +95,12 @@ private fun parseFeatures(root: JsonObject): List<Poi> =
                     euroKey = flag("euroKey"),
                     rooms = properties["rooms"]?.jsonArray.orEmpty().map { it.jsonPrimitive.content },
                     status = ToiletStatus.entries.firstOrNull { it.name == text("status") },
-                    schedule = parseSchedule(properties["schedule"]),
                 )
+            } else {
+                null
+            },
+            recyclingCentre = if (type == PoiType.RECYCLING_CENTRE) {
+                RecyclingCentreInfo(address = properties["address"]?.jsonPrimitive?.contentOrNull)
             } else {
                 null
             },
