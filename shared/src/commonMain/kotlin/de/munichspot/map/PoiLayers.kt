@@ -10,8 +10,10 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.munichspot.Log
 import de.munichspot.data.PoiType
 import kotlin.math.hypot
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -74,8 +76,14 @@ private fun zoomToCluster(source: GeoJsonSource, mapState: MapState, scope: Coro
         } else {
             onCluster()
             scope.launch {
-                val zoom = mapState.style.sources[source]?.getClusterExpansionZoom(cluster)
-                    ?: (mapState.cameraPosition.zoom + 2)
+                val zoom = try {
+                    mapState.style.sources[source]?.getClusterExpansionZoom(cluster)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("PoiLayers", "cluster expansion zoom failed", e)
+                    null
+                } ?: (mapState.cameraPosition.zoom + 2)
                 mapState.animateCamera(CameraUpdate(center = center, zoom = zoom + 0.5))
             }
             ClickResult.Consume

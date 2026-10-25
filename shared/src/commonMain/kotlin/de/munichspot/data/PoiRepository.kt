@@ -2,6 +2,7 @@ package de.munichspot.data
 
 import de.munichspot.Log
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -64,69 +65,86 @@ private fun parseTypedPois(root: JsonObject): List<Poi> = parseFeatures(root).fl
     }
 }
 
-private fun parseFeatures(root: JsonObject): List<Poi> =
-    root.getValue("features").jsonArray.mapNotNull { f ->
-        val feature = f.jsonObject
-        val properties = feature.getValue("properties").jsonObject
-        val type = PoiType.entries.firstOrNull { it.name == properties.getValue("type").jsonPrimitive.content }
-            ?: return@mapNotNull null
-        val coordinates = feature.getValue("geometry").jsonObject.getValue("coordinates").jsonArray
-        val rawName = properties["name"]?.jsonPrimitive?.contentOrNull.orEmpty().trim()
-        val legacyTimes = if (type == PoiType.POST_BOX) LEGACY_POST_BOX_NAME.matchEntire(rawName)?.groupValues?.get(1) else null
-        fun localText(key: String): LocalText? =
-            properties[key]?.jsonPrimitive?.contentOrNull?.let { LocalText(it, properties[key + "En"]?.jsonPrimitive?.contentOrNull) }
-        Poi(
-            id = feature.getValue("id").jsonPrimitive.content,
-            type = type,
-            name = if (legacyTimes != null || rawName in OLD_PLACEHOLDER_NAMES) "" else rawName,
-            lat = coordinates[1].jsonPrimitive.content.toDouble(),
-            lon = coordinates[0].jsonPrimitive.content.toDouble(),
-            materials = properties["materials"]?.jsonArray.orEmpty().mapNotNull { m ->
-                Material.entries.firstOrNull { it.name == m.jsonPrimitive.content }
-            },
-            note = localText("note"),
-            schedule = parseSchedule(properties["schedule"]),
-            toilet = if (type == PoiType.TOILET) {
-                fun text(key: String) = properties[key]?.jsonPrimitive?.contentOrNull
-                fun flag(key: String) = properties[key]?.jsonPrimitive?.booleanOrNull == true
-                ToiletInfo(
-                    address = text("address"),
-                    hours = localText("hours"),
-                    floor = text("floor"),
-                    price = properties["price"]?.jsonPrimitive?.doubleOrNull,
-                    accessible = flag("accessible"),
-                    changing = flag("changing"),
-                    euroKey = flag("euroKey"),
-                    rooms = properties["rooms"]?.jsonArray.orEmpty().map { it.jsonPrimitive.content },
-                    status = ToiletStatus.entries.firstOrNull { it.name == text("status") },
-                )
-            } else {
-                null
-            },
-            recyclingCentre = if (type == PoiType.RECYCLING_CENTRE) {
-                RecyclingCentreInfo(address = properties["address"]?.jsonPrimitive?.contentOrNull)
-            } else {
-                null
-            },
-            postBox = if (type == PoiType.POST_BOX) {
-                PostBoxInfo(
-                    address = properties["address"]?.jsonPrimitive?.contentOrNull,
-                    collectionTimes = properties["collectionTimes"]?.jsonPrimitive?.contentOrNull ?: legacyTimes,
-                    indoor = properties["indoor"]?.jsonPrimitive?.booleanOrNull == true,
-                )
-            } else {
-                null
-            },
-            bookcase = if (type == PoiType.PUBLIC_BOOKCASE) {
-                BookcaseInfo(
-                    phoneBox = properties["phoneBox"]?.jsonPrimitive?.booleanOrNull == true,
-                    indoor = properties["indoor"]?.jsonPrimitive?.booleanOrNull == true,
-                )
-            } else {
-                null
-            },
-        )
+private fun parseFeatures(root: JsonObject): List<Poi> {
+    val features = root.getValue("features").jsonArray
+    var malformed = 0
+    val pois = features.mapNotNull { f ->
+        try {
+            parseFeature(f)
+        } catch (e: Exception) {
+            malformed++
+            null
+        }
     }
+    if (malformed > 0) Log.w("Pois", "skipped $malformed malformed of ${features.size} features")
+    require(malformed <= features.size * MAX_MALFORMED_SHARE) { "$malformed of ${features.size} features malformed" }
+    return pois
+}
+
+private const val MAX_MALFORMED_SHARE = 0.05
+
+private fun parseFeature(f: JsonElement): Poi? {
+    val feature = f.jsonObject
+    val properties = feature.getValue("properties").jsonObject
+    val type = PoiType.entries.firstOrNull { it.name == properties.getValue("type").jsonPrimitive.content }
+        ?: return null
+    val coordinates = feature.getValue("geometry").jsonObject.getValue("coordinates").jsonArray
+    val rawName = properties["name"]?.jsonPrimitive?.contentOrNull.orEmpty().trim()
+    val legacyTimes = if (type == PoiType.POST_BOX) LEGACY_POST_BOX_NAME.matchEntire(rawName)?.groupValues?.get(1) else null
+    fun localText(key: String): LocalText? =
+        properties[key]?.jsonPrimitive?.contentOrNull?.let { LocalText(it, properties[key + "En"]?.jsonPrimitive?.contentOrNull) }
+    return Poi(
+        id = feature.getValue("id").jsonPrimitive.content,
+        type = type,
+        name = if (legacyTimes != null || rawName in OLD_PLACEHOLDER_NAMES) "" else rawName,
+        lat = coordinates[1].jsonPrimitive.content.toDouble(),
+        lon = coordinates[0].jsonPrimitive.content.toDouble(),
+        materials = properties["materials"]?.jsonArray.orEmpty().mapNotNull { m ->
+            Material.entries.firstOrNull { it.name == m.jsonPrimitive.content }
+        },
+        note = localText("note"),
+        schedule = parseSchedule(properties["schedule"]),
+        toilet = if (type == PoiType.TOILET) {
+            fun text(key: String) = properties[key]?.jsonPrimitive?.contentOrNull
+            fun flag(key: String) = properties[key]?.jsonPrimitive?.booleanOrNull == true
+            ToiletInfo(
+                address = text("address"),
+                hours = localText("hours"),
+                floor = text("floor"),
+                price = properties["price"]?.jsonPrimitive?.doubleOrNull,
+                accessible = flag("accessible"),
+                changing = flag("changing"),
+                euroKey = flag("euroKey"),
+                rooms = properties["rooms"]?.jsonArray.orEmpty().map { it.jsonPrimitive.content },
+                status = ToiletStatus.entries.firstOrNull { it.name == text("status") },
+            )
+        } else {
+            null
+        },
+        recyclingCentre = if (type == PoiType.RECYCLING_CENTRE) {
+            RecyclingCentreInfo(address = properties["address"]?.jsonPrimitive?.contentOrNull)
+        } else {
+            null
+        },
+        postBox = if (type == PoiType.POST_BOX) {
+            PostBoxInfo(
+                address = properties["address"]?.jsonPrimitive?.contentOrNull,
+                collectionTimes = properties["collectionTimes"]?.jsonPrimitive?.contentOrNull ?: legacyTimes,
+                indoor = properties["indoor"]?.jsonPrimitive?.booleanOrNull == true,
+            )
+        } else {
+            null
+        },
+        bookcase = if (type == PoiType.PUBLIC_BOOKCASE) {
+            BookcaseInfo(
+                phoneBox = properties["phoneBox"]?.jsonPrimitive?.booleanOrNull == true,
+                indoor = properties["indoor"]?.jsonPrimitive?.booleanOrNull == true,
+            )
+        } else {
+            null
+        },
+    )
+}
 
 /** dd.MM.yyyy in UTC. */
 internal fun Instant.toGermanDate(): String {
