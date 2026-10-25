@@ -1,5 +1,6 @@
 package de.munichspot.data
 
+import de.munichspot.Log
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -31,7 +32,9 @@ data class PoiData(val pois: List<Poi>, val generated: Instant?)
 private val cache = DataCache("pois-latest.geojson")
 
 // The cached copy of the last download if it is valid, otherwise null (a bad cache is deleted).
-suspend fun loadStartupPois(): PoiData? = loadCached(cache, ::parseLatest)
+suspend fun loadStartupPois(): PoiData? = loadCached(cache, ::parseLatest).also {
+    Log.d("PoiData", if (it == null) "no usable cache" else "loaded ${it.pois.size} pois from cache")
+}
 
 suspend fun fetchLatestPois(conditional: Boolean): FetchResult<PoiData> =
     fetchConditional(LATEST_POIS_URL, cache, conditional, parse = ::parseLatest)

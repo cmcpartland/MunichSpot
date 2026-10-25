@@ -1,5 +1,6 @@
 package de.munichspot.map
 
+import de.munichspot.Log
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -26,7 +27,7 @@ internal class MunichArea private constructor(private val ring: List<DoubleArray
         fun parse(geoJson: String): MunichArea? = runCatching {
             val rings = Json.parseToJsonElement(geoJson).jsonObject["geometry"]!!.jsonObject["coordinates"]!!.jsonArray
             MunichArea(rings[1].jsonArray.map { p -> p.jsonArray.let { doubleArrayOf(it[0].jsonPrimitive.content.toDouble(), it[1].jsonPrimitive.content.toDouble()) } })
-        }.getOrNull()
+        }.onFailure { Log.w("Map", "boundary parse failed", it) }.getOrNull()
     }
 }
 

@@ -1,5 +1,6 @@
 package de.munichspot.data
 
+import de.munichspot.Log
 import de.munichspot.shared.resources.Res
 import androidx.compose.runtime.saveable.listSaver
 import kotlinx.coroutines.CancellationException
@@ -42,6 +43,7 @@ suspend fun loadStartupPlaces(): PlaceData = withContext(Dispatchers.Default) {
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        Log.w("Places", "bundled places failed to load", e)
         PlaceData(emptyList(), null)
     }
     loadCached(cache) { text ->

@@ -41,7 +41,9 @@ fun App() {
         refreshing = true
         scope.launch {
             try {
-                when (val result = fetchLatestPois(conditional = data != null)) {
+                val result = fetchLatestPois(conditional = data != null)
+                Log.d("PoiData", "refresh: ${result::class.simpleName}")
+                when (result) {
                     is FetchResult.Updated -> {
                         data = result.data
                         failed = false

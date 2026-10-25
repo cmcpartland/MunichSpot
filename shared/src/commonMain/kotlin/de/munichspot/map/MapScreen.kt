@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import de.munichspot.Log
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
 import de.munichspot.data.PlaceKind
@@ -148,7 +149,8 @@ internal fun MapScreen(
     var panned by remember { mutableStateOf(false) }
     val dark = isSystemInDarkTheme()
     val boundary by produceState<String?>(null) {
-        value = runCatching { Res.readBytes("files/munich_boundary.geojson").decodeToString() }.getOrNull()
+        value = runCatching { Res.readBytes("files/munich_boundary.geojson").decodeToString() }
+            .onFailure { Log.w("Map", "boundary resource failed to load", it) }.getOrNull()
     }
     val munich = remember(boundary) { boundary?.let { MunichArea.parse(it) } }
     lateinit var mapState: MapState

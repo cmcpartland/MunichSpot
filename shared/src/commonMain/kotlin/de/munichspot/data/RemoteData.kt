@@ -1,5 +1,6 @@
 package de.munichspot.data
 
+import de.munichspot.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.get
@@ -24,10 +25,11 @@ private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutM
 internal suspend fun <T : Any> loadCached(cache: DataCache, parse: (String) -> T?): T? = withContext(Dispatchers.Default) {
     val text = cache.read() ?: return@withContext null
     val parsed = try {
-        parse(text)
+        parse(text).also { if (it == null) Log.w(cache.name, "cache implausible, deleted") }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        Log.w(cache.name, "cache parse failed, deleted", e)
         null
     }
     parsed ?: run { cache.delete(); null }
@@ -43,20 +45,41 @@ internal suspend fun <T : Any> fetchConditional(
     conditional: Boolean,
     isNewer: (T) -> Boolean = { true },
     parse: (String) -> T?,
-): FetchResult<T> = try {
-    val etag = if (conditional) cache.readEtag() else null
-    val response = client.get(url) { if (etag != null) header(HttpHeaders.IfNoneMatch, etag) }
-    when {
-        etag != null && response.status == HttpStatusCode.NotModified -> FetchResult.Unchanged
-        !response.status.isSuccess() -> FetchResult.Failed
-        else -> {
-            val text = response.bodyAsText()
-            val newEtag = response.headers[HttpHeaders.ETag]
-            withContext(Dispatchers.Default) {
-                val parsed = parse(text)
+): FetchResult<T> = withContext(Dispatchers.Default) {
+    try {
+        val etag = if (conditional) cache.readEtag() else null
+        val tag = cache.name
+        val response = client.get(url) { if (etag != null) header(HttpHeaders.IfNoneMatch, etag) }
+        when {
+            etag != null && response.status == HttpStatusCode.NotModified -> {
+                Log.d(tag, "unchanged (etag hit)")
+                FetchResult.Unchanged
+            }
+            !response.status.isSuccess() -> {
+                Log.w(tag, "download failed: HTTP ${response.status.value}")
+                FetchResult.Failed
+            }
+            else -> {
+                val text = response.bodyAsText()
+                val newEtag = response.headers[HttpHeaders.ETag]
+                Log.d(tag, "downloaded (etag sent: ${etag != null}, new etag: ${newEtag != null})")
+                val parsed = try {
+                    parse(text)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(tag, "parse failed", e)
+                    return@withContext FetchResult.Failed
+                }
                 when {
-                    parsed == null -> FetchResult.Failed
-                    !isNewer(parsed) -> FetchResult.Unchanged
+                    parsed == null -> {
+                        Log.w(tag, "download implausible")
+                        FetchResult.Failed
+                    }
+                    !isNewer(parsed) -> {
+                        Log.d(tag, "download not newer")
+                        FetchResult.Unchanged
+                    }
                     else -> {
                         cache.save(text, newEtag)
                         FetchResult.Updated(parsed)
@@ -64,9 +87,10 @@ internal suspend fun <T : Any> fetchConditional(
                 }
             }
         }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(cache.name, "download failed", e)
+        FetchResult.Failed
     }
-} catch (e: CancellationException) {
-    throw e
-} catch (e: Exception) {
-    FetchResult.Failed
 }
