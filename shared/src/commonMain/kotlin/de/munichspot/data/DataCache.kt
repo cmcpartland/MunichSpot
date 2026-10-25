@@ -1,5 +1,6 @@
 package de.munichspot.data
 
+import de.munichspot.Log
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -10,7 +11,8 @@ internal expect fun cacheDir(): String?
 
 /** A downloaded file in the cache directory with its ETag next to it. Failures are ignored: the cache is only an optimisation. */
 internal class DataCache(private val fileName: String) {
-    private val etagName = fileName.substringBeforeLast('.') + ".etag"
+    val name = fileName.substringBeforeLast('.')
+    private val etagName = "$name.etag"
 
     private fun path(name: String) = cacheDir()?.let { Path(it, name) }
 
@@ -18,6 +20,7 @@ internal class DataCache(private val fileName: String) {
         try {
             path?.let { SystemFileSystem.delete(it, mustExist = false) }
         } catch (e: Exception) {
+            Log.w("DataCache", "delete failed: $fileName", e)
         }
     }
 
@@ -32,6 +35,7 @@ internal class DataCache(private val fileName: String) {
             val etagFile = path(etagName)
             if (etag != null && etagFile != null) SystemFileSystem.sink(etagFile).buffered().use { it.writeString(etag) }
         } catch (e: Exception) {
+            Log.w("DataCache", "write failed: $fileName", e)
             deleteQuietly(path(etagName))
         }
     }
@@ -43,12 +47,14 @@ internal class DataCache(private val fileName: String) {
             ?.let { SystemFileSystem.source(it).buffered().use { s -> s.readString() } }
             ?.takeIf { it.isNotBlank() }
     } catch (e: Exception) {
+        Log.w("DataCache", "etag read failed: $fileName", e)
         null
     }
 
     fun read(): String? = try {
         path(fileName)?.takeIf { SystemFileSystem.exists(it) }?.let { SystemFileSystem.source(it).buffered().use { s -> s.readString() } }
     } catch (e: Exception) {
+        Log.w("DataCache", "read failed: $fileName", e)
         null
     }
 
