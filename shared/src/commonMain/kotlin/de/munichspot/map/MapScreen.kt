@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.jsonPrimitive
@@ -91,6 +92,8 @@ import org.maplibre.compose.sources.GeoJsonData
 import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.spatialk.geojson.Position
+
+private const val SelectedPollNanos = 1_500_000_000L
 
 private val LocationBlue = Color(0xFF1A73E8)
 
@@ -224,8 +227,14 @@ internal fun MapScreen(
         val poi = selected ?: return@LaunchedEffect
         val position = Position(longitude = poi.lon, latitude = poi.lat)
         val layerIds = PoiType.entries.mapTo(mutableSetOf()) { "${it.name.lowercase()}-selected" }
+        var start = -1L
         while (selectedOnMap != poi.id) {
-            withFrameNanos { }
+            val t = withFrameNanos { it }
+            if (start < 0) start = t
+            if (t - start > SelectedPollNanos) {
+                Log.d("MapScreen", "selected pin not found on screen, using overlay")
+                break
+            }
             val pin = mapState.screenLocationFromPosition(position) ?: continue
             val o = poi.type.pinOffset()
             val x = pin.x + o.x
@@ -435,12 +444,6 @@ internal fun MapScreen(
             dataStatus, onRetry,
             Modifier.align(Alignment.TopCenter).windowInsetsPadding(WindowInsets.statusBars).padding(top = 16.dp, start = 16.dp, end = 16.dp),
         )
-        SnackbarHost(
-            hostState = snackbar,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = pickerTop + 8.dp),
-        )
         CategoryPicker(
             type, onTypeChange, places, anchor, onAnchorChange, pickerOpen,
             onExpandedChange = {
@@ -453,6 +456,18 @@ internal fun MapScreen(
             bottomInset = pickerBottom,
         )
         AttributionBar(generated, { attributionBarHeight = it }, Modifier.align(Alignment.BottomCenter))
-        PoiSheet(selected, now, onBounds = { b -> sheetBounds = b }) { selected = null }
+        PoiSheet(
+            selected,
+            now,
+            onBounds = { b -> sheetBounds = b },
+            onOpenFailed = { scope.launch { snackbar.showSnackbar(getString(Res.string.open_failed)) } },
+        ) { selected = null }
+        val sheetTop = sheetBounds?.takeIf { selected != null }?.let { with(density) { (mapBounds.bottom - it.top).toDp() } }
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = (sheetTop ?: pickerTop) + 8.dp),
+        )
     }
 }

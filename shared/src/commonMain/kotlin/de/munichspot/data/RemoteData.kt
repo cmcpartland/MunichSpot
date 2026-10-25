@@ -11,6 +11,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 sealed interface FetchResult<out T> {
@@ -23,7 +24,7 @@ private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutM
 
 /** The cached download if [parse] accepts it (it returns null or throws for invalid data), otherwise null; a bad cache is deleted. */
 internal suspend fun <T : Any> loadCached(cache: DataCache, parse: (String) -> T?): T? = withContext(Dispatchers.Default) {
-    val text = cache.read() ?: return@withContext null
+    val text = withContext(Dispatchers.IO) { cache.read() } ?: return@withContext null
     val parsed = try {
         parse(text).also { if (it == null) Log.w(cache.name, "cache implausible, deleted") }
     } catch (e: CancellationException) {
@@ -32,7 +33,7 @@ internal suspend fun <T : Any> loadCached(cache: DataCache, parse: (String) -> T
         Log.w(cache.name, "cache parse failed, deleted", e)
         null
     }
-    parsed ?: run { cache.delete(); null }
+    parsed ?: run { withContext(Dispatchers.IO) { cache.delete() }; null }
 }
 
 /**
@@ -47,7 +48,7 @@ internal suspend fun <T : Any> fetchConditional(
     parse: (String) -> T?,
 ): FetchResult<T> = withContext(Dispatchers.Default) {
     try {
-        val etag = if (conditional) cache.readEtag() else null
+        val etag = if (conditional) withContext(Dispatchers.IO) { cache.readEtag() } else null
         val tag = cache.name
         val response = client.get(url) { if (etag != null) header(HttpHeaders.IfNoneMatch, etag) }
         when {
@@ -81,7 +82,7 @@ internal suspend fun <T : Any> fetchConditional(
                         FetchResult.Unchanged
                     }
                     else -> {
-                        cache.save(text, newEtag)
+                        withContext(Dispatchers.IO) { cache.save(text, newEtag) }
                         FetchResult.Updated(parsed)
                     }
                 }

@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import de.munichspot.Log
 import de.munichspot.data.BookcaseInfo
 import de.munichspot.data.LocalText
 import de.munichspot.data.Material
@@ -70,7 +71,7 @@ private val DragHandleHeight = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PoiSheet(poi: Poi?, now: LocalDateTime, onBounds: (Rect) -> Unit, onDismiss: () -> Unit) {
+internal fun PoiSheet(poi: Poi?, now: LocalDateTime, onBounds: (Rect) -> Unit, onOpenFailed: () -> Unit, onDismiss: () -> Unit) {
     val state = rememberBottomSheetState(initialValue = SheetValue.Hidden)
     var kept by remember { mutableStateOf(poi) }
     if (poi != null) kept = poi
@@ -94,12 +95,12 @@ internal fun PoiSheet(poi: Poi?, now: LocalDateTime, onBounds: (Rect) -> Unit, o
             )
         },
     ) {
-        kept?.let { PoiSheetContent(it, now, handleTop) { b -> if (poi != null) onBounds(b) } }
+        kept?.let { PoiSheetContent(it, now, handleTop, { b -> if (poi != null) onBounds(b) }, onOpenFailed) }
     }
 }
 
 @Composable
-private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBounds: (Rect) -> Unit) {
+private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBounds: (Rect) -> Unit, onOpenFailed: () -> Unit) {
     val density = LocalDensity.current
     val uriHandler = LocalUriHandler.current
     val (titleRes, sourceRes) = when (poi.type) {
@@ -131,7 +132,7 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
                 }
             }
             FilledTonalButton(
-                onClick = { openDirections(poi, uriHandler) },
+                onClick = { openDirections(poi, uriHandler, onOpenFailed) },
                 modifier = Modifier.heightIn(min = 36.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
             ) {
@@ -176,7 +177,7 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
             DetailRow({ SnowflakeIcon(muted, it) }) { Text(stringResource(Res.string.fountain_winter_hint), style = hint, color = muted) }
         }
         poi.toilet?.let { ToiletDetails(it, poi.schedule, now) }
-        poi.recyclingCentre?.let { RecyclingCentreDetails(it, poi.schedule, now) }
+        poi.recyclingCentre?.let { RecyclingCentreDetails(it, poi.schedule, now, onOpenFailed) }
         poi.postBox?.let { PostBoxDetails(it) }
         poi.bookcase?.let { BookcaseDetails(it, poi.note, poi.schedule, now) }
         Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -341,7 +342,7 @@ private fun TimeTable(rows: List<Pair<String, String>>) {
 }
 
 @Composable
-private fun RecyclingCentreDetails(info: RecyclingCentreInfo, schedule: List<ScheduleRule>?, now: LocalDateTime) {
+private fun RecyclingCentreDetails(info: RecyclingCentreInfo, schedule: List<ScheduleRule>?, now: LocalDateTime, onOpenFailed: () -> Unit) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val uriHandler = LocalUriHandler.current
     info.address?.let { DetailRow({ PlaceIcon(muted, it) }) { Text(it, style = MaterialTheme.typography.bodyLarge) } }
@@ -351,7 +352,12 @@ private fun RecyclingCentreDetails(info: RecyclingCentreInfo, schedule: List<Sch
             stringResource(Res.string.whats_accepted),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable(role = Role.Button) { uriHandler.openUri(WERTSTOFFHOF_URL) },
+            modifier = Modifier.clickable(role = Role.Button) {
+                runCatching { uriHandler.openUri(WERTSTOFFHOF_URL) }.onFailure {
+                    Log.w("PoiSheet", "cannot open website", it)
+                    onOpenFailed()
+                }
+            },
         )
     }
 }
