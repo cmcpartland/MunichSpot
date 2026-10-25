@@ -64,5 +64,6 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 
 ## Open ideas (not started)
 - More reliable nightly mailbox fetch: a second Overpass server, and reuse the last mailboxes if all fail.
-- Android release setup: R8, a signing config, and a baseline profile.
+- Android baseline profile (the `baselineprofile` plugin).
+- TestFlight upload, once there's a paid Apple Developer team.
 - With all categories shown, the city centre is crowded; a possible fix is a bigger cluster radius.
