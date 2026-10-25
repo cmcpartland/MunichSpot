@@ -36,7 +36,7 @@ class PlaceData(val places: List<Place>, val generated: Instant?) {
 }
 
 // Streets, parks, squares, stations, landmarks and districts: © OpenStreetMap contributors (ODbL), built by tools/data/build_places.py
-// The bundled copy is the base; a downloaded copy replaces it only if its `generated` is strictly newer.
+// The bundled copy is the base; a cached copy is used if its `generated` is at least as new, a downloaded one replaces it only if strictly newer.
 suspend fun loadStartupPlaces(): PlaceData = withContext(Dispatchers.Default) {
     val bundled = try {
         parsePlaceData(Res.readBytes("files/places.json").decodeToString())
@@ -47,7 +47,7 @@ suspend fun loadStartupPlaces(): PlaceData = withContext(Dispatchers.Default) {
         PlaceData(emptyList(), null)
     }
     loadCached(cache) { text ->
-        parsePlaceData(text).takeIf { it.isPlausible() && it.isNewerThan(bundled.generated) }
+        parsePlaceData(text).takeIf { it.isPlausible() && it.isAtLeast(bundled.generated) }
     } ?: bundled
 }
 
@@ -58,6 +58,8 @@ suspend fun fetchLatestPlaces(current: Instant?): FetchResult<PlaceData> =
     }
 
 private fun PlaceData.isPlausible() = places.size >= MIN_PLACES
+
+private fun PlaceData.isAtLeast(other: Instant?) = generated != null && (other == null || generated >= other)
 
 private fun PlaceData.isNewerThan(other: Instant?) = generated != null && (other == null || generated > other)
 

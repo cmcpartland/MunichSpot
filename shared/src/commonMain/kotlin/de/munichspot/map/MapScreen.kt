@@ -24,8 +24,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +45,10 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import de.munichspot.Log
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceIndex
@@ -57,6 +62,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
@@ -66,6 +72,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
 import org.maplibre.compose.camera.CameraAnimation
 import org.maplibre.compose.camera.CameraMoveReason
 import org.maplibre.compose.camera.CameraPosition
@@ -86,6 +93,7 @@ import org.maplibre.compose.location.LocationTrackingStatus
 import org.maplibre.compose.location.rememberLocationState
 import org.maplibre.compose.map.MapState
 import org.maplibre.compose.map.MaplibreMap
+import org.maplibre.compose.map.StyleLoadState
 import org.maplibre.compose.map.rememberMapState
 import org.maplibre.compose.overlay.MapOverlay
 import org.maplibre.compose.sources.GeoJsonData
@@ -100,6 +108,8 @@ private val LocationBlue = Color(0xFF1A73E8)
 internal enum class DataStatus { Loading, Ready, Failed }
 
 private var locationAsked = false
+
+private val StyleRetryDelays = listOf(5.seconds, 15.seconds, 60.seconds)
 
 @OptIn(FlowPreview::class)
 @Composable
@@ -156,9 +166,12 @@ internal fun MapScreen(
             .onFailure { Log.w("Map", "boundary resource failed to load", it) }.getOrNull()
     }
     val munich = remember(boundary) { boundary?.let { MunichArea.parse(it) } }
+    var styleAttempt by remember { mutableIntStateOf(0) }
     lateinit var mapState: MapState
     mapState = rememberMapState(
-        baseStyle = BaseStyle.Uri("https://tiles.openfreemap.org/styles/" + if (dark) "fiord" else "positron"),
+        baseStyle = BaseStyle.Uri(
+            "https://tiles.openfreemap.org/styles/" + (if (dark) "fiord" else "positron") + if (styleAttempt > 0) "?r=$styleAttempt" else "",
+        ),
         // Roughly the 700 m framing on a phone; refined below once the viewport is known.
         initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.9),
     ) {
@@ -397,6 +410,44 @@ internal fun MapScreen(
             },
         )
         if (showFilters && type != null) FilterSheet(type, filters, onChange = onFiltersChange, onDismiss = { showFilters = false })
+        val loadState = mapState.style.loadState
+        var styleSlow by remember { mutableStateOf(false) }
+        LaunchedEffect(loadState, styleAttempt) {
+            styleSlow = false
+            when (loadState) {
+                StyleLoadState.Ready -> {}
+                is StyleLoadState.Failed -> {}
+                else -> {
+                    delay(10.seconds)
+                    Log.w("Map", "style still loading after 10 s")
+                    styleSlow = true
+                }
+            }
+        }
+        val styleFailed = loadState is StyleLoadState.Failed || styleSlow
+        LaunchedEffect(loadState) { if (loadState is StyleLoadState.Failed) Log.w("Map", "style failed: ${loadState.reason}") }
+        val currentFailed by rememberUpdatedState(styleFailed)
+        LifecycleResumeEffect(Unit) {
+            if (currentFailed) styleAttempt++
+            onPauseOrDispose {}
+        }
+        var autoRetries by remember { mutableIntStateOf(0) }
+        val lifecycle = LocalLifecycleOwner.current.lifecycle
+        LaunchedEffect(loadState) { if (loadState == StyleLoadState.Ready) autoRetries = 0 }
+        // Only on Failed: while Loading MapLibre retries by itself, and a restart would cut off a slow load.
+        val styleError = loadState is StyleLoadState.Failed
+        LaunchedEffect(styleError) {
+            if (!styleError) return@LaunchedEffect
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    delay(StyleRetryDelays.getOrElse(autoRetries) { StyleRetryDelays.last() })
+                    autoRetries++
+                    styleAttempt++
+                }
+            }
+        }
+        // A successful poi download means the network is back.
+        LaunchedEffect(pois.isNotEmpty()) { if (pois.isNotEmpty() && currentFailed) styleAttempt++ }
         val wide = with(density) { mapBounds.width.toDp() } >= WideBreakpoint
         val locate = {
             if (locationState.permission !is LocationPermission.Granted) locationState.requestPermission()
@@ -440,10 +491,14 @@ internal fun MapScreen(
             LocatePill(panned && !pickerOpen, locate)
             filterButton()
         }
-        DataNotice(
-            dataStatus, onRetry,
-            Modifier.align(Alignment.TopCenter).windowInsetsPadding(WindowInsets.statusBars).padding(top = 16.dp, start = 16.dp, end = 16.dp),
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.align(Alignment.TopCenter).windowInsetsPadding(WindowInsets.statusBars).padding(top = 16.dp, start = 16.dp, end = 16.dp),
+        ) {
+            NoticePill(styleFailed, stringResource(Res.string.map_failed), { styleAttempt++ })
+            DataNotice(dataStatus, onRetry)
+        }
         CategoryPicker(
             type, onTypeChange, places, anchor, onAnchorChange, pickerOpen,
             onExpandedChange = {
