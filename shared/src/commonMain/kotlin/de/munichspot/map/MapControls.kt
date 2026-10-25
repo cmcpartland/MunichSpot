@@ -114,8 +114,19 @@ internal val WideBreakpoint = 680.dp
 
 @Composable
 internal fun DataNotice(status: DataStatus, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    AnimatedVisibility(
+    val failed = status == DataStatus.Failed
+    NoticePill(
         visible = status != DataStatus.Ready,
+        text = stringResource(if (failed) Res.string.no_data else Res.string.loading_data),
+        onRetry = if (failed) onRetry else null,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun NoticePill(visible: Boolean, text: String, onRetry: (() -> Unit)?, modifier: Modifier = Modifier) {
+    AnimatedVisibility(
+        visible = visible,
         modifier = modifier,
         enter = fadeIn(tween(MorphMillis)),
         exit = fadeOut(tween(MorphMillis)),
@@ -128,11 +139,11 @@ internal fun DataNotice(status: DataStatus, onRetry: () -> Unit, modifier: Modif
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp, end = 4.dp)) {
                 Text(
-                    text = stringResource(if (status == DataStatus.Failed) Res.string.no_data else Res.string.loading_data),
+                    text = text,
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.padding(vertical = 12.dp, horizontal = 0.dp).weight(1f, fill = false),
                 )
-                if (status == DataStatus.Failed) TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
+                if (onRetry != null) TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
                 else Spacer(Modifier.width(12.dp))
             }
         }

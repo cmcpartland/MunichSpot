@@ -38,7 +38,8 @@ internal suspend fun <T : Any> loadCached(cache: DataCache, parse: (String) -> T
 
 /**
  * With [conditional] and a cached download, asks the server only for newer data (304 -> Unchanged).
- * [parse] returns null or throws for invalid data (-> Failed); a download that is not [isNewer] is neither used nor cached (-> Unchanged).
+ * [parse] returns null or throws for invalid data (-> Failed); a download that is not [isNewer] is not used but still cached with its new ETag (-> Unchanged),
+ * so the next request can hit.
  */
 internal suspend fun <T : Any> fetchConditional(
     url: String,
@@ -79,6 +80,7 @@ internal suspend fun <T : Any> fetchConditional(
                     }
                     !isNewer(parsed) -> {
                         Log.d(tag, "download not newer")
+                        withContext(Dispatchers.IO) { cache.save(text, newEtag) }
                         FetchResult.Unchanged
                     }
                     else -> {

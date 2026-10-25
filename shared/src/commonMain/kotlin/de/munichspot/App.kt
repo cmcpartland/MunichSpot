@@ -12,7 +12,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import de.munichspot.data.FetchResult
 import de.munichspot.data.Place
 import de.munichspot.data.PlaceData
@@ -27,7 +30,10 @@ import de.munichspot.data.rememberBerlinNow
 import de.munichspot.map.DataStatus
 import de.munichspot.map.MapScreen
 import de.munichspot.map.PoiFilters
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private val RETRY_DELAYS_MS = listOf(5_000L, 15_000L, 60_000L)
 
 @Composable
 fun App() {
@@ -69,6 +75,17 @@ fun App() {
     LifecycleResumeEffect(loaded) {
         if (loaded) refresh()
         onPauseOrDispose {}
+    }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(failed, data == null) {
+        if (!failed || data != null) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            var attempt = 0
+            while (failed && data == null) {
+                delay(RETRY_DELAYS_MS.getOrElse(attempt++) { RETRY_DELAYS_MS.last() })
+                if (failed && data == null) refresh()
+            }
+        }
     }
     var anchor by rememberSaveable(stateSaver = PlaceSaver) { mutableStateOf<Place?>(null) }
     var type by rememberSaveable { mutableStateOf<PoiType?>(null) }

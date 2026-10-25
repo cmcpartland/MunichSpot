@@ -25,6 +25,7 @@
     <string name="outside_munich">MunichSpot funktioniert nur in München</string>
     <string name="loading_data">Lade Daten …</string>
     <string name="no_data">Keine Daten – Internetverbindung prüfen</string>
+    <string name="map_failed">Karte konnte nicht geladen werden</string>
     <string name="retry">Erneut versuchen</string>
     <string name="my_location">Mein Standort</string>
     <string name="all_categories">Alle Kategorien</string>

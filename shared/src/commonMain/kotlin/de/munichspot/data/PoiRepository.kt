@@ -42,8 +42,10 @@ suspend fun fetchLatestPois(conditional: Boolean): FetchResult<PoiData> =
 
 private fun parseLatest(text: String) = parsePoiData(text).takeIf { isPlausible(it.pois) }
 
+private val CORE_TYPES = setOf(PoiType.RECYCLING, PoiType.POST_BOX, PoiType.DRINKING_WATER, PoiType.TOILET)
+
 private fun isPlausible(pois: List<Poi>) =
-    pois.size >= MIN_LATEST_POIS && PoiType.entries.all { type -> pois.any { it.type == type } }
+    pois.size >= MIN_LATEST_POIS && CORE_TYPES.all { type -> pois.any { it.type == type } }
 
 // Clothes containers are derived from the recycling islands that accept clothing.
 internal fun parsePoiData(geoJson: String): PoiData {
