@@ -68,6 +68,14 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on 
 - **Version:** `appVersion` (major.minor.patch) in `androidApp/build.gradle.kts`; `versionCode` is major × 10000 + minor × 100 + patch. On iOS, bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Config.xcconfig` to match.
 - **iOS:** the privacy manifest is `iosApp/iosApp/PrivacyInfo.xcprivacy` (no tracking, no collected data, plus the required-reason APIs found in the binary). Archiving for TestFlight needs a paid Apple Developer team.
 
+### Crash reports
+
+The app has no crash-reporting SDK. Crashes reach the stores' own consoles:
+
+- **Android:** Play Console → Android vitals (crashes and ANRs). Stack traces are deobfuscated with the R8 mapping file in the AAB. To retrace a stack locally: `java -cp "/Applications/Android Studio.app/Contents/plugins/android/lib/r8.jar" com.android.tools.r8.retrace.Retrace androidApp/build/outputs/mapping/release/mapping.txt stack.txt`.
+- **iOS:** Xcode Organizer → Crashes, or App Store Connect. Reports come only from users who share analytics with developers. Release builds produce a dSYM that includes the Kotlin code (the `Shared` framework is static). Archives upload it with the build. To resolve an address locally: `atos -o MunichSpot.app.dSYM/Contents/Resources/DWARF/MunichSpot -arch arm64 -l <load address> <address>`. An uncaught Kotlin exception shows the frames where Kotlin/Native caught it (e.g. Compose's `setContent` or the coroutine dispatcher), not the line that threw, and the report doesn't include the exception message.
+- **Testing the path:** commit `d633aab` adds a crash trigger: typing `crashtest!` into the place search throws. Cherry-pick it onto a temporary build for internal testing or TestFlight, and never onto a release.
+
 ## Data sources and attribution
 
 - **Recycling islands:** Landeshauptstadt München, Abfallwirtschaftsbetrieb München (AWM), via opendata.muenchen.de, dataset `awm_container_opendata`. Licensed under [Datenlizenz Deutschland – Namensnennung – Version 2.0](https://www.govdata.de/dl-de/by-2-0). The source data is in EPSG:25832 and is converted to WGS84. Accepted container types (glass by colour, packaging, clothing) are included per site. Clothes containers are not a separate source: the app derives them from the islands that accept clothing.
