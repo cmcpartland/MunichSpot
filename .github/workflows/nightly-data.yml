@@ -29,6 +29,7 @@ on:
     branches: [main]
     paths:
       - tools/data/**
+      - pages/**
       - .github/workflows/nightly-data.yml
 
 permissions:
@@ -141,6 +142,7 @@ jobs:
           jq -c --arg result "$result" '{result: $result, count: (.places | length), generated}' site/places.json > "$RUN_RECORD_DIR/places.json"
       - name: Write index page
         run: |
+          cp pages/privacy.html site/privacy.html
           cat > site/index.html <<'HTML'
           <!doctype html>
           <meta charset="utf-8">
@@ -152,6 +154,7 @@ jobs:
             <li>Mailboxes: © OpenStreetMap contributors, <a href="https://www.openstreetmap.org/copyright">ODbL 1.0</a></li>
             <li>Place search index (places.json): © OpenStreetMap contributors, <a href="https://www.openstreetmap.org/copyright">ODbL 1.0</a></li>
           </ul>
+          <p><a href="privacy.html">Privacy policy / Datenschutzerklärung</a></p>
           HTML
       - uses: actions/upload-pages-artifact@v5
         with:

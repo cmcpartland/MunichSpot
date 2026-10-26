@@ -60,7 +60,13 @@ Commands:
 
 To build the data locally, run `tools/data/build_pois.py` (see `tools/data/README.md`).
 
-For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on a simulator. The build phase uses `JAVA_HOME`, or Android Studio's JBR if `JAVA_HOME` is not set. To run on a device, set `TEAM_ID` in `iosApp/Configuration/Config.xcconfig`.
+For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on a simulator. The build phase uses `JAVA_HOME`, or Android Studio's JBR if `JAVA_HOME` is not set. To run on a device, put `TEAM_ID=<your team id>` in `iosApp/Configuration/Local.xcconfig` (gitignored, included by `Config.xcconfig`). Don't pick the team in Xcode's Signing tab, because that writes it into `project.pbxproj`.
+
+### Release builds
+
+- **Android:** `./gradlew :androidApp:bundleRelease` (or `assembleRelease` for an APK) builds with R8 and resource shrinking. The upload key is read from `release.storeFile`, `release.storePassword`, `release.keyAlias` and `release.keyPassword` in `local.properties`, or from the `MUNICHSPOT_STORE_FILE`, `MUNICHSPOT_STORE_PASSWORD`, `MUNICHSPOT_KEY_ALIAS` and `MUNICHSPOT_KEY_PASSWORD` environment variables. Without them the release build is signed with the debug key and Gradle prints a warning. The AAB includes the R8 mapping file for Play Console.
+- **Version:** `appVersion` (major.minor.patch) in `androidApp/build.gradle.kts`; `versionCode` is major × 10000 + minor × 100 + patch. On iOS, bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Config.xcconfig` to match.
+- **iOS:** the privacy manifest is `iosApp/iosApp/PrivacyInfo.xcprivacy` (no tracking, no collected data, plus the required-reason APIs found in the binary). Archiving for TestFlight needs a paid Apple Developer team.
 
 ## Data sources and attribution
 
@@ -77,7 +83,7 @@ The Apache-2.0 license below covers the code only. The data remains under its ow
 
 ## Privacy
 
-Your location is used only on the device, to draw the location dot and centre the map. The app does not send it anywhere. Map tiles for the visible area are loaded from OpenFreeMap, as for any map view. The app also downloads the data file from GitHub Pages and sends nothing else.
+Your location is used only on the device, to draw the location dot and centre the map. The app does not send it anywhere. Map tiles for the visible area are loaded from OpenFreeMap, as for any map view. The app also downloads the data file from GitHub Pages and sends nothing else. The full privacy policy (English and German) is at https://cmcpartland.github.io/MunichSpot/privacy.html, from `pages/privacy.html`.
 
 ## License
 
