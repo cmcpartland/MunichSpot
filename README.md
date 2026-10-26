@@ -56,7 +56,11 @@ Commands:
 ./gradlew :androidApp:assembleDebug
 ./gradlew :androidApp:installDebug
 ./gradlew :shared:compileKotlinIosSimulatorArm64
+./gradlew :shared:testAndroidHostTest        # unit tests on the JVM
+./gradlew :shared:iosSimulatorArm64Test      # the same tests on the iOS simulator (macOS)
 ```
+
+The tests are in `shared/src/commonTest`; `.github/workflows/app-ci.yml` runs them plus a release build on every push and PR.
 
 To build the data locally, run `tools/data/build_pois.py` (see `tools/data/README.md`).
 

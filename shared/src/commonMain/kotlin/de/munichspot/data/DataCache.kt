@@ -10,11 +10,11 @@ import kotlinx.io.writeString
 internal expect fun cacheDir(): String?
 
 /** A downloaded file in the cache directory with its ETag next to it. Failures are ignored: the cache is only an optimisation. */
-internal class DataCache(private val fileName: String) {
+internal class DataCache(private val fileName: String, private val dir: () -> String? = ::cacheDir) {
     val name = fileName.substringBeforeLast('.')
     private val etagName = "$name.etag"
 
-    private fun path(name: String) = cacheDir()?.let { Path(it, name) }
+    private fun path(name: String) = dir()?.let { Path(it, name) }
 
     private fun deleteQuietly(path: Path?) {
         try {

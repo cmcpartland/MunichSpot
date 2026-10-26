@@ -16,6 +16,7 @@ kotlin {
         minSdk = libs.versions.minSdk.get().toInt()
         // Needed so Compose resources (places.json, munich_boundary.geojson) are packaged into the APK.
         androidResources.enable = true
+        withHostTest { isReturnDefaultValues = true }
     }
 
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
@@ -39,6 +40,11 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.io.core)
             implementation(libs.ktor.client.core)
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)

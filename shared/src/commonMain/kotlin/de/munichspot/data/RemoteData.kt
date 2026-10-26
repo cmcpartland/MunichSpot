@@ -20,7 +20,7 @@ sealed interface FetchResult<out T> {
     data object Failed : FetchResult<Nothing>
 }
 
-private val client by lazy { HttpClient { install(HttpTimeout) { requestTimeoutMillis = 10_000 } } }
+private val defaultClient by lazy { HttpClient { install(HttpTimeout) { requestTimeoutMillis = 10_000 } } }
 
 /** The cached download if [parse] accepts it (it returns null or throws for invalid data), otherwise null; a bad cache is deleted. */
 internal suspend fun <T : Any> loadCached(cache: DataCache, parse: (String) -> T?): T? = withContext(Dispatchers.Default) {
@@ -46,6 +46,7 @@ internal suspend fun <T : Any> fetchConditional(
     cache: DataCache,
     conditional: Boolean,
     isNewer: (T) -> Boolean = { true },
+    client: HttpClient = defaultClient,
     parse: (String) -> T?,
 ): FetchResult<T> = withContext(Dispatchers.Default) {
     try {
