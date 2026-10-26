@@ -17,7 +17,7 @@ from ci import warn
 from hours import colon_times, parse_schedule
 from osm_hours import parse_opening_hours
 from translate import translate_features
-from validate_pois import validate
+from validate_pois import SCHEMA_VERSION, validate
 
 AWM_URL = (
     "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0"
@@ -303,7 +303,7 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(
-            {"type": "FeatureCollection", "generated": generated, "features": features},
+            {"type": "FeatureCollection", "schemaVersion": SCHEMA_VERSION, "generated": generated, "features": features},
             separators=(",", ":"),
             ensure_ascii=False,
         ),
