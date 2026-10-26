@@ -143,7 +143,7 @@ internal fun CategoryPicker(
                             }
                         }
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            SearchField(query, { if (it == "crashtest!") crashForTest(); query = it }, focusRequester, onSearch = { suggestions.firstOrNull()?.let(pick) })
+                            SearchField(query, { query = it }, focusRequester, onSearch = { suggestions.firstOrNull()?.let(pick) })
                             if (searching) {
                                 if (suggestions.isEmpty()) {
                                     Column(Modifier.padding(horizontal = 4.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
