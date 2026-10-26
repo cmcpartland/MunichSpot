@@ -50,6 +50,15 @@ def counts(features):
     return c
 
 
+SCHEMA_VERSION = 1
+
+
+def check_schema_version(value):
+    if type(value) is not int or value != SCHEMA_VERSION:
+        return [f"schemaVersion: {value!r} is not {SCHEMA_VERSION}"]
+    return []
+
+
 def check_generated(value):
     if not isinstance(value, str) or not value:
         return ["generated: missing"]
@@ -235,6 +244,7 @@ def main():
         sys.exit(f"validation failed: {args.path} is not a readable FeatureCollection: {e}")
     previous = load_previous(args.previous) if args.previous and not args.skip_previous else None
     errors, warnings = validate(features, previous)
+    errors.extend(check_schema_version(data.get("schemaVersion")))
     errors.extend(check_generated(data.get("generated")))
     for w in warnings:
         warn(w)

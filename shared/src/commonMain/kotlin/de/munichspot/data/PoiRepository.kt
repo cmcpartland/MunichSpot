@@ -4,9 +4,11 @@ import de.munichspot.Log
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -40,7 +42,22 @@ suspend fun loadStartupPois(): PoiData? = loadCached(cache, ::parseLatest).also 
 suspend fun fetchLatestPois(conditional: Boolean): FetchResult<PoiData> =
     fetchConditional(LATEST_POIS_URL, cache, conditional, parse = ::parseLatest)
 
-internal fun parseLatest(text: String) = parsePoiData(text).takeIf { isPlausible(it.pois) }
+internal const val POI_SCHEMA_VERSION = 1
+
+// A missing version (files from before the field) is accepted; a newer or non-integer one is not.
+internal fun isSupportedSchema(root: JsonObject): Boolean {
+    val element = root["schemaVersion"] ?: return true
+    val version = (element as? JsonPrimitive)?.takeIf { !it.isString }?.intOrNull
+    if (version == null) Log.w("PoiData", "schemaVersion is not an integer: $element")
+    else if (version > POI_SCHEMA_VERSION) Log.w("PoiData", "schema version $version is newer than supported ($POI_SCHEMA_VERSION)")
+    return version != null && version <= POI_SCHEMA_VERSION
+}
+
+internal fun parseLatest(text: String): PoiData? {
+    val root = Json.parseToJsonElement(text).jsonObject
+    if (!isSupportedSchema(root)) return null
+    return parsePoiData(root).takeIf { isPlausible(it.pois) }
+}
 
 private val CORE_TYPES = setOf(PoiType.RECYCLING, PoiType.POST_BOX, PoiType.DRINKING_WATER, PoiType.TOILET)
 
@@ -48,8 +65,9 @@ internal fun isPlausible(pois: List<Poi>) =
     pois.size >= MIN_LATEST_POIS && CORE_TYPES.all { type -> pois.any { it.type == type } }
 
 // Clothes containers are derived from the recycling islands that accept clothing.
-internal fun parsePoiData(geoJson: String): PoiData {
-    val root = Json.parseToJsonElement(geoJson).jsonObject
+internal fun parsePoiData(geoJson: String) = parsePoiData(Json.parseToJsonElement(geoJson).jsonObject)
+
+private fun parsePoiData(root: JsonObject): PoiData {
     val generated = root["generated"]?.jsonPrimitive?.contentOrNull
         ?.let { try { Instant.parse(it) } catch (e: IllegalArgumentException) { null } }
     return PoiData(parseTypedPois(root), generated)

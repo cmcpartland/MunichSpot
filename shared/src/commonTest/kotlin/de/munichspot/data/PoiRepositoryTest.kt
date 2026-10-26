@@ -122,4 +122,17 @@ class PoiRepositoryTest {
         assertNotNull(parseLatest(geojson(plausibleFeatures())))
         assertNull(parseLatest(geojson(plausibleFeatures(10))))
     }
+
+    @Test
+    fun schemaVersionMissingOrKnownIsAccepted() {
+        assertNotNull(parseLatest(geojson(plausibleFeatures())))
+        assertNotNull(parseLatest(geojson(plausibleFeatures(), schemaVersion = "1")))
+    }
+
+    @Test
+    fun newerOrNonIntegerSchemaVersionIsRejected() {
+        assertNull(parseLatest(geojson(plausibleFeatures(), schemaVersion = "2")))
+        assertNull(parseLatest(geojson(plausibleFeatures(), schemaVersion = "\"1\"")))
+        assertNull(parseLatest(geojson(plausibleFeatures(), schemaVersion = "1.5")))
+    }
 }
