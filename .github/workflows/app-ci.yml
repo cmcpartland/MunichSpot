@@ -1,0 +1,46 @@
+# Builds and tests the app: shared unit tests (Android host + iOS simulator), release APK (R8) and iOS device compile.
+name: App CI
+
+on:
+  push:
+    paths-ignore:
+      - "tools/data/**"
+      - "pages/**"
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "tools/data/**"
+      - "pages/**"
+      - "docs/**"
+      - "**.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+      - run: ./gradlew :shared:testAndroidHostTest :androidApp:assembleRelease
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+      - run: ./gradlew :shared:iosSimulatorArm64Test :shared:compileKotlinIosArm64

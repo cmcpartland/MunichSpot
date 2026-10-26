@@ -40,11 +40,11 @@ suspend fun loadStartupPois(): PoiData? = loadCached(cache, ::parseLatest).also 
 suspend fun fetchLatestPois(conditional: Boolean): FetchResult<PoiData> =
     fetchConditional(LATEST_POIS_URL, cache, conditional, parse = ::parseLatest)
 
-private fun parseLatest(text: String) = parsePoiData(text).takeIf { isPlausible(it.pois) }
+internal fun parseLatest(text: String) = parsePoiData(text).takeIf { isPlausible(it.pois) }
 
 private val CORE_TYPES = setOf(PoiType.RECYCLING, PoiType.POST_BOX, PoiType.DRINKING_WATER, PoiType.TOILET)
 
-private fun isPlausible(pois: List<Poi>) =
+internal fun isPlausible(pois: List<Poi>) =
     pois.size >= MIN_LATEST_POIS && CORE_TYPES.all { type -> pois.any { it.type == type } }
 
 // Clothes containers are derived from the recycling islands that accept clothing.
