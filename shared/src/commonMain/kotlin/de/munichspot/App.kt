@@ -7,13 +7,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import de.munichspot.data.FetchResult
@@ -27,6 +28,7 @@ import de.munichspot.data.fetchLatestPlaces
 import de.munichspot.data.loadStartupPlaces
 import de.munichspot.data.loadStartupPois
 import de.munichspot.data.rememberBerlinNow
+import de.munichspot.map.CameraCarry
 import de.munichspot.map.DataStatus
 import de.munichspot.map.MapScreen
 import de.munichspot.map.PoiFilters
@@ -72,14 +74,14 @@ fun App() {
         places = loadStartupPlaces()
         (fetchLatestPlaces(places?.generated) as? FetchResult.Updated)?.let { places = it.data }
     }
-    LifecycleResumeEffect(loaded) {
+    LifecycleStartEffect(loaded) {
         if (loaded) refresh()
-        onPauseOrDispose {}
+        onStopOrDispose {}
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(failed, data == null) {
         if (!failed || data != null) return@LaunchedEffect
-        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             var attempt = 0
             while (failed && data == null) {
                 delay(RETRY_DELAYS_MS.getOrElse(attempt++) { RETRY_DELAYS_MS.last() })
@@ -96,14 +98,19 @@ fun App() {
         failed -> DataStatus.Failed
         else -> DataStatus.Loading
     }
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-        MapScreen(
-            data?.pois.orEmpty(), data?.generated, status,
-            onRetry = {
-                failed = false
-                refresh()
-            },
-            type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places?.index, anchor, onAnchorChange = { anchor = it }, now,
-        )
+    val dark = isSystemInDarkTheme()
+    val camera = remember { CameraCarry() }
+    MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+        // A new map per style: on iOS a live base style swap leaves the pin images under the wrong ids.
+        key(dark) {
+            MapScreen(
+                data?.pois.orEmpty(), data?.generated, status,
+                onRetry = {
+                    failed = false
+                    refresh()
+                },
+                type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places?.index, anchor, onAnchorChange = { anchor = it }, now, camera,
+            )
+        }
     }
 }

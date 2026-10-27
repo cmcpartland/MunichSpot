@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import de.munichspot.Log
@@ -109,6 +109,11 @@ internal enum class DataStatus { Loading, Ready, Failed }
 
 private var locationAsked = false
 
+/** Carries the camera over when the map is recreated for a dark mode switch. */
+internal class CameraCarry {
+    var position: CameraPosition? = null
+}
+
 private val StyleRetryDelays = listOf(5.seconds, 15.seconds, 60.seconds)
 
 @OptIn(FlowPreview::class)
@@ -126,6 +131,7 @@ internal fun MapScreen(
     anchor: Place?,
     onAnchorChange: (Place?) -> Unit,
     now: LocalDateTime,
+    camera: CameraCarry,
 ) {
     var selected by remember { mutableStateOf<Poi?>(null) }
     val poisById = remember(pois) { pois.associateBy { it.id } }
@@ -173,7 +179,7 @@ internal fun MapScreen(
             "https://tiles.openfreemap.org/styles/" + (if (dark) "fiord" else "positron") + if (styleAttempt > 0) "?r=$styleAttempt" else "",
         ),
         // Roughly the 700 m framing on a phone; refined below once the viewport is known.
-        initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.9),
+        initialCameraPosition = camera.position ?: CameraPosition(center = Marienplatz, zoom = 13.9),
     ) {
         boundary?.let { CityVeilLayers(it, dark) }
         val sources = PoiType.entries.associateWith { t ->
@@ -294,8 +300,10 @@ internal fun MapScreen(
     val pickerTop = pickerBottom + CategoryPickerHeight
 
     val currentAnchor by rememberUpdatedState(anchor)
+    val restored = remember { camera.position != null }
+    LaunchedEffect(Unit) { snapshotFlow { mapState.cameraPosition }.collect { camera.position = it } }
     LaunchedEffect(Unit) {
-        mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
+        if (!restored) mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
         val permission = locationState.permission
         if (!locationAsked && permission is LocationPermission.NotGranted && permission.canRequest != false) {
             locationAsked = true
@@ -308,7 +316,7 @@ internal fun MapScreen(
         val area = withTimeoutOrNull(3.seconds) { snapshotFlow { boundary }.first { it != null } }?.let { MunichArea.parse(it) }
         if (!area.containsOrBox(position)) {
             snackbar.showSnackbar(getString(Res.string.outside_munich))
-        } else if (!panned && currentAnchor == null) {
+        } else if (!panned && !restored && currentAnchor == null) {
             mapState.animateCameraToBounds(boundsAround(position))
         }
     }
@@ -427,9 +435,9 @@ internal fun MapScreen(
         val styleFailed = loadState is StyleLoadState.Failed || styleSlow
         LaunchedEffect(loadState) { if (loadState is StyleLoadState.Failed) Log.w("Map", "style failed: ${loadState.reason}") }
         val currentFailed by rememberUpdatedState(styleFailed)
-        LifecycleResumeEffect(Unit) {
+        LifecycleStartEffect(Unit) {
             if (currentFailed) styleAttempt++
-            onPauseOrDispose {}
+            onStopOrDispose {}
         }
         var autoRetries by remember { mutableIntStateOf(0) }
         val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -438,12 +446,21 @@ internal fun MapScreen(
         val styleError = loadState is StyleLoadState.Failed
         LaunchedEffect(styleError) {
             if (!styleError) return@LaunchedEffect
-            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 while (true) {
                     delay(StyleRetryDelays.getOrElse(autoRetries) { StyleRetryDelays.last() })
                     autoRetries++
                     styleAttempt++
                 }
+            }
+        }
+        var styleHadTrouble by remember { mutableStateOf(false) }
+        LaunchedEffect(styleFailed) { if (styleFailed) styleHadTrouble = true }
+        // The style loading again means the network is back, so don't wait for the pois' backoff.
+        LaunchedEffect(loadState, dataStatus) {
+            if (loadState == StyleLoadState.Ready && styleHadTrouble && dataStatus == DataStatus.Failed) {
+                styleHadTrouble = false
+                onRetry()
             }
         }
         // A successful poi download means the network is back.
