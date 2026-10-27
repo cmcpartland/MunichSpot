@@ -151,6 +151,13 @@ No crash-reporting SDK. The app keeps its promise to send nothing besides the ti
   - Smaller:
     - With no data, the pois retry backs off to 60 s even after the style has loaded again. A style that recovers from a failure could trigger a pois refresh, the reverse of the existing "pois arrived → retry the style".
     - iOS first launch: the location alert keeps the app inactive, so the first `refresh()` (on resume) waits until the alert is answered.
+  - Fixed in `feature/test-matrix-fixes`:
+    - Connect (10 s) and socket (30 s) timeouts instead of the 10 s total.
+    - The category panel scrolls within the window height.
+    - A `PickerRow` layout gives the category segment its full width first; the place segment keeps at least 72 dp and is truncated with "…".
+    - The style loading after a failure triggers a pois retry.
+    - The refresh and both retry loops run on STARTED instead of RESUMED.
+    - Not verified: the slow-network fix. The emulator's GSM and EDGE profiles are far slower than the real networks (58 KB still trickling after 7 min on "edge", while the tiles share the link), so it needs Network Link Conditioner or a phone on a bad connection.
   - Not yet tested:
     - iOS offline (cached launch, first launch, mid-session, slow network). The simulator shares the Mac's network, so it needs the hosts blocked or Network Link Conditioner.
     - iOS with Apple Maps deleted.

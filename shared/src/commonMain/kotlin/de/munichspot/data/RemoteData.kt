@@ -24,7 +24,7 @@ private val defaultClient by lazy {
     HttpClient {
         install(HttpTimeout) {
             connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 15_000
+            socketTimeoutMillis = 30_000
         }
     }
 }
