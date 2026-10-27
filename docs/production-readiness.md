@@ -158,6 +158,11 @@ No crash-reporting SDK. The app keeps its promise to send nothing besides the ti
     - The style loading after a failure triggers a pois retry.
     - The refresh and both retry loops run on STARTED instead of RESUMED.
     - Not verified: the slow-network fix. The emulator's GSM and EDGE profiles are far slower than the real networks (58 KB still trickling after 7 min on "edge", while the tiles share the link), so it needs Network Link Conditioner or a phone on a bad connection.
+  - Fixed in `feature/dark-switch-icons`:
+    - `App.kt` wraps `MapScreen` in `key(dark)`, so a dark mode switch builds a new map instead of swapping the base style. The camera carries over through a `CameraCarry` held in `App`, and the opening view and the jump to the user are skipped for a carried camera.
+    - Verified light→dark→light on the iOS simulator (icons match pin for pin) and on the Android emulator.
+    - An open details or filter sheet closes on the switch.
+    - Not tested: whether a style retry (`?r=`), also a live style swap, can show the same mix-up on iOS. It only happens after a failed or slow style, which may not have loaded any images yet.
   - Not yet tested:
     - iOS offline (cached launch, first launch, mid-session, slow network). The simulator shares the Mac's network, so it needs the hosts blocked or Network Link Conditioner.
     - iOS with Apple Maps deleted.

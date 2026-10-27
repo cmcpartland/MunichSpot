@@ -6,8 +6,8 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -28,6 +28,7 @@ import de.munichspot.data.fetchLatestPlaces
 import de.munichspot.data.loadStartupPlaces
 import de.munichspot.data.loadStartupPois
 import de.munichspot.data.rememberBerlinNow
+import de.munichspot.map.CameraCarry
 import de.munichspot.map.DataStatus
 import de.munichspot.map.MapScreen
 import de.munichspot.map.PoiFilters
@@ -98,15 +99,18 @@ fun App() {
         else -> DataStatus.Loading
     }
     val dark = isSystemInDarkTheme()
+    val camera = remember { CameraCarry() }
     MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
         // A new map per style: on iOS a live base style swap leaves the pin images under the wrong ids.
-        key(dark) { MapScreen(
-            data?.pois.orEmpty(), data?.generated, status,
-            onRetry = {
-                failed = false
-                refresh()
-            },
-            type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places?.index, anchor, onAnchorChange = { anchor = it }, now,
-        ) }
+        key(dark) {
+            MapScreen(
+                data?.pois.orEmpty(), data?.generated, status,
+                onRetry = {
+                    failed = false
+                    refresh()
+                },
+                type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places?.index, anchor, onAnchorChange = { anchor = it }, now, camera,
+            )
+        }
     }
 }

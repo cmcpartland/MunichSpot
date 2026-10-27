@@ -109,8 +109,10 @@ internal enum class DataStatus { Loading, Ready, Failed }
 
 private var locationAsked = false
 
-// Carries the camera over when the map is recreated (dark mode switch).
-private var carriedCamera: CameraPosition? = null
+/** Carries the camera over when the map is recreated for a dark mode switch. */
+internal class CameraCarry {
+    var position: CameraPosition? = null
+}
 
 private val StyleRetryDelays = listOf(5.seconds, 15.seconds, 60.seconds)
 
@@ -129,6 +131,7 @@ internal fun MapScreen(
     anchor: Place?,
     onAnchorChange: (Place?) -> Unit,
     now: LocalDateTime,
+    camera: CameraCarry,
 ) {
     var selected by remember { mutableStateOf<Poi?>(null) }
     val poisById = remember(pois) { pois.associateBy { it.id } }
@@ -176,7 +179,7 @@ internal fun MapScreen(
             "https://tiles.openfreemap.org/styles/" + (if (dark) "fiord" else "positron") + if (styleAttempt > 0) "?r=$styleAttempt" else "",
         ),
         // Roughly the 700 m framing on a phone; refined below once the viewport is known.
-        initialCameraPosition = carriedCamera ?: CameraPosition(center = Marienplatz, zoom = 13.9),
+        initialCameraPosition = camera.position ?: CameraPosition(center = Marienplatz, zoom = 13.9),
     ) {
         boundary?.let { CityVeilLayers(it, dark) }
         val sources = PoiType.entries.associateWith { t ->
@@ -297,8 +300,8 @@ internal fun MapScreen(
     val pickerTop = pickerBottom + CategoryPickerHeight
 
     val currentAnchor by rememberUpdatedState(anchor)
-    val restored = remember { carriedCamera != null }
-    LaunchedEffect(Unit) { snapshotFlow { mapState.cameraPosition }.collect { carriedCamera = it } }
+    val restored = remember { camera.position != null }
+    LaunchedEffect(Unit) { snapshotFlow { mapState.cameraPosition }.collect { camera.position = it } }
     LaunchedEffect(Unit) {
         if (!restored) mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
         val permission = locationState.permission
