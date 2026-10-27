@@ -13,7 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import de.munichspot.data.FetchResult
@@ -72,14 +72,14 @@ fun App() {
         places = loadStartupPlaces()
         (fetchLatestPlaces(places?.generated) as? FetchResult.Updated)?.let { places = it.data }
     }
-    LifecycleResumeEffect(loaded) {
+    LifecycleStartEffect(loaded) {
         if (loaded) refresh()
-        onPauseOrDispose {}
+        onStopOrDispose {}
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(failed, data == null) {
         if (!failed || data != null) return@LaunchedEffect
-        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             var attempt = 0
             while (failed && data == null) {
                 delay(RETRY_DELAYS_MS.getOrElse(attempt++) { RETRY_DELAYS_MS.last() })

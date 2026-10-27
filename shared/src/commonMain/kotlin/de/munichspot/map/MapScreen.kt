@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import de.munichspot.Log
@@ -427,9 +427,9 @@ internal fun MapScreen(
         val styleFailed = loadState is StyleLoadState.Failed || styleSlow
         LaunchedEffect(loadState) { if (loadState is StyleLoadState.Failed) Log.w("Map", "style failed: ${loadState.reason}") }
         val currentFailed by rememberUpdatedState(styleFailed)
-        LifecycleResumeEffect(Unit) {
+        LifecycleStartEffect(Unit) {
             if (currentFailed) styleAttempt++
-            onPauseOrDispose {}
+            onStopOrDispose {}
         }
         var autoRetries by remember { mutableIntStateOf(0) }
         val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -438,12 +438,21 @@ internal fun MapScreen(
         val styleError = loadState is StyleLoadState.Failed
         LaunchedEffect(styleError) {
             if (!styleError) return@LaunchedEffect
-            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 while (true) {
                     delay(StyleRetryDelays.getOrElse(autoRetries) { StyleRetryDelays.last() })
                     autoRetries++
                     styleAttempt++
                 }
+            }
+        }
+        var styleHadTrouble by remember { mutableStateOf(false) }
+        LaunchedEffect(styleFailed) { if (styleFailed) styleHadTrouble = true }
+        // The style loading again means the network is back, so don't wait for the pois' backoff.
+        LaunchedEffect(loadState, dataStatus) {
+            if (loadState == StyleLoadState.Ready && styleHadTrouble && dataStatus == DataStatus.Failed) {
+                styleHadTrouble = false
+                onRetry()
             }
         }
         // A successful poi download means the network is back.

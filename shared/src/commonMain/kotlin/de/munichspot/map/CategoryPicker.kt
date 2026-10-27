@@ -25,9 +25,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -51,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -142,7 +147,8 @@ internal fun CategoryPicker(
                                 focusSearch = false
                             }
                         }
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val maxPanelHeight = with(density) { LocalWindowInfo.current.containerSize.height.toDp() - WindowInsets.statusBars.getTop(density).toDp() } - maxOf(bottomInset, imeBottom + 8.dp) - 16.dp
+                        Column(Modifier.heightIn(max = maxPanelHeight).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             SearchField(query, { query = it }, focusRequester, onSearch = { suggestions.firstOrNull()?.let(pick) })
                             if (searching) {
                                 if (suggestions.isEmpty()) {
@@ -170,11 +176,11 @@ internal fun CategoryPicker(
                             }
                         }
                     } else {
-                        Row(Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PickerRow(Modifier.padding(horizontal = 16.dp).widthIn(max = 400.dp)) {
                             val colors = MaterialTheme.colorScheme
                             val chooseCategory = stringResource(Res.string.choose_category)
                             val searchPlaces = stringResource(Res.string.search_places)
-                            Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Row(
                                     Modifier.heightIn(min = CategoryPickerHeight)
                                         .weight(1f, fill = false)
@@ -198,10 +204,7 @@ internal fun CategoryPicker(
                                 if (type != null) ClearButton(stringResource(Res.string.clear_category)) { onTypeChange(null) }
                             }
                             Box(Modifier.size(width = 1.dp, height = 20.dp).background(colors.outlineVariant))
-                            Row(
-                                Modifier.then(if (anchor != null) Modifier.weight(1f, fill = false) else Modifier),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Row(
                                     Modifier.heightIn(min = CategoryPickerHeight)
                                         .weight(1f, fill = false)
@@ -235,6 +238,26 @@ internal fun CategoryPicker(
         }
     }
 }
+
+/** Category segment, divider, place segment: the category gets its full width first, the place segment keeps at least [MinPlaceWidth] and shrinks. */
+@Composable
+private fun PickerRow(modifier: Modifier, content: @Composable () -> Unit) {
+    Layout(content, modifier) { measurables, constraints ->
+        val minPlace = MinPlaceWidth.roundToPx().coerceAtMost(constraints.maxWidth)
+        val loose = constraints.copy(minWidth = 0)
+        val divider = measurables[1].measure(loose)
+        val category = measurables[0].measure(loose.copy(maxWidth = (constraints.maxWidth - divider.width - minPlace).coerceAtLeast(0)))
+        val place = measurables[2].measure(loose.copy(maxWidth = (constraints.maxWidth - divider.width - category.width).coerceAtLeast(0)))
+        val height = maxOf(category.height, divider.height, place.height)
+        layout(category.width + divider.width + place.width, height) {
+            category.placeRelative(0, (height - category.height) / 2)
+            divider.placeRelative(category.width, (height - divider.height) / 2)
+            place.placeRelative(category.width + divider.width, (height - place.height) / 2)
+        }
+    }
+}
+
+private val MinPlaceWidth = 72.dp
 
 @Composable
 private fun ClearButton(description: String, onClick: () -> Unit) {
