@@ -136,6 +136,26 @@ No crash-reporting SDK. The app keeps its promise to send nothing besides the ti
 - [ ] Dark mode, German and English, the Fold unfolded, small phone, large font scale.
 - [ ] A physical device on each platform (so far only the emulator and simulator have been used).
 - [ ] Crash reports (first submission per platform, see README "Crash reports"): upload a throwaway build with the `d633aab` trigger cherry-picked to Play internal testing / TestFlight, type `crashtest!`, and check that the crash shows up symbolicated in Android vitals / Xcode Organizer. Then submit the real build without the trigger. Set up the vitals alerts (crash rate, ANR rate) when the app is created in Play Console.
+- Result of the first run (2026-10-27, `b92b488`; Android release APK on the Fold emulator, iOS Debug build on the iPhone 18 Pro and 17e simulators; "old" = `cd40941`, the build from before the readiness work):
+  - Pass:
+    - App update over an old cache on both platforms (offline on Android). On iOS the four cache files moved from `Caches` to `Application Support`, which carries the backup-exclusion attribute.
+    - First launch with location granted, denied and outside Munich (Berlin), on both platforms; the iOS permission text in English and German.
+    - Android: first launch offline shows both pills. After the network comes back, the map style recovers on the 5 s retry and the pois on the next backoff step (58 s later in the debug repro).
+    - Android: cached launch offline, going offline mid-session (pan, category, details sheet), and no Chrome or Maps (snackbar for directions and the Wertstoffhof link, no crash).
+    - Dark mode (Android, and iOS from a cold start), German and English, the Fold folded and unfolded, and 720x1280 @320 dpi.
+  - Bugs:
+    - **Slow network never loads data.** `RemoteData.kt` sets a 10 s *total* `requestTimeoutMillis`, and `pois.geojson` is 58 KB gzipped, about 32 s at GSM speed. With the emulator's GSM profile there was still no data after 90 s. Use connect and socket timeouts instead of a total cap.
+    - **Category panel can't scroll.** At font scale 2.0 on the small screen, Mailboxes, Fountains, Toilets and Bookcases are cut off and unreachable (`CategoryPicker.kt`).
+    - **iOS: switching to dark mode while the app runs swaps pin icons**, e.g. mailboxes drawn as T-shirts and fountains as mailboxes. Colours stay right and a cold start in dark is fine. The likely cause is maplibre-compose 0.20's `StyleImageRegistry` (incrementing image ids kept across the style swap). Android recreates the activity on a uimode change, so it doesn't show this.
+    - **Large text truncates the category segment**: "All c…" at Android 1.3, "A…" at the largest iOS size, and a fragment at Android 2.0.
+  - Smaller:
+    - With no data, the pois retry backs off to 60 s even after the style has loaded again. A style that recovers from a failure could trigger a pois refresh, the reverse of the existing "pois arrived → retry the style".
+    - iOS first launch: the location alert keeps the app inactive, so the first `refresh()` (on resume) waits until the alert is answered.
+  - Not yet tested:
+    - iOS offline (cached launch, first launch, mid-session, slow network). The simulator shares the Mac's network, so it needs the hosts blocked or Network Link Conditioner.
+    - iOS with Apple Maps deleted.
+    - Physical devices.
+    - The crash-report upload.
 
 ## Out of scope / already tracked
 - More reliable nightly mailbox fetch (second Overpass server, reusing the last mailboxes): already in CLAUDE.md's open ideas. It matters to the app only through E3.
