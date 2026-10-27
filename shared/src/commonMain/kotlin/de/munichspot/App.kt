@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -96,14 +97,16 @@ fun App() {
         failed -> DataStatus.Failed
         else -> DataStatus.Loading
     }
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-        MapScreen(
+    val dark = isSystemInDarkTheme()
+    MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+        // A new map per style: on iOS a live base style swap leaves the pin images under the wrong ids.
+        key(dark) { MapScreen(
             data?.pois.orEmpty(), data?.generated, status,
             onRetry = {
                 failed = false
                 refresh()
             },
             type, onTypeChange = { type = it }, filters, onFiltersChange = { filters = it }, places?.index, anchor, onAnchorChange = { anchor = it }, now,
-        )
+        ) }
     }
 }

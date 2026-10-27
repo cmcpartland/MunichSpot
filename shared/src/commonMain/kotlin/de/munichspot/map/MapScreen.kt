@@ -109,6 +109,9 @@ internal enum class DataStatus { Loading, Ready, Failed }
 
 private var locationAsked = false
 
+// Carries the camera over when the map is recreated (dark mode switch).
+private var carriedCamera: CameraPosition? = null
+
 private val StyleRetryDelays = listOf(5.seconds, 15.seconds, 60.seconds)
 
 @OptIn(FlowPreview::class)
@@ -173,7 +176,7 @@ internal fun MapScreen(
             "https://tiles.openfreemap.org/styles/" + (if (dark) "fiord" else "positron") + if (styleAttempt > 0) "?r=$styleAttempt" else "",
         ),
         // Roughly the 700 m framing on a phone; refined below once the viewport is known.
-        initialCameraPosition = CameraPosition(center = Marienplatz, zoom = 13.9),
+        initialCameraPosition = carriedCamera ?: CameraPosition(center = Marienplatz, zoom = 13.9),
     ) {
         boundary?.let { CityVeilLayers(it, dark) }
         val sources = PoiType.entries.associateWith { t ->
@@ -294,8 +297,10 @@ internal fun MapScreen(
     val pickerTop = pickerBottom + CategoryPickerHeight
 
     val currentAnchor by rememberUpdatedState(anchor)
+    val restored = remember { carriedCamera != null }
+    LaunchedEffect(Unit) { snapshotFlow { mapState.cameraPosition }.collect { carriedCamera = it } }
     LaunchedEffect(Unit) {
-        mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
+        if (!restored) mapState.animateCameraToBounds(boundsAround(Marienplatz), animation = CameraAnimation.Ease { duration = Duration.ZERO })
         val permission = locationState.permission
         if (!locationAsked && permission is LocationPermission.NotGranted && permission.canRequest != false) {
             locationAsked = true
@@ -308,7 +313,7 @@ internal fun MapScreen(
         val area = withTimeoutOrNull(3.seconds) { snapshotFlow { boundary }.first { it != null } }?.let { MunichArea.parse(it) }
         if (!area.containsOrBox(position)) {
             snackbar.showSnackbar(getString(Res.string.outside_munich))
-        } else if (!panned && currentAnchor == null) {
+        } else if (!panned && !restored && currentAnchor == null) {
             mapState.animateCameraToBounds(boundsAround(position))
         }
     }
