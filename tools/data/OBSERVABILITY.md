@@ -24,7 +24,7 @@ These never fail a run; they only raise warnings:
 
 ## Alerts: Healthchecks.io
 
-A Healthchecks.io check ("MunichSpot nightly data", period 1 day, grace 12 h) works as a dead man's switch. The `healthcheck` job runs at the end of every run on `main`:
+A Healthchecks.io check ("PublicPoint nightly data", period 1 day, grace 12 h) works as a dead man's switch. The `healthcheck` job runs at the end of every run on `main`:
 - deploy succeeded: it pings the check (up);
 - build or deploy failed or was skipped: it pings `/fail`, which alerts right away.
 
