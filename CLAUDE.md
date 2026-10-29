@@ -2,7 +2,7 @@
 
 A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps Munich open data: recycling islands, mailboxes, drinking fountains and public toilets. Read `README.md` for features, the tech stack, build commands and data sources, and `tools/data/README.md` for the data pipeline. This file covers only what the READMEs don't.
 
-## Code map (`shared/src/commonMain/kotlin/de/munichspot/`)
+## Code map (`shared/src/commonMain/kotlin/de/publicpoint/`)
 - `App.kt`: loads data (cache, then the nightly download on launch and on every foreground resume; no bundled data; states loading/ready/failed), and holds the selected category (`PoiType?`, null = all) and `PoiFilters`.
 - `data/`:
   - `Poi.kt`: model (incl. `schedule` for any type), `PoiType`, `Material`, `ToiletInfo`, `RecyclingCentreInfo`, `BookcaseInfo`.
@@ -53,7 +53,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - **iOS:**
   - Simulator UDID `544C056F-40A3-4E8B-AFEE-C6D6E362D57C`, bundle `de.publicpoint.ios`.
   - Build: `xcodebuild -quiet -project iosApp/iosApp.xcodeproj -scheme iosApp -destination 'id=<udid>' -derivedDataPath <dd> build`.
-  - Then `xcrun simctl install <udid> <dd>/Build/Products/Debug-iphonesimulator/MunichSpot.app` and `xcrun simctl launch`.
+  - Then `xcrun simctl install <udid> <dd>/Build/Products/Debug-iphonesimulator/PublicPoint.app` and `xcrun simctl launch`.
   - This Xcode has no Simulator.app; the simulator window lives in `Xcode.app/Contents/Applications/DeviceHub.app`.
   - The simulator hides the on-screen keyboard while the Mac keyboard is connected (⌘K toggles it).
 - Keep screenshots and DerivedData out of the repo.

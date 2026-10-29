@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		A1000000000000000000000A /* MunichSpot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MunichSpot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000000000000000000A /* PublicPoint.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PublicPoint.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000000B /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		A1000000000000000000000C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -52,7 +52,7 @@
 		A10000000000000000000032 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000000000000000000A /* MunichSpot.app */,
+				A1000000000000000000000A /* PublicPoint.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -78,7 +78,7 @@
 			);
 			name = iosApp;
 			productName = iosApp;
-			productReference = A1000000000000000000000A /* MunichSpot.app */;
+			productReference = A1000000000000000000000A /* PublicPoint.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

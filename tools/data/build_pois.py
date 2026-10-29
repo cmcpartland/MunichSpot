@@ -44,7 +44,7 @@ area["boundary"="administrative"]["admin_level"="6"]["name"="München"]["de:amtl
   nwr["amenity"="public_bookcase"](area.a);
 );
 out center tags;"""
-USER_AGENT = "MunichSpot-data/0.1 (+https://github.com/cmcpartland/MunichSpot)"
+USER_AGENT = "PublicPoint-data/0.1 (+https://github.com/cmcpartland/PublicPoint)"
 DEFAULT_OUT = Path(__file__).resolve().parent / "out/pois.geojson"
 
 TOILET_MERGE_METERS = 15

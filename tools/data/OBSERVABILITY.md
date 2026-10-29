@@ -11,7 +11,7 @@ How to tell whether the `Nightly data` workflow (`.github/workflows/nightly-data
 | What did it produce? | The run's job summary |
 | Why did a step fail? | The run's logs |
 | How has the data changed over weeks or months? | `history.jsonl` on the `data-history` branch |
-| What's live right now? | https://cmcpartland.github.io/MunichSpot/ (each file has a `generated` timestamp) |
+| What's live right now? | https://cmcpartland.github.io/PublicPoint/ (each file has a `generated` timestamp) |
 
 ## Failure handling
 
@@ -72,7 +72,7 @@ git fetch origin data-history
 git show origin/data-history:history.jsonl | jq -c '{n: .run.number, time: .run.recorded, counts: .pois.counts}'
 ```
 
-or https://raw.githubusercontent.com/cmcpartland/MunichSpot/data-history/history.jsonl.
+or https://raw.githubusercontent.com/cmcpartland/PublicPoint/data-history/history.jsonl.
 
 Useful queries:
 

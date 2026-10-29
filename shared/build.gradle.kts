@@ -6,12 +6,12 @@ plugins {
 }
 
 compose.resources {
-    packageOfResClass = "de.munichspot.shared.resources"
+    packageOfResClass = "de.publicpoint.shared.resources"
 }
 
 kotlin {
     android {
-        namespace = "de.munichspot.shared"
+        namespace = "de.publicpoint.shared"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
         // Needed so Compose resources (places.json, munich_boundary.geojson) are packaged into the APK.
