@@ -1,6 +1,6 @@
-# MunichSpot
+# PublicPoint
 
-MunichSpot is a Kotlin Multiplatform (Compose Multiplatform) app for iOS and Android that shows Munich infrastructure from open data on a map: recycling islands (Wertstoffinseln), clothes donation containers (Altkleidercontainer), mailboxes (Briefkästen), drinking fountains (Trinkbrunnen) and public toilets (öffentliche Toiletten).
+PublicPoint is a Kotlin Multiplatform (Compose Multiplatform) app for iOS and Android that shows Munich infrastructure from open data on a map: recycling islands (Wertstoffinseln), clothes donation containers (Altkleidercontainer), mailboxes (Briefkästen), drinking fountains (Trinkbrunnen) and public toilets (öffentliche Toiletten).
 
 This is an early prototype, not a finished app.
 
