@@ -38,7 +38,7 @@ permissions:
   id-token: write
 
 env:
-  LIVE_PLACES_URL: https://cmcpartland.github.io/MunichSpot/places.json
+  LIVE_PLACES_URL: https://cmcpartland.github.io/PublicPoint/places.json
 
 concurrency:
   group: pages
@@ -74,7 +74,7 @@ jobs:
         id: validate
         run: >
           python tools/data/validate_pois.py site/pois.geojson
-          --previous https://cmcpartland.github.io/MunichSpot/pois.geojson
+          --previous https://cmcpartland.github.io/PublicPoint/pois.geojson
           ${{ inputs.skip_previous_check && '--skip-previous' || '' }}
       - name: Places
         id: places

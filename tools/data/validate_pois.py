@@ -12,7 +12,7 @@ from pathlib import Path
 import requests
 from ci import warn
 
-USER_AGENT = "MunichSpot-data/0.1 (+https://github.com/cmcpartland/MunichSpot)"
+USER_AGENT = "PublicPoint-data/0.1 (+https://github.com/cmcpartland/PublicPoint)"
 
 ID_PREFIX = {"RECYCLING": "awm-", "POST_BOX": "osm-", "DRINKING_WATER": "tb-", "TOILET": "wc-", "RECYCLING_CENTRE": "wsh-", "PUBLIC_BOOKCASE": "osm-"}
 MATERIALS = {"GLASS_BROWN", "GLASS_GREEN", "GLASS_WHITE", "PACKAGING", "CLOTHING"}

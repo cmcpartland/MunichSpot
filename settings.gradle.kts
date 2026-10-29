@@ -11,5 +11,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MunichSpot"
+rootProject.name = "PublicPoint"
 include(":shared", ":androidApp")

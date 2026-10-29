@@ -14,7 +14,7 @@ val localProps = Properties().apply {
 fun signingProp(key: String, env: String): String? = localProps.getProperty("release.$key") ?: System.getenv(env)
 
 android {
-    namespace = "de.munichspot"
+    namespace = "de.publicpoint"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
@@ -25,13 +25,13 @@ android {
         versionName = appVersion
     }
     signingConfigs {
-        val storeFile = signingProp("storeFile", "MUNICHSPOT_STORE_FILE")
+        val storeFile = signingProp("storeFile", "PUBLICPOINT_STORE_FILE")
         if (storeFile != null) {
             create("release") {
                 this.storeFile = file(storeFile)
-                storePassword = signingProp("storePassword", "MUNICHSPOT_STORE_PASSWORD")
-                keyAlias = signingProp("keyAlias", "MUNICHSPOT_KEY_ALIAS")
-                keyPassword = signingProp("keyPassword", "MUNICHSPOT_KEY_PASSWORD")
+                storePassword = signingProp("storePassword", "PUBLICPOINT_STORE_PASSWORD")
+                keyAlias = signingProp("keyAlias", "PUBLICPOINT_KEY_ALIAS")
+                keyPassword = signingProp("keyPassword", "PUBLICPOINT_KEY_PASSWORD")
             }
         }
     }
@@ -41,7 +41,7 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug").also {
-                logger.warn("No release signing config (release.* in local.properties or MUNICHSPOT_* env); signing with the debug key.")
+                logger.warn("No release signing config (release.* in local.properties or PUBLICPOINT_* env); signing with the debug key.")
             }
         }
     }

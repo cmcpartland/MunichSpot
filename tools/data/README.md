@@ -12,7 +12,7 @@ The script exits non-zero if `validate_pois.py` finds a problem (see below). Req
 
 ## Nightly refresh
 
-The `Nightly data` workflow (`.github/workflows/nightly-data.yml`) runs daily at 03:17 UTC, on manual dispatch, and on pushes to `main` that touch `tools/data/` or the workflow. It builds `pois.geojson` and publishes it to https://cmcpartland.github.io/MunichSpot/pois.geojson. If the build or the validation fails, the run fails and the last good file stays live.
+The `Nightly data` workflow (`.github/workflows/nightly-data.yml`) runs daily at 03:17 UTC, on manual dispatch, and on pushes to `main` that touch `tools/data/` or the workflow. It builds `pois.geojson` and publishes it to https://cmcpartland.github.io/PublicPoint/pois.geojson. If the build or the validation fails, the run fails and the last good file stays live.
 
 One-time setup: Settings → Pages → Build and deployment → Source: GitHub Actions.
 
@@ -27,7 +27,7 @@ How to see what a run did and what went wrong (alerts, annotations, job summary,
 `validate_pois.py` is called by `build_pois.py` before it writes, and runs as its own workflow step against the built file:
 
 ```
-python tools/data/validate_pois.py site/pois.geojson --previous https://cmcpartland.github.io/MunichSpot/pois.geojson [--skip-previous]
+python tools/data/validate_pois.py site/pois.geojson --previous https://cmcpartland.github.io/PublicPoint/pois.geojson [--skip-previous]
 ```
 
 It collects all problems and exits non-zero if there are any. Thresholds are constants at the top of the script.
@@ -48,7 +48,7 @@ The app accepts a `pois.geojson` whose `schemaVersion` is missing or at most the
 
 ## Translations
 
-`translate.py` (called by `build_pois.py`) adds `hoursEn` (toilet opening hours, translated per segment between " / " and " | ") and `noteEn` (fountain and bookcase notes) to the features; the app shows them on English devices with an "Automatically translated" label; dotted times in `hoursEn` ("11.00 am") are rewritten to colons ("11:00 am"). For each distinct German text it looks in `translation_overrides.json` (committed `{german: english}`, wins over everything), then in the cache, then asks DeepL (EN-GB) for the rest. Overrides match the exact German text too, so an override whose text no longer appears (the city edited or removed it) is reported as a warning and in the job summary; update or delete its key. The cache is the live https://cmcpartland.github.io/MunichSpot/translations.json (`{"generated", "entries": {german: english}}`, keyed by the exact whitespace-normalised German text), so only new or changed text goes to DeepL. For local runs, `TRANSLATIONS_CACHE` can point to another URL or file. The file is written next to the pois output and pruned to the texts currently in use; counts are printed and added to the job summary.
+`translate.py` (called by `build_pois.py`) adds `hoursEn` (toilet opening hours, translated per segment between " / " and " | ") and `noteEn` (fountain and bookcase notes) to the features; the app shows them on English devices with an "Automatically translated" label; dotted times in `hoursEn` ("11.00 am") are rewritten to colons ("11:00 am"). For each distinct German text it looks in `translation_overrides.json` (committed `{german: english}`, wins over everything), then in the cache, then asks DeepL (EN-GB) for the rest. Overrides match the exact German text too, so an override whose text no longer appears (the city edited or removed it) is reported as a warning and in the job summary; update or delete its key. The cache is the live https://cmcpartland.github.io/PublicPoint/translations.json (`{"generated", "entries": {german: english}}`, keyed by the exact whitespace-normalised German text), so only new or changed text goes to DeepL. For local runs, `TRANSLATIONS_CACHE` can point to another URL or file. The file is written next to the pois output and pruned to the texts currently in use; counts are printed and added to the job summary.
 
 The DeepL key is the repository secret `DEEPL_AUTH_KEY` (a key ending in `:fx` uses the free API). Without a key, or if DeepL fails, the build continues with cache and overrides only; texts without a translation simply have no `…En` field and show in German. `validate_pois.py` warns if fewer than 90 % of toilets with hours have `hoursEn`.
 
@@ -70,7 +70,7 @@ Public bookcases (Bücherschränke, type `PUBLIC_BOOKCASE`, ids `osm-<n|w|r><osm
 
 ## Place index
 
-`build_places.py [output-path]` writes `places.json` (compact `{"generated": <UTC timestamp>, "places": [[name, kind, lat, lon], ...]}`), the index behind the app's place search ("Wo?"): streets, parks, squares, stations, landmarks and districts in Munich. One Overpass query; streets with the same name become one entry at the mean of their ways, other features with the same name merge within 500 m. Ways and areas are returned if they touch the city, so each final point is tested against `munich_boundary.geojson` (point in polygon) and dropped if it lies outside. Without an argument it writes the bundled copy in the app (the base the app starts with); `validate_places.py <file>` checks it (parseable `generated`, at least 5000 entries, every kind present, coordinates in the Munich bounding box) and exits non-zero on problems. Places rarely change, so the nightly workflow rebuilds and validates them only weekly (Monday's scheduled run, a manual dispatch with `rebuild_places`, or when https://cmcpartland.github.io/MunichSpot/places.json isn't live yet) and publishes them next to `pois.geojson`. Any other run, and any places failure, re-publishes the live file (or the bundled one on the first deploy) because every deploy replaces the whole site; a places problem never fails the job. The app only takes a downloaded file whose `generated` is newer than the one it has. Source: OSM via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
+`build_places.py [output-path]` writes `places.json` (compact `{"generated": <UTC timestamp>, "places": [[name, kind, lat, lon], ...]}`), the index behind the app's place search ("Wo?"): streets, parks, squares, stations, landmarks and districts in Munich. One Overpass query; streets with the same name become one entry at the mean of their ways, other features with the same name merge within 500 m. Ways and areas are returned if they touch the city, so each final point is tested against `munich_boundary.geojson` (point in polygon) and dropped if it lies outside. Without an argument it writes the bundled copy in the app (the base the app starts with); `validate_places.py <file>` checks it (parseable `generated`, at least 5000 entries, every kind present, coordinates in the Munich bounding box) and exits non-zero on problems. Places rarely change, so the nightly workflow rebuilds and validates them only weekly (Monday's scheduled run, a manual dispatch with `rebuild_places`, or when https://cmcpartland.github.io/PublicPoint/places.json isn't live yet) and publishes them next to `pois.geojson`. Any other run, and any places failure, re-publishes the live file (or the bundled one on the first deploy) because every deploy replaces the whole site; a places problem never fails the job. The app only takes a downloaded file whose `generated` is newer than the one it has. Source: OSM via Overpass. © OpenStreetMap contributors, [ODbL 1.0](https://www.openstreetmap.org/copyright).
 
 ## Run history
 
@@ -82,7 +82,7 @@ The build job writes its inputs to `$RUN_RECORD_DIR` (`pois.json`, `places.json`
 git fetch origin data-history && git show origin/data-history:history.jsonl | jq -c '{n: .run.number, counts: .pois.counts}'
 ```
 
-Raw file: https://raw.githubusercontent.com/cmcpartland/MunichSpot/data-history/history.jsonl
+Raw file: https://raw.githubusercontent.com/cmcpartland/PublicPoint/data-history/history.jsonl
 
 ## Sources
 

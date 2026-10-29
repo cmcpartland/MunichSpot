@@ -7,7 +7,7 @@ import requests
 
 SERVERS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]
 QUERY = "[out:json][timeout:60];relation(62428);out geom;"
-HEADERS = {"User-Agent": "MunichSpot-data/1.0 (https://github.com/cmcpartland/MunichSpot)"}
+HEADERS = {"User-Agent": "PublicPoint-data/1.0 (https://github.com/cmcpartland/PublicPoint)"}
 TOLERANCE = 0.0002
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / "shared/src/commonMain/composeResources/files/munich_boundary.geojson"
 
