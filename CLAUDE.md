@@ -1,4 +1,4 @@
-# MunichSpot – notes for Claude
+# PublicPoint – notes for Claude
 
 A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps Munich open data: recycling islands, mailboxes, drinking fountains and public toilets. Read `README.md` for features, the tech stack, build commands and data sources, and `tools/data/README.md` for the data pipeline. This file covers only what the READMEs don't.
 
@@ -47,11 +47,11 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 ## Local test loop (this Mac)
 - `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`. The Android SDK is at `~/Library/Android/sdk`.
 - **Android:**
-  - Emulator AVD `Pixel_Fold_API_36` (emulator-5554), package `de.munichspot`.
-  - Run `./gradlew :androidApp:installDebug`, then `adb shell monkey -p de.munichspot 1`.
+  - Emulator AVD `Pixel_Fold_API_36` (emulator-5554), package `de.publicpoint`.
+  - Run `./gradlew :androidApp:installDebug`, then `adb shell monkey -p de.publicpoint 1`.
   - The emulator has two displays, so screenshots need `adb exec-out screencap -d 4619827259835644672 -p`.
 - **iOS:**
-  - Simulator UDID `544C056F-40A3-4E8B-AFEE-C6D6E362D57C`, bundle `de.munichspot.ios`.
+  - Simulator UDID `544C056F-40A3-4E8B-AFEE-C6D6E362D57C`, bundle `de.publicpoint.ios`.
   - Build: `xcodebuild -quiet -project iosApp/iosApp.xcodeproj -scheme iosApp -destination 'id=<udid>' -derivedDataPath <dd> build`.
   - Then `xcrun simctl install <udid> <dd>/Build/Products/Debug-iphonesimulator/MunichSpot.app` and `xcrun simctl launch`.
   - This Xcode has no Simulator.app; the simulator window lives in `Xcode.app/Contents/Applications/DeviceHub.app`.

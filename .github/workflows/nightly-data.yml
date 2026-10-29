@@ -146,9 +146,9 @@ jobs:
           cat > site/index.html <<'HTML'
           <!doctype html>
           <meta charset="utf-8">
-          <title>MunichSpot data</title>
-          <h1>MunichSpot data</h1>
-          <p>Nightly <a href="pois.geojson">pois.geojson</a> and weekly <a href="places.json">places.json</a> (place search index) and <a href="translations.json">translations.json</a> (English translations of opening hours and notes, machine-translated with DeepL), used by the MunichSpot app.</p>
+          <title>PublicPoint data</title>
+          <h1>PublicPoint data</h1>
+          <p>Nightly <a href="pois.geojson">pois.geojson</a> and weekly <a href="places.json">places.json</a> (place search index) and <a href="translations.json">translations.json</a> (English translations of opening hours and notes, machine-translated with DeepL), used by the PublicPoint app.</p>
           <ul>
             <li>Recycling islands: Landeshauptstadt München, AWM, <a href="https://www.govdata.de/dl-de/by-2-0">dl-by-de/2.0</a></li>
             <li>Mailboxes: © OpenStreetMap contributors, <a href="https://www.openstreetmap.org/copyright">ODbL 1.0</a></li>
