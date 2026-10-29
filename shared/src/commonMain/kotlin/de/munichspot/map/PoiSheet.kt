@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.munichspot.Log
 import de.munichspot.data.BookcaseInfo
@@ -71,7 +72,7 @@ private val DragHandleHeight = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun PoiSheet(poi: Poi?, now: LocalDateTime, onBounds: (Rect) -> Unit, onOpenFailed: () -> Unit, onDismiss: () -> Unit) {
+internal fun PoiSheet(poi: Poi?, now: LocalDateTime, minHeight: Dp, onBounds: (Rect) -> Unit, onOpenFailed: () -> Unit, onDismiss: () -> Unit) {
     val state = rememberBottomSheetState(initialValue = SheetValue.Hidden)
     var kept by remember { mutableStateOf(poi) }
     if (poi != null) kept = poi
@@ -95,12 +96,12 @@ internal fun PoiSheet(poi: Poi?, now: LocalDateTime, onBounds: (Rect) -> Unit, o
             )
         },
     ) {
-        kept?.let { PoiSheetContent(it, now, handleTop, { b -> if (poi != null) onBounds(b) }, onOpenFailed) }
+        kept?.let { PoiSheetContent(it, now, minHeight - DragHandleHeight, handleTop, { b -> if (poi != null) onBounds(b) }, onOpenFailed) }
     }
 }
 
 @Composable
-private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBounds: (Rect) -> Unit, onOpenFailed: () -> Unit) {
+private fun PoiSheetContent(poi: Poi, now: LocalDateTime, minHeight: Dp, handleTop: Float, onBounds: (Rect) -> Unit, onOpenFailed: () -> Unit) {
     val density = LocalDensity.current
     val uriHandler = LocalUriHandler.current
     val (titleRes, sourceRes) = when (poi.type) {
@@ -116,7 +117,7 @@ private fun PoiSheetContent(poi: Poi, now: LocalDateTime, handleTop: Float, onBo
     val source = stringResource(sourceRes)
     val nameIsAddress = poi.type == PoiType.RECYCLING || poi.type == PoiType.CLOTHES
     Column(
-        Modifier.fillMaxWidth().onGloballyPositioned {
+        Modifier.fillMaxWidth().heightIn(min = minHeight).onGloballyPositioned {
             val p = it.positionOnScreen()
             with(density) { onBounds(Rect(p.x, if (handleTop > 0f) handleTop else p.y - DragHandleHeight.toPx(), p.x + it.size.width, p.y + it.size.height)) }
         }.navigationBarsPadding().verticalScroll(rememberScrollState())

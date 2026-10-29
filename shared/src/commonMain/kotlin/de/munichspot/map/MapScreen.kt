@@ -531,6 +531,7 @@ internal fun MapScreen(
         PoiSheet(
             selected,
             now,
+            minHeight = pickerTop + 8.dp,
             onBounds = { b -> sheetBounds = b },
             onOpenFailed = { scope.launch { snackbar.showSnackbar(getString(Res.string.open_failed)) } },
         ) { selected = null }
