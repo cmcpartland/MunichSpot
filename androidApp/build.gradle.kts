@@ -5,8 +5,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val appVersion = "1.0.0" // major.minor.patch
-val (major, minor, patch) = appVersion.split(".").map { it.toInt() }
+val appVersion = "1.0" // major.minor
+val buildNumber = 1 // +1 for every store upload
+require(Regex("""\d+\.\d+""").matches(appVersion)) { "appVersion must be major.minor" }
 
 val localProps = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.reader()?.use(::load)
@@ -21,7 +22,7 @@ android {
         applicationId = "de.publicpoint"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = major * 10000 + minor * 100 + patch
+        versionCode = buildNumber
         versionName = appVersion
     }
     signingConfigs {
