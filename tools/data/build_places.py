@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from build_pois import OVERPASS_URL, fetch
+from build_pois import OVERPASS_URLS, fetch
 
 QUERY = """[out:json][timeout:180];
 area["boundary"="administrative"]["admin_level"="6"]["name"="München"]["de:amtlicher_gemeindeschluessel"="09162000"]->.a;
@@ -68,7 +68,7 @@ def meters(a, b):
 def main():
     rings = load_boundary()
     groups = defaultdict(list)
-    for e in fetch(OVERPASS_URL, {"data": QUERY})["elements"]:
+    for e in fetch(OVERPASS_URLS, {"data": QUERY})["elements"]:
         tags = e.get("tags", {})
         c = e if e["type"] == "node" else e.get("center")
         kind = kind_of(tags)

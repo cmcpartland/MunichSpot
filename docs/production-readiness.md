@@ -171,5 +171,5 @@ No crash-reporting SDK. The app keeps its promise to send nothing besides the ti
     - The crash-report upload.
 
 ## Out of scope / already tracked
-- More reliable nightly mailbox fetch (second Overpass server, reusing the last mailboxes): already in CLAUDE.md's open ideas. It matters to the app only through E3.
+- More reliable nightly mailbox fetch (second Overpass server, reusing the last mailboxes): done (server rotation, reuse of the last elements). It mattered to the app only through E3.
 - OpenFreeMap has no SLA. A self-hosted or paid tile fallback is worth considering only if outages show up in practice (L1 logging will show style failures).
