@@ -69,7 +69,7 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run the `iosApp` scheme on 
 ### Release builds
 
 - **Android:** `./gradlew :androidApp:bundleRelease` (or `assembleRelease` for an APK) builds with R8 and resource shrinking. The upload key is read from `release.storeFile`, `release.storePassword`, `release.keyAlias` and `release.keyPassword` in `local.properties`, or from the `PUBLICPOINT_STORE_FILE`, `PUBLICPOINT_STORE_PASSWORD`, `PUBLICPOINT_KEY_ALIAS` and `PUBLICPOINT_KEY_PASSWORD` environment variables. Without them the release build is signed with the debug key and Gradle prints a warning. The AAB includes the R8 mapping file for Play Console.
-- **Version:** `appVersion` (major.minor.patch) in `androidApp/build.gradle.kts`; `versionCode` is major × 10000 + minor × 100 + patch. On iOS, bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Config.xcconfig` to match.
+- **Version:** `appVersion` (major.minor) and `buildNumber` in `androidApp/build.gradle.kts` (`versionName`, `versionCode`). On iOS, `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Config.xcconfig` hold the same two values. Bump the build number for every store upload; both stores reject a repeated one.
 - **iOS:** the privacy manifest is `iosApp/iosApp/PrivacyInfo.xcprivacy` (no tracking, no collected data, plus the required-reason APIs found in the binary). Archiving for TestFlight needs a paid Apple Developer team.
 
 ### Crash reports
