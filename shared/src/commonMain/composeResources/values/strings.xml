@@ -17,7 +17,7 @@
     <string name="source_city">Source: City of Munich (dl-by-de/2.0)</string>
     <string name="source_recycling_centre">Source: City of Munich, AWM (dl-by-de/2.0); opening hours: © OpenStreetMap contributors</string>
     <string name="source_osm">Source: © OpenStreetMap contributors</string>
-    <string name="attribution">© OpenStreetMap contributors · OpenFreeMap · Data: City of Munich (dl-by-de/2.0)</string>
+    <string name="attribution">© OpenStreetMap · OpenFreeMap · © OpenMapTiles · City of Munich (dl-by-de/2.0)</string>
     <string name="data_as_of">Data as of: %1$s</string>
     <string name="data_very_old">Data not updated for over a year</string>
     <string name="location_unavailable">Location unavailable</string>

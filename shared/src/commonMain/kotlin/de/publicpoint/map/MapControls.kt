@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +27,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -37,10 +37,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -56,11 +55,8 @@ import kotlin.time.Instant
 import org.jetbrains.compose.resources.stringResource
 import org.maplibre.compose.expressions.dsl.not
 import org.maplibre.compose.map.MapState
-import org.maplibre.compose.overlay.AttributionDefaults
-import org.maplibre.compose.overlay.AttributionStyle
 import org.maplibre.compose.overlay.DisappearingCompassButton
 import org.maplibre.compose.overlay.DisappearingScaleBar
-import org.maplibre.compose.overlay.ExpandingAttributionButton
 import org.maplibre.compose.overlay.LocalViewportInsets
 import org.maplibre.compose.overlay.MapOverlay
 import org.maplibre.compose.overlay.MaplibreLogo
@@ -86,27 +82,6 @@ internal fun MapControls(mapState: MapState, onLogoHeight: (Dp) -> Unit) {
             Box(Modifier.onSizeChanged { onLogoHeight(with(density) { it.height.toDp() }) }) { MaplibreLogo() }
         }
         DisappearingCompassButton(Modifier.align(Alignment.TopEnd))
-        // MapLibre's defaults are always white with black text; follow the theme instead.
-        val container = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
-        val content = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-        ExpandingAttributionButton(
-            Modifier.align(Alignment.BottomEnd),
-            toggleButton = { onClick ->
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape).clickable(onClick = onClick, role = Role.Button),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        AttributionDefaults.icon(),
-                        AttributionDefaults.contentDescription(),
-                        Modifier.size(24.dp),
-                        colorFilter = ColorFilter.tint(content),
-                    )
-                }
-            },
-            expandedStyle = AttributionStyle(container, content),
-            collapsedStyle = AttributionStyle(container.copy(alpha = 0f), content.copy(alpha = 0f)),
-        )
     }
 }
 
@@ -180,11 +155,13 @@ internal fun LocatePill(visible: Boolean, onClick: () -> Unit, modifier: Modifie
 @Composable
 internal fun AttributionBar(generated: Instant?, onHeight: (Dp) -> Unit, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
+    val uriHandler = LocalUriHandler.current
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
         modifier = modifier
             .fillMaxWidth()
             .onSizeChanged { onHeight(with(density) { it.height.toDp() }) }
+            .clickable(role = Role.Button) { uriHandler.openUri("https://www.openstreetmap.org/copyright") }
             .navigationBarsPadding(),
     ) {
         val hint = when (val f = remember(generated) { freshnessHint(generated, Clock.System.now()) }) {
@@ -192,12 +169,15 @@ internal fun AttributionBar(generated: Instant?, onHeight: (Dp) -> Unit, modifie
             is Freshness.AsOf -> stringResource(Res.string.data_as_of, f.date)
             null -> null
         }
-        val attribution = stringResource(Res.string.attribution)
-        Text(
-            text = if (hint != null) "$attribution · $hint" else attribution,
-            fontSize = 10.sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-        )
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+            Text(
+                text = stringResource(Res.string.attribution),
+                autoSize = TextAutoSize.StepBased(minFontSize = 7.sp, maxFontSize = 10.sp, stepSize = 0.5.sp),
+                maxLines = 1,
+                softWrap = false,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (hint != null) Text(text = hint, fontSize = 10.sp, maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
+        }
     }
 }

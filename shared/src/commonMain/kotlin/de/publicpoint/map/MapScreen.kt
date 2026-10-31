@@ -296,7 +296,7 @@ internal fun MapScreen(
     }
     var attributionBarHeight by remember { mutableStateOf(0.dp) }
     var logoHeight by remember { mutableStateOf(0.dp) }
-    val pickerBottom = attributionBarHeight + maxOf(logoHeight, 40.dp) + MapOverlay.Spacing + 8.dp
+    val pickerBottom = attributionBarHeight + logoHeight + MapOverlay.Spacing + 8.dp
     val pickerTop = pickerBottom + CategoryPickerHeight
 
     val currentAnchor by rememberUpdatedState(anchor)
@@ -401,7 +401,7 @@ internal fun MapScreen(
         MaplibreMap(
             state = mapState,
             modifier = Modifier.fillMaxSize().onGloballyPositioned { mapBounds = Rect(it.positionOnScreen(), it.size.toSize()) },
-            // Keeps MapLibre's own attribution button clear of our attribution bar.
+            // Keeps the logo and scale bar clear of our attribution bar.
             viewportInsets = PaddingValues(bottom = attributionBarHeight),
             overlay = {
                 MapControls(mapState) { logoHeight = it }
