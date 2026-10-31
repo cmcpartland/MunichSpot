@@ -20,13 +20,14 @@ A run fails only if `build_pois.py` or `validate_pois.py` fails. The deploy job 
 These never fail a run; they only raise warnings:
 - DeepL or translation-cache problems (texts without a translation show in German).
 - places.json build or validation problems (the live file, or the bundled copy, is re-published).
-- Overpass failures (504s, timeouts, unreachable network): retried for up to 5 minutes inside the build, rotating between two servers. If they still fail, the build reuses the last published `osm-elements.json` (mailboxes, recycling centres and bookcases are then as old as its timestamp) and warns. Only if that file can't be downloaded either does the build fail.
+- Overpass failures (504s, timeouts, unreachable network): retried for up to 5 minutes inside the build, rotating between two servers. If they still fail, the build reuses the last published `osm-elements.json` (mailboxes, recycling centres and bookcases are then as old as its timestamp) and warns; Healthchecks.io alerts once that timestamp is more than 3 days old (see Alerts). Only if that file can't be downloaded either does the build fail.
 
 ## Alerts: Healthchecks.io
 
 A Healthchecks.io check ("PublicPoint nightly data", period 1 day, grace 12 h) works as a dead man's switch. The `healthcheck` job runs at the end of every run on `main`:
 - deploy succeeded: it pings the check (up);
-- build or deploy failed or was skipped: it pings `/fail`, which alerts right away.
+- build or deploy failed or was skipped: it pings `/fail`, which alerts right away;
+- deploy succeeded but the OSM data (`osm-elements.json` timestamp, exposed as the build output `osm_timestamp`) is more than 3 days old, because Overpass has been down and the build keeps reusing the old copy: it pings `/fail` with `OSM elements from <timestamp> (> 3 days old)` in the body. The data is still deployed. One or two bad nights stay quiet; look at the run's annotation or `history.jsonl` for those.
 
 If no successful ping arrives for about 36 hours, Healthchecks.io alerts too. This catches what GitHub can't report itself: a schedule that stopped firing. GitHub disables scheduled workflows after 60 days without repository activity; re-enable it under Actions → Nightly data → "Enable workflow".
 
