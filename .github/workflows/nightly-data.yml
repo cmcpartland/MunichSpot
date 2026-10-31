@@ -10,6 +10,7 @@
 # translations.json (DeepL machine translations of German hours and notes, cached by exact German text)
 # is published next to pois.geojson; DeepL problems never fail the build.
 # Every run, failed or not, appends one line to history.jsonl on the data-history branch (record job).
+# OSM elements older than 3 days (Overpass down for several nights) also ping /fail, though the deploy still happens.
 # Successful deploys on main ping the HEALTHCHECK_URL check (Healthchecks.io), failures ping /fail; no ping for ~36 h means the job stopped (e.g. GitHub disabled the schedule after 60 days without repo activity).
 name: Nightly data
 
@@ -55,6 +56,7 @@ jobs:
       pois: ${{ steps.pois.outcome }}
       validate: ${{ steps.validate.outcome }}
       places: ${{ steps.places.outcome }}
+      osm_timestamp: ${{ steps.osm.outputs.timestamp }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -73,6 +75,10 @@ jobs:
         run: python tools/data/build_pois.py site/pois.geojson
         env:
           DEEPL_AUTH_KEY: ${{ secrets.DEEPL_AUTH_KEY }}
+      - name: OSM data timestamp
+        id: osm
+        if: always()
+        run: echo "timestamp=$(jq -r '.timestamp // empty' site/osm-elements.json 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
       - name: Validate
         id: validate
         run: >
@@ -245,6 +251,8 @@ jobs:
     env:
       HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
       DEPLOY_RESULT: ${{ needs.deploy.result }}
+      OSM_TIMESTAMP: ${{ needs.build.outputs.osm_timestamp }}
+      OSM_MAX_AGE_DAYS: 3
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Ping Healthchecks.io
@@ -254,5 +262,14 @@ jobs:
             exit 0
           fi
           url="$HEALTHCHECK_URL"
+          note=""
           [ "$DEPLOY_RESULT" = success ] || url="$HEALTHCHECK_URL/fail"
-          curl -fsS -m 10 --retry 5 -o /dev/null --data-raw "deploy: $DEPLOY_RESULT, $RUN_URL" "$url"
+          if [ -n "$OSM_TIMESTAMP" ] && osm_epoch=$(date -u -d "$OSM_TIMESTAMP" +%s 2>/dev/null); then
+            age=$(( $(date -u +%s) - osm_epoch ))
+            echo "OSM elements from $OSM_TIMESTAMP ($(( age / 3600 )) h old)"
+            if [ "$age" -gt $(( OSM_MAX_AGE_DAYS * 86400 )) ]; then
+              url="$HEALTHCHECK_URL/fail"
+              note=", OSM elements from $OSM_TIMESTAMP (> $OSM_MAX_AGE_DAYS days old)"
+            fi
+          fi
+          curl -fsS -m 10 --retry 5 -o /dev/null --data-raw "deploy: $DEPLOY_RESULT$note, $RUN_URL" "$url"
