@@ -17,7 +17,7 @@
     <string name="source_city">Quelle: Landeshauptstadt München (dl-by-de/2.0)</string>
     <string name="source_recycling_centre">Quelle: Landeshauptstadt München, AWM (dl-by-de/2.0); Öffnungszeiten: © OpenStreetMap contributors</string>
     <string name="source_osm">Quelle: © OpenStreetMap contributors</string>
-    <string name="attribution">© OpenStreetMap contributors · OpenFreeMap · Daten: Landeshauptstadt München (dl-by-de/2.0)</string>
+    <string name="attribution">© OpenStreetMap · OpenFreeMap · © OpenMapTiles · Stadt München (dl-by-de/2.0)</string>
     <string name="data_as_of">Datenstand: %1$s</string>
     <string name="data_very_old">Daten seit über einem Jahr nicht aktualisiert</string>
     <string name="location_unavailable">Standort nicht verfügbar</string>
