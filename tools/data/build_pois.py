@@ -35,7 +35,8 @@ WSH_URL = (
     "https://geoportal.muenchen.de/geoserver/gsm_wfs/ows?service=WFS&version=1.0.0"
     "&request=GetFeature&typeName=gsm_wfs:awm_wertstoffhoefe&outputFormat=application/json"
 )
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]
+LIVE_OSM_ELEMENTS_URL = "https://cmcpartland.github.io/PublicPoint/osm-elements.json"
 OVERPASS_QUERY = """[out:json][timeout:120];
 area["boundary"="administrative"]["admin_level"="6"]["name"="München"]["de:amtlicher_gemeindeschluessel"="09162000"]->.a;
 (
@@ -54,20 +55,50 @@ RETRY_STATUSES = (404, 429, 502, 503, 504)
 RETRY_SECONDS = 300
 
 
-def fetch(url, data=None):
-    """Retries 404 (GeoServer briefly 404s valid layers while reloading), rate limits and 5xx for up to RETRY_SECONDS."""
+def fetch(urls, data=None):
+    """Takes a URL or a list (attempt n uses urls[(n-1) % len(urls)]). Retries 404 (GeoServer briefly 404s valid layers while reloading), rate limits, 5xx, connection errors and timeouts for up to RETRY_SECONDS."""
+    urls = [urls] if isinstance(urls, str) else urls
     start = time.monotonic()
     for attempt in itertools.count(1):
-        resp = requests.request(
-            "POST" if data else "GET", url, data=data, headers={"User-Agent": USER_AGENT}, timeout=180
-        )
-        if resp.ok:
-            return resp.json()
+        url = urls[(attempt - 1) % len(urls)]
         wait = min(10 * attempt, 60)
-        if resp.status_code not in RETRY_STATUSES or time.monotonic() - start + wait > RETRY_SECONDS:
-            resp.raise_for_status()
-        print(f"{resp.status_code} from {url.split('?')[0]}, retry {attempt} in {wait} s")
+        try:
+            resp = requests.request(
+                "POST" if data else "GET", url, data=data, headers={"User-Agent": USER_AGENT}, timeout=(15, 180)
+            )
+        except (requests.ConnectionError, requests.Timeout) as e:
+            if time.monotonic() - start + wait > RETRY_SECONDS:
+                raise
+            problem = type(e).__name__
+        else:
+            if resp.ok:
+                return resp.json()
+            if resp.status_code not in RETRY_STATUSES or time.monotonic() - start + wait > RETRY_SECONDS:
+                resp.raise_for_status()
+            problem = resp.status_code
+        print(f"{problem} from {url.split('?')[0]}, retry {attempt} in {wait} s")
         time.sleep(wait)
+
+
+def overpass_elements(out):
+    """Fetches the OSM elements and writes them next to `out`; if Overpass stays down, reuses the last published ones."""
+    path = out.with_name("osm-elements.json")
+    try:
+        resp = fetch(OVERPASS_URLS, {"data": OVERPASS_QUERY})
+        saved = {"timestamp": resp.get("osm3s", {}).get("timestamp_osm_base"), "elements": resp["elements"]}
+    except requests.RequestException as e:
+        url = os.environ.get("LIVE_OSM_ELEMENTS_URL", LIVE_OSM_ELEMENTS_URL)
+        try:
+            live = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=60)
+            live.raise_for_status()
+            saved = live.json()
+            saved["elements"]
+        except (requests.RequestException, ValueError, KeyError, TypeError) as e2:
+            sys.exit(f"Overpass failed ({type(e).__name__}) and no earlier elements are available from {url} ({type(e2).__name__}: {e2})")
+        warn(f"Overpass failed ({type(e).__name__}), reused the last OSM elements (data from {saved.get('timestamp') or 'unknown time'})")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(saved, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+    return saved["elements"]
 
 
 MATERIAL_COLUMNS = {
@@ -284,7 +315,7 @@ def toilet_features():
 
 def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT
-    elements = fetch(OVERPASS_URL, {"data": OVERPASS_QUERY})["elements"]
+    elements = overpass_elements(out)
     features = sorted(
         [*recycling_features(), *mailbox_features(elements), *fountain_features(), *toilet_features(), *wsh_features(elements), *bookcase_features(elements)],
         key=lambda f: f["id"],

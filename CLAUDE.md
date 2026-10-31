@@ -42,7 +42,7 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - Map style changes (source data, layer filters) take about 0.4 s to appear on the emulator. For instant feedback on a tap, such as the selected-pin highlight, draw in `MaplibreMap`'s `overlay` with `Modifier.placedAt(position)` only until the layer is rendered.
 - Dark mode follows the system; the dark map style is OpenFreeMap "fiord" (it only lists Noto Sans Regular, but "Noto Sans Bold" is served from the shared font endpoint).
 - Kotlin/Native can't pass a Kotlin `String` as a C vararg (`NSLog("%@", s)` crashes with `EXC_BAD_ACCESS`). `Log.ios.kt` passes the message as the format, with `%` escaped.
-- Overpass (mailboxes) often returns 504. The nightly workflow retries, and a failed run keeps the last deploy live.
+- Overpass (mailboxes, centres, bookcases) is flaky. `fetch` retries and rotates servers; if all fail, `build_pois.py` reuses the published `osm-elements.json` and warns.
 
 ## Local test loop (this Mac)
 - `export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`. The Android SDK is at `~/Library/Android/sdk`.
@@ -63,7 +63,6 @@ A Kotlin Multiplatform / Compose Multiplatform app for Android and iOS. It maps 
 - Hand implementation to Sonnet or Haiku subagents. The main session plans, reviews (including screenshots) and talks to the user.
 
 ## Open ideas (not started)
-- More reliable nightly mailbox fetch: a second Overpass server, and reuse the last mailboxes if all fail.
 - Android baseline profile (the `baselineprofile` plugin).
 - TestFlight upload, once there's a paid Apple Developer team.
 - With all categories shown, the city centre is crowded; a possible fix is a bigger cluster radius.

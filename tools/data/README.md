@@ -8,7 +8,9 @@ pip install -r tools/data/requirements.txt
 python tools/data/build_pois.py [output-path]
 ```
 
-The script exits non-zero if `validate_pois.py` finds a problem (see below). Requests that return 404, 429 or a 5xx error are retried with growing waits for up to 5 minutes; GeoServer briefly answers 404 for valid layers while it reloads.
+The script exits non-zero if `validate_pois.py` finds a problem (see below). Requests that return 404, 429 or a 5xx error, or fail with a connection error or timeout (15 s connect, 180 s read), are retried with growing waits for up to 5 minutes; GeoServer briefly answers 404 for valid layers while it reloads. Overpass requests rotate through `OVERPASS_URLS` (overpass-api.de, then overpass.kumi.systems) on each retry.
+
+The raw Overpass `elements` (plus `osm3s.timestamp_osm_base`) are written next to the output as `osm-elements.json` and published with the site. If Overpass still fails after the retries, `build_pois.py` downloads the last published file (`LIVE_OSM_ELEMENTS_URL`), builds from it, re-writes it and raises a warning with the age of the data; if that download fails too, the build fails. Tests: `python3 tools/data/test_fetch.py` (also run by the nightly workflow).
 
 ## Nightly refresh
 

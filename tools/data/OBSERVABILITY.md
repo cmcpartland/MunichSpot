@@ -20,7 +20,7 @@ A run fails only if `build_pois.py` or `validate_pois.py` fails. The deploy job 
 These never fail a run; they only raise warnings:
 - DeepL or translation-cache problems (texts without a translation show in German).
 - places.json build or validation problems (the live file, or the bundled copy, is re-published).
-- Mailbox fetches from Overpass, which often return 504, are retried for up to 5 minutes inside the build. If they still fail, the build fails.
+- Overpass failures (504s, timeouts, unreachable network): retried for up to 5 minutes inside the build, rotating between two servers. If they still fail, the build reuses the last published `osm-elements.json` (mailboxes, recycling centres and bookcases are then as old as its timestamp) and warns. Only if that file can't be downloaded either does the build fail.
 
 ## Alerts: Healthchecks.io
 
@@ -39,7 +39,7 @@ The job has `continue-on-error`, so a Healthchecks.io outage never turns a run r
 The scripts report problems through `ci.warn()` (`tools/data/ci.py`). In Actions this prints `::warning::…`, which GitHub shows as an annotation on the run page and in the run list, even when the run passed. Locally it prints `WARNING: …`.
 
 Current warnings include:
-- `build_pois.py`: unknown toilet `zustand` values (a new condition code the script doesn't map).
+- `build_pois.py`: unknown toilet `zustand` values (a new condition code the script doesn't map); Overpass down, so the last OSM elements were reused (with their timestamp).
 - `translate.py`: no translation cache, DeepL failed, `DEEPL_AUTH_KEY` missing, overrides whose German text no longer appears.
 - `validate_pois.py`: previous file unusable (comparison skipped), fewer than 70 % of previous ids kept, fewer than 90 % of toilet hours translated.
 - `validate_places.py` and the `Places summary` step: places validation errors, a failed rebuild, or a fallback to the bundled copy.
